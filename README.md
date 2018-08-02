@@ -20,8 +20,10 @@ Comming Soon...
 ## Examples
 [example](http://htmlpreview.github.io/?https://github.com/SasanFarrokh/vue-chimera/blob/master/example/index.html)
 
-## Contributors
-Thank you to all our [contributors](https://github.com/SasanFarrokh/vue-chimera/graphs/contributors)!
+## Maintainer
+<p>
+<a href="https://github.com/SasanFarrokh" target="_blank" rel="noopener noreferrer"><img src="https://avatars1.githubusercontent.com/u/20913428?s=460&v=4"></a>
+</p>
 
 ## License
 [MIT](https://github.com/SasanFarrokh/vue-chimera/blob/master/LICENSE.MD)
