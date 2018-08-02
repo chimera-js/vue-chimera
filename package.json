@@ -1,6 +1,6 @@
 {
   "name": "vue-chimera",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "VueJS RESTful client with reactive resources and features",
   "main": "dist/main.js",
   "scripts": {
