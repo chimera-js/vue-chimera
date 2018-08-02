@@ -67,7 +67,6 @@ class Resource {
             'localStorage': new LocalStorageCache(options.cacheExpiration || 10000)
         }[options.cache || Resource.cache]
 
-        console.log(options)
         this.errorTransformer = (err) => err
         this.responseTransformer = (res) => res
 
@@ -109,42 +108,49 @@ class Resource {
     }
 
     reload(force) {
+        return new Promise((resolve, reject) => {
 
-        let setByResponse = (res) => {
-            this._status = res.status
-            this._error = null
-            this._data = this.responseTransformer(res.data)
-            this._loading = false
-            this._lastLoaded = new Date()
-        }
-
-        if (this.cache && !force) {
-            let cacheValue = this.cache.getItem(this.getCacheKey())
-            if (cacheValue) {
-                setByResponse(cacheValue)
-                return
+            let setByResponse = (res) => {
+                this._status = res.status
+                this._error = null
+                this._data = this.responseTransformer(res.data)
+                this._loading = false
+                this._lastLoaded = new Date()
             }
-        }
 
-        this._loading = true
-        this.emit(EVENT_LOADING)
-        this.client.request(this.requestConfig).then(res => {
+            if (this.cache && !force) {
+                let cacheValue = this.cache.getItem(this.getCacheKey())
+                if (cacheValue) {
+                    setByResponse(cacheValue)
+                    resolve()
+                    return
+                }
+            }
 
-            setByResponse(res)
-            this.setCache(res)
-            this.emit(this.EVENT_SUCCESS)
+            this._loading = true
+            this.emit(EVENT_LOADING)
+            this.client.request(this.requestConfig).then(res => {
 
-        }).catch(err => {
-            this._status = err.status
-            this._data = null
-            this._error = err.responseJSON ? this.errorTransformer(err.responseJSON) : err.responseText
-            this._loading = false
-            this.emit(this.EVENT_ERROR)
+                setByResponse(res)
+                this.setCache(res)
+                this.emit(this.EVENT_SUCCESS)
+                resolve(res)
+
+            }).catch(err => {
+                this._status = err.status
+                this._data = null
+                this._error = err.responseJSON ? this.errorTransformer(err.responseJSON) : err.responseText
+                this._loading = false
+                this.emit(this.EVENT_ERROR)
+                reject(err)
+            })
+
         })
+
     }
 
     execute() {
-        this.reload(true)
+        return this.reload(true)
     }
 
     getCacheKey() {

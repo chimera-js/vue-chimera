@@ -21,8 +21,6 @@ export default function (config) {
             else if (isPlainObject(options.chimera))
                 _chimera = new VueChimera(options.chimera, this)
 
-            console.log('Initializing Vue-rest...')
-
 
             this._chimeraWatcher = _chimera.watch()
             _chimera.subscribe(this)
