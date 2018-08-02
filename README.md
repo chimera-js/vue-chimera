@@ -24,4 +24,4 @@ Comming Soon...
 Thank you to all our [contributors](https://github.com/SasanFarrokh/vue-chimera/graphs/contributors)!
 
 ## License
-[MIT](https://github.com/SasanFarrokh/vue-chimera/blob/master/LICENSE.md)
+[MIT](https://github.com/SasanFarrokh/vue-chimera/blob/master/LICENSE.MD)
