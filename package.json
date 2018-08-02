@@ -1,6 +1,6 @@
 {
   "name": "vue-chimera",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "VueJS RESTful client with reactive resources and features",
   "main": "dist/main.js",
   "scripts": {
@@ -29,8 +29,8 @@
   },
   "homepage": "https://github.com/sasanfarrokh/vue-chimera#readme",
   "dependencies": {
-    "vue": "^2.5.16",
     "axios": "^0.18.0",
-    "throttle-debounce": "^2.0.1"
+    "throttle-debounce": "^2.0.1",
+    "vue": "^2.5.16"
   }
 }
