@@ -18,7 +18,7 @@ $ npm install vue-chimera
 Comming Soon...
 
 ## Examples
-[example](https://github.com/SasanFarrokh/vue-chimera/blob/master/example/index.html)
+[example](http://htmlpreview.github.io/?https://github.com/SasanFarrokh/vue-chimera/blob/master/example/index.html)
 
 ## Contributors
 Thank you to all our [contributors](https://github.com/SasanFarrokh/vue-chimera/graphs/contributors)!
