@@ -1,5 +1,7 @@
 import axios from 'axios'
 import { isPlainObject } from "./utils";
+import LocalStorageCache from "./LocalStorageCache";
+import NullCache from "./NullCache";
 
 export const EVENT_SUCCESS = 'success'
 export const EVENT_ERROR = 'error'
@@ -17,7 +19,13 @@ class Resource {
 
         if (isPlainObject(value)) {
             let axiosClient = value.client || (value.axiosConfig ? axios.create(value.axiosConfig) : axios)
-            let resource = new Resource(value.url, value.method, value.params, value.headers, axiosClient)
+            let resource = new Resource(value.url, value.method, {
+                params: value.params,
+                headers: value.headers,
+                client: axiosClient,
+                cache: value.cache,
+                prefetch: value.prefetch
+            })
             if (value.interval)
                 resource.setInterval(value.interval)
             if (typeof value.transformer === 'function')
@@ -26,14 +34,13 @@ class Resource {
                 resource.setResponseTransformer(value.transformer.response)
                 resource.setErrorTransformer(value.transformer.error)
             }
-            if (value.prefetch !== undefined)
-                resource.prefetch = Boolean(value.prefetch)
             return resource
         }
     }
 
-    constructor(url, method, params, headers, client) {
+    constructor(url, method, options) {
 
+        options = options || {}
         method = method ? method.toLowerCase() : 'get'
         if (method && ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1)
             throw 'Bad Method requested: ' + method
@@ -41,12 +48,12 @@ class Resource {
         this.requestConfig = {
             url: url,
             method: method ? method.toUpperCase() : 'GET',
-            headers: headers,
+            headers: options.headers || {},
         }
 
-        this.requestConfig[this.requestConfig.method === 'GET' ? 'params' : 'data'] = params
+        this.requestConfig[this.requestConfig.method === 'GET' ? 'params' : 'data'] = options.params
 
-        this.client = client || axios
+        this.client = options.client || axios
 
         this._loading = false
         this._status = null
@@ -54,9 +61,13 @@ class Resource {
         this._error = null
         this._lastLoaded = null
         this._eventListeners = {}
-        this.prefetch = true
-        this.cache = Resource.cache
+        this.prefetch = options.prefetch !== undefined ? Boolean(options.prefetch) : true
+        this.cache = {
+            'no-cache': new NullCache(),
+            'localStorage': new LocalStorageCache(options.cacheExpiration || 10000)
+        }[options.cache || Resource.cache]
 
+        console.log(options)
         this.errorTransformer = (err) => err
         this.responseTransformer = (res) => res
 
@@ -130,6 +141,10 @@ class Resource {
             this._loading = false
             this.emit(this.EVENT_ERROR)
         })
+    }
+
+    execute() {
+        this.reload(true)
     }
 
     getCacheKey() {

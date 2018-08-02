@@ -2,7 +2,7 @@
   "name": "vue-chimera",
   "version": "1.0.0",
   "description": "VueJS RESTful client with reactive resources and features",
-  "main": "src/index.js",
+  "main": "dist/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -14,14 +14,9 @@ export class VueChimera {
 
     static install(Vue, options) {
 
-
         options = options || {}
 
-        Resource.cache = {
-            'no-cache': new NullCache(),
-            'localStorage': new LocalStorageCache(options.cacheExpiration || 10000)
-        }[options.cache || 'no-cache']
-
+        Resource.cache = options.cache || 'no-cache'
         Vue.mixin(mixin(options))
 
     }
