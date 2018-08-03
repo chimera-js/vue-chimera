@@ -4,6 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/vue-chimera.svg?style=flat-square)](http://npm-stat.com/charts.html?package=vue-chimera)
 
 VueJS RESTful client with reactive features.
+Vue-Chimera is based on [axios](https://github.com/axios/axios) http client library.
 
 ## Installing
 
@@ -71,6 +72,19 @@ Your resources can be:
 var app = new Vue({
     
     chimera: {
+      
+      // You can use axios config to set default config for your axios http client library
+      axios: {
+        baseURL: 'https://my-domain.com/api/v1',
+        headers: {
+          'X-Sample-Access-Token': 'xxx'
+        }
+      },
+      
+      // Or you can directly pass a axios client for more control over your client
+      axios: axios.create(),
+      
+      client:
       
       resources: {
       
@@ -176,6 +190,66 @@ let app = new Vue({
 | reload(force)    | Promise   | Fetches the resource from server. `force`: True for cache busting
 | execute(force)  | Promise   | Same as Reload
 | on(event, handler)|           | Sets an event listener. [Events](#events)
+
+#### Chimera instance properties
+```javascript
+...
+  methods: {
+    send() {
+      
+      // Global identifier to check if any request is pending
+      this.$chimera.$loading
+      
+      // Get the axios client to modify or ...
+      this.$chimera.$client
+      
+    }
+  }
+...
+```
+
+#### Transformers
+Transformers is used to change the response to another format. It would be called before the request response (error or success) is mapped to the `data` attribute of Resource object.
+
+```javascript
+new Vue({
+  
+  chimera: {
+    resources: {
+      users: {
+        
+        url: '/users',
+        
+        transformers: {
+          response: (response) => {
+            if (response.user)
+              response.user.id = 'UID: ' + response.user.id
+            return response
+          },
+          error: (error) => {
+            error.msg = error.msg || 'Something went wrong'
+            return error
+          }
+        }
+      }
+    }
+  }
+  
+})
+```
+
+#### Events
+```javascript
+
+import { EVENT_SUCCESS, EVENT_ERROR, EVENT_LOADING } from 'vue-chimera/src/Resource.js'
+
+function aVuejsMethod() {
+  this.$chimera.users.on(EVENT_ERROR, function(err) {
+    alert('Oops error occured! status: ' + err.status)
+  })
+}
+
+```
 
 ## Examples
 [example](http://htmlpreview.github.io/?https://github.com/SasanFarrokh/vue-chimera/blob/master/example/index.html)
