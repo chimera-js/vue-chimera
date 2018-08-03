@@ -7,4 +7,5 @@ docs/_book
 config
 dist/*.map
 node_modules
+example
 test
