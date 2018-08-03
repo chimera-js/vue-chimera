@@ -18,7 +18,7 @@ class Resource {
             return new Resource(value, 'GET')
 
         if (isPlainObject(value)) {
-            let axiosClient = value.client || (value.axiosConfig ? axios.create(value.axiosConfig) : axios)
+            let axiosClient = value.axios || (isPlainObject(value.axios) ? axios.create(value.axios) : axios)
             let resource = new Resource(value.url, value.method, {
                 params: value.params,
                 headers: value.headers,

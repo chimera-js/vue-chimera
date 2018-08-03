@@ -4,7 +4,7 @@ import mixin from './mixin'
 
 import Resource from "./Resource";
 import NullResource from './NullResource'
-import { remove } from './utils'
+import { remove, isPlainObject } from './utils'
 
 import LocalStorageCache from "./LocalStorageCache";
 import NullCache from "./NullCache";
@@ -26,7 +26,17 @@ export class VueChimera {
         options = options || {}
 
         this._vm = null
-        this._axios = axios.create(options.axiosConfig || {})
+
+        if (options.axios) {
+            if (isPlainObject(options.axios))
+                this._axios =  axios.create(options.axios)
+            else if (options.axios instanceof axios)
+                this._axios = options.axios
+            else
+                throw 'Your client should be a axios config object or an axios instance.'
+        } else {
+            this._axios = axios.create()
+        }
         this._listeners = []
         this._context = context
         this._reactiveResources = {}
@@ -68,9 +78,8 @@ export class VueChimera {
                 }
             }
         })
-        data.$loading = () => {
-            return this._vm.$loading
-        }
+        data.$loading = () => this._vm.$loading
+        data.$client = () => this._axios
         Vue.config.silent = silent
     }
 
