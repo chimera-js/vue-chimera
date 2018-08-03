@@ -1,0 +1,10 @@
+.*
+*.log
+*.swp
+*.yml
+coverage
+docs/_book
+config
+dist/*.map
+node_modules
+test

@@ -133,15 +133,17 @@ class Resource {
 
                 setByResponse(res)
                 this.setCache(res)
-                this.emit(this.EVENT_SUCCESS)
+                this.emit(EVENT_SUCCESS)
                 resolve(res)
 
             }).catch(err => {
-                this._status = err.status
+                let errorResponse = err.response
+                this._status = errorResponse.status
                 this._data = null
-                this._error = err.responseJSON ? this.errorTransformer(err.responseJSON) : err.responseText
+                this._error = this.errorTransformer(errorResponse.data)
                 this._loading = false
-                this.emit(this.EVENT_ERROR)
+                this.emit(EVENT_ERROR)
+
                 reject(err)
             })
 
@@ -185,21 +187,5 @@ class Resource {
         return this._lastLoaded
     }
 }
-
-class GetResource extends Resource {
-
-    constructor(url, params, headers, client) {
-        super(url, 'GET', params, headers, client);
-    }
-}
-
-class PostResource extends Resource {
-
-    constructor(url, params, headers, client) {
-        super(url, 'POST', params, headers, client);
-    }
-}
-
-export { PostResource, GetResource }
 
 export default Resource
