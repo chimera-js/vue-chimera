@@ -21,7 +21,7 @@ $ bower install vue-chimera
 
 Using cdn:
 ```html
-<script src="https://unpkg.com/vue-chimera@0.1.0/dist/vue-chimera.js"></script>
+<script src="https://unpkg.com/vue-chimera@0.1.3/dist/vue-chimera.js"></script>
 ```
 
 ## Getting started
