@@ -84,8 +84,6 @@ var app = new Vue({
       // Or you can directly pass a axios client for more control over your client
       axios: axios.create(),
       
-      client:
-      
       resources: {
       
         users: '/users',
