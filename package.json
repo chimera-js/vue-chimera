@@ -31,7 +31,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "throttle-debounce": "^2.0.1",
-    "vue": "^2.5.16"
+    "vue": "^2.5.17"
   },
   "devDependencies": {
     "babel": "^6.23.0",
@@ -47,6 +47,7 @@
     "mocha": "^5.2.0",
     "nightwatch": "^0.9.21",
     "sinon": "^6.1.4",
+    "https-proxy-agent": "^2.2.0",
     "webpack": "^4.16.4"
   }
 }
