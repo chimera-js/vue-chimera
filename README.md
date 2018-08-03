@@ -13,7 +13,29 @@ Using npm:
 $ npm install vue-chimera
 ```
 
-## Docs
+Using bower:
+```bash
+$ bower install vue-chimera
+```
+
+Using cdn:
+```html
+<script src="https://unpkg.com/vue-chimera@0.1.0/dist/vue-chimera.js"></script>
+```
+
+## Getting started
+
+To add **vue-chimera** to your Vue you must use it as a plugin:
+*ECMAScript 6*
+```javascript
+import Vue from 'vue'
+import VueChimera from 'vue-chimera'
+
+Vue.use(VueChimera)
+
+```
+
+If you use old browser style just add `vue.min.js` and `dist/vue-chimera.js` script tag to your HTML file and everything would be fine to go on.
 
 #### Defining Resources
 To use Vue Chimera in your vue instance you should add `chimera` property to root of your vue component instance:
@@ -166,6 +188,14 @@ let app = new Vue({
 ## Contribution
 This project is open for any contribution. We are waiting for your pull requests.
 Thanks to all our contributors.
+
+## Roadmap
+* Unit/Integration/e2e Tests
+* Vue Directives
+* Different Cache implementations
+* Vuex Implementation
+* Inject restful resources to children components
+* Vuejs web components
 
 ## License
 [MIT](https://github.com/SasanFarrokh/vue-chimera/blob/master/LICENSE.MD)
