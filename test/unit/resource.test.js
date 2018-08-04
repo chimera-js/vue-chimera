@@ -3,7 +3,6 @@ import sinon from 'sinon'
 
 import Resource, {EVENT_SUCCESS, EVENT_LOADING, EVENT_ERROR} from '../../src/Resource'
 import axios from 'axios'
-import { arraysEqual } from "../helpers/util";
 
 describe('resource', function () {
 
