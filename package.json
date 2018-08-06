@@ -2,7 +2,7 @@
   "name": "vue-chimera",
   "version": "0.1.4",
   "description": "VueJS RESTful client with reactive resources and features",
-  "main": "dist/main.js",
+  "main": "dist/vue-chimera.js",
   "scripts": {
     "test:unit": "karma start config/karma.unit.conf.js"
   },
