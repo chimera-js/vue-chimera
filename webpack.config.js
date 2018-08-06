@@ -2,13 +2,14 @@ const path = require('path')
 
 module.exports = {
 
-    mode: 'development',
-
     entry: './src/index.js',
 
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'vue-chimera.js'
+        filename: 'vue-chimera.js',
+
+        libraryExport: 'default',
+        libraryTarget: 'umd'
     }
 
 }

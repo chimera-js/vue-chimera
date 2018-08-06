@@ -9,12 +9,13 @@ import { remove, isPlainObject } from './utils'
 import LocalStorageCache from "./LocalStorageCache";
 import NullCache from "./NullCache";
 
+Vue.config.silent = true
+Vue.config.productionTip = false
+Vue.config.devtools = false
 
 export class VueChimera {
 
-    static install(Vue, options) {
-
-        options = options || {}
+    static install(Vue, options = {}) {
 
         Resource.cache = options.cache || 'no-cache'
         Vue.mixin(mixin(options))
@@ -64,8 +65,6 @@ export class VueChimera {
     }
 
     _initVM(data) {
-        const silent = Vue.config.silent
-        Vue.config.silent = true
         this._vm = new Vue({
             data,
             computed: {
@@ -80,7 +79,6 @@ export class VueChimera {
         })
         data.$loading = () => this._vm.$loading
         data.$client = () => this._axios
-        Vue.config.silent = silent
     }
 
     watch() {
