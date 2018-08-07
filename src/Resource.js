@@ -18,7 +18,12 @@ class Resource {
             return new Resource(value, 'GET')
 
         if (isPlainObject(value)) {
-            let axiosClient = value.axios || (isPlainObject(value.axios) ? axios.create(value.axios) : axios)
+
+            let axiosClient = Resource.axios
+
+            if (value.axios)
+                axiosClient = isPlainObject(value.axios) ? axios.create(value.axios) : value.axios
+
             let resource = new Resource(value.url, value.method, {
                 params: value.params,
                 headers: value.headers,
@@ -62,10 +67,8 @@ class Resource {
         this._lastLoaded = null
         this._eventListeners = {}
         this.prefetch = options.prefetch !== undefined ? Boolean(options.prefetch) : true
-        this.cache = {
-            'no-cache': new NullCache(),
-            'localStorage': new LocalStorageCache(options.cacheExpiration || 10000)
-        }[options.cache || Resource.cache]
+
+        this.cache = this.getCache(options)
 
         this.errorTransformer = (err) => err
         this.responseTransformer = (res) => res
@@ -155,8 +158,21 @@ class Resource {
         return this.reload(true)
     }
 
+    send() {
+        return this.reload(true)
+    }
+
+    getCache(options) {
+        let key = options.cache || Resource.cache
+        let caches = {
+            'no-cache': () => new NullCache(),
+            'localStorage': () => new LocalStorageCache(options.cacheExpiration || 10000)
+        }
+        return caches[key] ? caches[key]() : null;
+    }
+
     getCacheKey() {
-        return (btoa || (x => x))(this.requestConfig.url
+        return (typeof btoa !== 'undefined' ? btoa : (x => x))(this.requestConfig.url
             + this.requestConfig.params
             + this.requestConfig.data
             + this.requestConfig.method)

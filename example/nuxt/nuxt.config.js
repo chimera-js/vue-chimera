@@ -37,7 +37,7 @@ module.exports = {
     },
 
     plugins: [
-      { src: '~plugins/vue-chimera.js', ssr: false}
+      '~plugins/vue-chimera.js'
     ]
 };
 

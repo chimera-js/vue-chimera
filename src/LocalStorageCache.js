@@ -1,7 +1,7 @@
 export default class LocalStorageCache {
 
     constructor(defaultExpiration) {
-        if (!window || !window.localStorage)
+        if (typeof window === 'undefined' || !window.localStorage)
             throw 'LocalStorageCache: Local storage is not available.'
         this.storage = window.localStorage
         this.defaultExpiration = defaultExpiration

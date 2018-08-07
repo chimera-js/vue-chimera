@@ -6,9 +6,6 @@ import Resource from "./Resource";
 import NullResource from './NullResource'
 import { remove, isPlainObject } from './utils'
 
-import LocalStorageCache from "./LocalStorageCache";
-import NullCache from "./NullCache";
-
 Vue.config.silent = true
 Vue.config.productionTip = false
 Vue.config.devtools = false
@@ -18,26 +15,15 @@ export class VueChimera {
     static install(Vue, options = {}) {
 
         Resource.cache = options.cache || 'no-cache'
+        Resource.axios = options.axios instanceof axios ? options.axios : axios.create(options.axios || {})
         Vue.mixin(mixin(options))
 
     }
 
-    constructor(options, context) {
-
-        options = options || {}
+    constructor(options = {}, context) {
 
         this._vm = null
 
-        if (options.axios) {
-            if (isPlainObject(options.axios))
-                this._axios =  axios.create(options.axios)
-            else if (options.axios instanceof axios)
-                this._axios = options.axios
-            else
-                throw 'Your client should be a axios config object or an axios instance.'
-        } else {
-            this._axios = axios.create()
-        }
         this._listeners = []
         this._context = context
         this._reactiveResources = {}
@@ -52,12 +38,6 @@ export class VueChimera {
                 this._reactiveResources[key] = r.bind(context)
             } else
                 resources[key] = Resource.from(r)
-
-            Object.defineProperty(resources, '$' + key, {
-                set(x) {
-                    this[key] = Resource.from(x)
-                }
-            })
         }
 
         this._initVM(resources)
@@ -106,7 +86,7 @@ export class VueChimera {
     }
 
     updateReactiveResource(key) {
-        this._resources[key] = Resource.from(this._reactiveResources[key]())
+        this._resources[key] = Resource.from(this._reactiveResources[key](), this._axios)
     }
 
     get resources() {

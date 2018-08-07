@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "nuxt": "^1.0.0",
-    "vue-chimera": "^0.1.5"
+    "vue-chimera": "^0.1.6"
   },
   "devDependencies": {
     "babel-eslint": "^8.2.1",

@@ -12,7 +12,7 @@ export default function (config) {
             const options = this.$options
 
             let _chimera
-            if (!options.chimera)
+            if (!options.chimera || options._chimera)
                 return
 
             else if (options.chimera instanceof VueChimera)
@@ -20,7 +20,6 @@ export default function (config) {
 
             else if (isPlainObject(options.chimera))
                 _chimera = new VueChimera(options.chimera, this)
-
 
             this._chimeraWatcher = _chimera.watch()
             _chimera.subscribe(this)

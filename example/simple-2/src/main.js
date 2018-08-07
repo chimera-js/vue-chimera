@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueChimera from '../../../dist/vue-chimera'
+import VueChimera from 'vue-chimera'
 import App from './App.vue'
 
 console.log(VueChimera)

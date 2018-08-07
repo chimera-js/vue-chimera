@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "vue": "^2.5.11",
-    "vue-chimera": "^0.1.5"
+    "vue-chimera": "^0.1.6"
   },
   "browserslist": [
     "> 1%",

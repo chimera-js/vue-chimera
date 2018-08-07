@@ -3,11 +3,11 @@
     <div>
       <app-logo/>
       <h1 class="title">
-        nuxt
+        Nuxt.js
       </h1>
       <h2 class="subtitle">
-        Nuxt.js project
-        <!--{{ $chimera.sasan.loading ? 's' : 'j' }}-->
+        <small v-if="$chimera.blogPost.loading">loading...</small>
+        <span v-if="$chimera.blogPost.data">{{ $chimera.blogPost.data.title }}</span>
       </h2>
       <div class="links">
         <a
@@ -33,9 +33,9 @@ export default {
 
     chimera: {
         resources: {
-            sasan: {
-                url: '/dfsf',
-                prefetch: false
+            blogPost: {
+                url: '/blog/posts/55',
+                prefetch: true
             }
         }
     },
