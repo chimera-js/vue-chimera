@@ -1,7 +1,7 @@
 import Vue from 'vue'
-import install, { VueChimera } from '../../../src/index'
+import VueChimera from '../../../src/index'
 
-Vue.use(install, {
+Vue.use(VueChimera, {
     axios: {
         baseURL: 'https://idehhub.com/api/v1',
 
