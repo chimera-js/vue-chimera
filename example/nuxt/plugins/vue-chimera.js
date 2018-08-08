@@ -14,5 +14,8 @@ Vue.use(VueChimera, {
 })
 
 export default ({app}, inject) => {
+
+    
+
     // inject('chimera', {})
 }
