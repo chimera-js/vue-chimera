@@ -10,7 +10,6 @@ export const EVENT_LOADING = 'loading'
 class Resource {
 
     static from(value) {
-
         if (value instanceof Resource)
             return value
 
@@ -18,7 +17,6 @@ class Resource {
             return new Resource(value, 'GET')
 
         if (isPlainObject(value)) {
-
             let axiosClient = Resource.axios
 
             if (value.axios)
@@ -67,14 +65,12 @@ class Resource {
         this._lastLoaded = null
         this._eventListeners = {}
         this.prefetch = options.prefetch !== undefined ? Boolean(options.prefetch) : true
+        this.ssrPrefetched = false
 
         this.cache = this.getCache(options)
 
         this.errorTransformer = (err) => err
         this.responseTransformer = (res) => res
-
-        if (this.prefetch)
-            this.reload()
     }
 
     setResponseTransformer(transformer) {
@@ -114,11 +110,13 @@ class Resource {
         return new Promise((resolve, reject) => {
 
             let setByResponse = (res) => {
-                this._status = res.status
                 this._error = null
-                this._data = this.responseTransformer(res.data)
                 this._loading = false
-                this._lastLoaded = new Date()
+                if (res) {
+                    this._status = res.status
+                    this._data = this.responseTransformer(res.data)
+                    this._lastLoaded = new Date()
+                }
             }
 
             if (this.cache && !force) {
@@ -141,10 +139,12 @@ class Resource {
 
             }).catch(err => {
                 let errorResponse = err.response
-                this._status = errorResponse.status
                 this._data = null
-                this._error = this.errorTransformer(errorResponse.data)
                 this._loading = false
+                if (errorResponse) {
+                    this._status = errorResponse.status
+                    this._error = this.errorTransformer(errorResponse.data)
+                }
                 this.emit(EVENT_ERROR)
 
                 reject(err)

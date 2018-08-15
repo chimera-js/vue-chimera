@@ -8,16 +8,14 @@ export default function (config) {
 
     return {
         beforeCreate() {
-
             const options = this.$options
 
             let _chimera
+
             if (!options.chimera || options._chimera)
                 return
-
             else if (options.chimera instanceof VueChimera)
                 _chimera = options.chimera
-
             else if (isPlainObject(options.chimera))
                 _chimera = new VueChimera(options.chimera, this)
 
@@ -38,8 +36,14 @@ export default function (config) {
         },
 
         mounted() {
-            if (this._chimera)
+            if (this._chimera) {
                 this._chimera.updateReactiveResources()
+                for (let r in this._chimera._resources) {
+                    let resource = this._chimera._resources[r];
+                    if (resource.prefetch && !resource.ssrPrefetched)
+                        resource.reload();
+                }
+            }
         },
 
         beforeDestroy() {
