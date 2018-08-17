@@ -111,30 +111,6 @@ describe('resource', function () {
 
     });
 
-    describe('test-prefetch', function () {
-
-        it('should be prefetched', function (done) {
-
-            server.respondWith('GET', '/users', [
-                200,
-                {'Content-Type': 'application/json'},
-                JSON.stringify([{id: 1, name: 'User 1'}, {id: 2, name: 'User 2'}])
-            ])
-
-            resource = Resource.from({
-                url: '/users',
-                axios: client
-            })
-
-            resource.on(EVENT_SUCCESS, response => {
-                assert.equal(resource.status, 200)
-                assert.equal(typeof resource.data, 'object')
-                done()
-            })
-        });
-
-    });
-
     describe('test-interval', function () {
 
         it('should be repeated every seconds', function (done) {
@@ -150,6 +126,7 @@ describe('resource', function () {
                 interval: 100,
                 axios: client
             })
+            resource.execute()
 
             let count = 0
             resource.on(EVENT_SUCCESS, response => {
