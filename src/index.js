@@ -4,7 +4,7 @@ import mixin from './mixin'
 
 import Resource from "./Resource";
 import NullResource from './NullResource'
-import { remove, isPlainObject } from './utils'
+import { remove } from './utils'
 
 Vue.config.silent = true
 Vue.config.productionTip = false
@@ -13,11 +13,9 @@ Vue.config.devtools = false
 export class VueChimera {
 
     static install(Vue, options = {}) {
-
         Resource.cache = options.cache || 'no-cache'
         Resource.axios = options.axios instanceof axios ? options.axios : axios.create(options.axios || {})
         Vue.mixin(mixin(options))
-
     }
 
     constructor(options = {}, context) {

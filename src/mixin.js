@@ -1,43 +1,62 @@
-import {VueChimera} from './index'
-import {isPlainObject} from "./utils";
-import {debounce} from 'throttle-debounce'
+import { VueChimera } from './index';
+import { isPlainObject } from './utils';
+import { debounce } from 'throttle-debounce';
 
-const DEFAULT_DEBOUNCE = 200
+const DEFAULT_DEBOUNCE = 200;
 
 export default function (config) {
-
     return {
-        beforeCreate() {
-            const options = this.$options
-
-            let _chimera
+        beforeCreate () {
+            const options = this.$options;
+            let _chimera;
 
             if (!options.chimera || options._chimera)
-                return
+                return;
             else if (options.chimera instanceof VueChimera)
-                _chimera = options.chimera
+                _chimera = options.chimera;
             else if (isPlainObject(options.chimera))
-                _chimera = new VueChimera(options.chimera, this)
+                _chimera = new VueChimera(options.chimera, this);
 
-            this._chimeraWatcher = _chimera.watch()
-            _chimera.subscribe(this)
+            this._chimeraWatcher = _chimera.watch();
+            _chimera.subscribe(this);
 
-            options.computed = options.computed || {}
-            options.watch = options.watch || {}
+            options.computed = options.computed || {};
+            options.watch = options.watch || {};
             for (let key in _chimera._reactiveResources) {
-                options.computed['__' + key] = _chimera._reactiveResources[key]
+                options.computed['__' + key] = _chimera._reactiveResources[key];
                 options.watch['__' + key] = () => {
-                    debounce(config.debounce || DEFAULT_DEBOUNCE, true, _chimera.updateReactiveResource(key))
+                        debounce(config.debounce || DEFAULT_DEBOUNCE, true, _chimera.updateReactiveResource(key));
                 }
             }
 
-            this.$chimera = _chimera.resources
-            this._chimera = _chimera
+            // Nuxtjs prefetch
+            const NUXT = process.server && this.$ssrContext ? this.$ssrContext.nuxt : window.__NUXT__;
+            if (_chimera && NUXT && NUXT.chimera) {
+                if (this.$router) {
+                    let matched = this.$router.match(this.$router.currentRoute.fullPath);
+                    (matched ? matched.matched : []).forEach((m, i) => {
+                        let nuxtChimera = NUXT.chimera[i]
+                        if (nuxtChimera) {
+                            Object.keys(_chimera.resources).forEach(key => {
+                                let localResource = _chimera.resources[key]
+                                let ssrResource = nuxtChimera[key]
+                                if (localResource && ssrResource && ssrResource._data) {
+                                    _chimera.resources[key]._data = nuxtChimera[key]._data
+                                    _chimera.resources[key].ssrPrefetched = nuxtChimera[key].ssrPrefetched
+                                }
+                            })
+                        }
+                    });
+                }
+            }
+
+            this.$chimera = _chimera.resources;
+            this._chimera = _chimera;
         },
 
-        mounted() {
+        mounted () {
             if (this._chimera) {
-                this._chimera.updateReactiveResources()
+                this._chimera.updateReactiveResources();
                 for (let r in this._chimera._resources) {
                     let resource = this._chimera._resources[r];
                     if (resource.prefetch && !resource.ssrPrefetched)
@@ -46,20 +65,20 @@ export default function (config) {
             }
         },
 
-        beforeDestroy() {
+        beforeDestroy () {
             if (!this._chimera) {
-                return
+                return;
             }
 
-            this._chimera.unsubscribe(this)
+            this._chimera.unsubscribe(this);
 
             if (this._chimeraWatcher) {
-                this._chimeraWatcher()
-                delete this._chimeraWatcher
+                this._chimeraWatcher();
+                delete this._chimeraWatcher;
             }
 
-            this._chimera = null
+            this._chimera = null;
         }
 
-    }
+    };
 }

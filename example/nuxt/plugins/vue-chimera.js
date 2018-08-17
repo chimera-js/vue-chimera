@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueChimera from '../../../src/index'
+import VueChimera from '../../../dist/vue-chimera'
 import { NuxtPlugin } from '../../../src/NuxtPlugin'
 
 Vue.use(VueChimera, {
