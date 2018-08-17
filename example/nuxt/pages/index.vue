@@ -19,9 +19,6 @@
                         target="_blank"
                         class="button--grey">GitHub</a>
             </div>
-            <div>
-                <small>{{ title }}</small>
-            </div>
         </div>
     </section>
 </template>
@@ -38,19 +35,9 @@ export default {
         resources: {
             blogPost: {
                 url: '/posts',
-                prefetch: false
+                prefetch: true
             }
         }
-    },
-
-    data() {
-        return {
-            title: 'not fetched'
-        }
-    },
-
-    mounted () {
-        window.APP = this;
     }
 };
 </script>

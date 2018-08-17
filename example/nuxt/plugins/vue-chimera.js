@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueChimera from '../../../src/index'
-import Resource from '../../../src/Resource'
+import { NuxtPlugin } from '../../../src/NuxtPlugin'
 
 Vue.use(VueChimera, {
     axios: {
@@ -8,27 +8,4 @@ Vue.use(VueChimera, {
     }
 })
 
-export default ({app, beforeNuxtRender}, inject) => {
-
-    if (beforeNuxtRender) {
-        beforeNuxtRender((ssrContext) => {
-            let { Components } = ssrContext
-            ssrContext.chimera = {}
-            Components.forEach(component => {
-
-                const options = component.options
-                if (options.chimera) {
-                    ssrContext.chimera[component.cid] = {}
-                    for (let key in options.chimera.resources) {
-                        let resource = options.chimera.resources[key];
-                        resource = Resource.from(resource)
-                        // resource._data = [{title : 'sdfsdfsjkhfjh'}]
-                        // resource.ssrPrefetched = true;
-                        // ssrContext.chimera[component.cid][key] = resource;
-                    }
-                }
-
-            })
-        })
-    }
-}
+export default NuxtPlugin
