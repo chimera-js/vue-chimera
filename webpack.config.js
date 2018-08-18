@@ -15,6 +15,10 @@ module.exports = {
 
         libraryExport: 'default',
         libraryTarget: 'umd'
-    }
+    },
 
+    externals: {
+        axios: 'axios',
+        vue: 'vue'
+    }
 }
