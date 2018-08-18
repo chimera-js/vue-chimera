@@ -7,14 +7,14 @@ module.exports = {
         'vue-chimera-nuxt': './src/NuxtPlugin.js'
     },
 
-    target: 'node',
+    // target: 'node',
 
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].js',
 
-        libraryExport: 'default',
-        libraryTarget: 'umd'
+        libraryTarget: 'umd',
+        libraryExport: 'default'
     },
 
     // externals: {

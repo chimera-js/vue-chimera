@@ -36,7 +36,7 @@
     <div class="con">
         <h3>Simple GET</h3>
         <p>
-            <span v-if="!$chimera.simple.loading">{{ $chimera.simple.data.title }}</span>
+            <span v-if="!$chimera.simple.loading && $chimera.simple.data">{{ $chimera.simple.data.title }}</span>
             <span v-else>Loading...</span>
         </p>
     </div>
@@ -77,7 +77,8 @@
 </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.min.js"></script>
-<script src="https://unpkg.com/vue-chimera@0.3.4/dist/vue-chimera.js"></script>
+<!--<script src="https://unpkg.com/vue-chimera@0.3.4/dist/vue-chimera.js"></script>-->
+<script src="../../dist/vue-chimera.js"></script>
 <script>
     var app = new Vue({
         el: '#app',

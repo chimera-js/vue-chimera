@@ -250,7 +250,7 @@ function aVuejsMethod() {
 ```
 
 ## Examples
-[example](http://htmlpreview.github.io/?https://github.com/SasanFarrokh/vue-chimera/blob/master/example/index.html)
+[example](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/c8c39981/example/simple/index.html)
 
 ## Maintainer
 <p>
