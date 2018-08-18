@@ -2,11 +2,16 @@ const path = require('path')
 
 module.exports = {
 
-    entry: './src/index.js',
+    entry: {
+        'vue-chimera': './src/index.js',
+        'vue-chimera-nuxt': './src/NuxtPlugin.js'
+    },
+
+    target: 'node',
 
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'vue-chimera.js',
+        filename: '[name].js',
 
         libraryExport: 'default',
         libraryTarget: 'umd'
