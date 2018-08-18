@@ -17,8 +17,8 @@ module.exports = {
         libraryTarget: 'umd'
     },
 
-    externals: {
-        axios: 'axios',
-        vue: 'vue'
-    }
+    // externals: {
+    //     axios: 'axios',
+    //     vue: 'vue'
+    // }
 }
