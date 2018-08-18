@@ -9,6 +9,7 @@
                 <small v-if="$chimera.blogPost.loading">loading...</small>
                 <span v-if="$chimera.blogPost.data">{{ $chimera.blogPost.data[0].title }}</span>
             </h2>
+            <small v-if="$chimera.blogPost.ssrPrefetched">SSR Prefetched!</small>
             <div class="links">
                 <a
                         href="https://nuxtjs.org/"

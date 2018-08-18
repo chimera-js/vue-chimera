@@ -30,7 +30,7 @@ export default function (config) {
             }
 
             // Nuxtjs prefetch
-            const NUXT = process.server && this.$ssrContext ? this.$ssrContext.nuxt : window.__NUXT__;
+            const NUXT = process.server && this.$ssrContext ? this.$ssrContext.nuxt : (typeof window !== 'undefined' ? window.__NUXT__ : null);
             if (_chimera && NUXT && NUXT.chimera) {
                 if (this.$router) {
                     let matched = this.$router.match(this.$router.currentRoute.fullPath);

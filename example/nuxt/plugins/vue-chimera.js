@@ -1,6 +1,6 @@
 import Vue from 'vue'
-import VueChimera from 'vue-chimera'
-import { NuxtPlugin } from 'vue-chimera/src/NuxtPlugin'
+import VueChimera from '../../../dist/vue-chimera'
+import NuxtPlugin from '../../../dist/vue-chimera-nuxt'
 
 Vue.use(VueChimera, {
     axios: {

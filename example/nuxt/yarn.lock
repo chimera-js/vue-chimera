@@ -5761,9 +5761,9 @@ vm-browserify@0.0.4:
   dependencies:
     indexof "0.0.1"
 
-vue-chimera@^0.3.0:
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/vue-chimera/-/vue-chimera-0.3.0.tgz#45bb6c463ec9b03d4e76b3f18c1fa8148918728e"
+vue-chimera@0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/vue-chimera/-/vue-chimera-0.3.1.tgz#d6ad970d74de11c3193d8f5d6c1ab03cb988f69a"
   dependencies:
     axios "^0.18.0"
     throttle-debounce "^2.0.1"
