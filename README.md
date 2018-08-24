@@ -21,7 +21,7 @@ $ bower install vue-chimera
 
 Using cdn:
 ```html
-<script src="https://unpkg.com/vue-chimera@0.3.1/dist/vue-chimera.js"></script>
+<script src="https://unpkg.com/vue-chimera@latest/dist/vue-chimera.js"></script>
 ```
 
 ## Getting started
@@ -247,6 +247,19 @@ function aVuejsMethod() {
   })
 }
 
+```
+
+## Using with Nuxt.js
+You can use Vue-Chimera with nuxtjs to use it's SSR features. You can easily prefetch the resources that has been marked with `prefetch: true` to prefetch the data.
+Use this snippet of code in your nuxtjs plugin folder:
+```javascript
+import Vue from 'vue'
+import VueChimera  from 'vue-chimera'
+import { NuxtPlugin } from 'vue-chimera'
+ 
+Vue.use(VueChimera, { /* Pass options */ })
+ 
+export default NuxtPlugin
 ```
 
 ## Examples

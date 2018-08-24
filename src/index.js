@@ -105,4 +105,6 @@ if (GlobalVue) {
     GlobalVue.use(VueChimera.install)
 }
 
+export { default as NuxtPlugin } from './NuxtPlugin'
+
 export default VueChimera.install
