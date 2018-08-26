@@ -263,7 +263,7 @@ export default NuxtPlugin
 ```
 
 ## Examples
-[example](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/c8c39981/example/simple/index.html)
+[example](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/e1bd4faf/example/simple/index.html)
 
 ## Maintainer
 <p>
