@@ -45,7 +45,7 @@
         <h3>Simple GET with auto refresh interval</h3>
         <p>
             Current UTC time:
-            <span style="font-family: arial;" v-if="$chimera.time.data">{{ new Date($chimera.time.data.currentFileTime / 10000).toTimeString() }}</span>
+            <span style="font-family: arial;" v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
             <small v-if="$chimera.time.loading">Refreshing...</small>
         </p>
     </div>
@@ -55,7 +55,7 @@
         Post id: <input type="number" v-model="postNumber">
         <p>
             <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
-            <small v-else>Loading...</small>
+            <small v-if="$chimera.reactive.loading">Loading...</small>
         </p>
     </div>
 
@@ -89,7 +89,7 @@
                 simple: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
 
                 time: {
-                    url: 'http://worldclockapi.com/api/json/utc/now',
+                    url: 'https://reqres.in/api/users',
                     interval: 2000,
                 },
 
