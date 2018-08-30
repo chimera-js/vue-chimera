@@ -1,33 +1,31 @@
 export default class NullCache {
+  constructor () {
+  }
 
-    constructor() {
-    }
+  setItem (key, value, expiration) {
 
-    setItem(key, value, expiration) {
+  }
 
-    }
+  getItem (key) {
+    return null
+  }
 
-    getItem(key) {
-        return null
-    }
+  removeItem (key) {
+  }
 
-    removeItem(key) {
-    }
+  keys () {
+    return []
+  }
 
-    keys() {
-        return []
-    }
+  all () {
+    return {}
+  }
 
-    all() {
-        return {}
-    }
+  length () {
+    return 0
+  }
 
-    length() {
-        return 0
-    }
+  clearCache () {
 
-    clearCache() {
-
-    }
-
+  }
 }

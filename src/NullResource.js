@@ -1,28 +1,27 @@
 import Resource from './Resource'
 
 export default class NullResource extends Resource {
+  reload (force) {
+    return null
+  }
 
-    reload(force) {
-        return null
-    }
+  get loading () {
+    return false
+  }
 
-    get loading() {
-        return false
-    }
+  get status () {
+    return 0
+  }
 
-    get status() {
-        return 0
-    }
+  get data () {
+    return null
+  }
 
-    get data() {
-        return null
-    }
+  get error () {
+    return null
+  }
 
-    get error() {
-        return null
-    }
-
-    get lastLoaded() {
-        return null
-    }
+  get lastLoaded () {
+    return null
+  }
 }

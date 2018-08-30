@@ -1,7 +1,7 @@
 import Vue from 'vue'
-import mixin from './mixin';
-import Resource from './Resource';
-import { createAxios } from './utils';
+import mixin from './mixin'
+import Resource from './Resource'
+import { createAxios } from './utils'
 
 Vue.config.silent = true
 Vue.config.productionTip = false
@@ -9,11 +9,18 @@ Vue.config.devtools = false
 
 const plugin = {
 
-    install (Vue, options = {}) {
-        Resource.cache = options.cache || 'no-cache'
-        Resource.axios = createAxios(options.axios)
-        Vue.mixin(mixin(options))
-    }
+  options: {
+    axios: null,
+    cache: 'no-cache',
+    debounce: 200
+  },
+
+  install (Vue, options = {}) {
+    Object.assign(this.options, options)
+    Resource.cache = this.options.cache
+    Resource.axios = createAxios(this.options.axios)
+    Vue.mixin(mixin(this.options))
+  }
 
 }
 
@@ -21,8 +28,7 @@ const plugin = {
 let GlobalVue = null
 if (typeof window !== 'undefined') {
   GlobalVue = window.Vue
-}
-else if (typeof global !== 'undefined') {
+} else if (typeof global !== 'undefined') {
   GlobalVue = global.Vue
 }
 
