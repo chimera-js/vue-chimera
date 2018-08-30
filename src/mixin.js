@@ -1,4 +1,4 @@
-import { VueChimera } from './index';
+import VueChimera from './VueChimera';
 import { isPlainObject } from './utils';
 import { debounce } from 'throttle-debounce';
 
