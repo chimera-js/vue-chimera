@@ -1,9 +1,9 @@
-import Vue from 'vue/types/index'
+import Vue from 'vue'
 import Resource from './Resource'
 import NullResource from './NullResource'
 import { remove } from './utils'
 
-export class VueChimera {
+export default class VueChimera {
   constructor (options = {}, context) {
     this._vm = null
 
