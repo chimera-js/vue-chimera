@@ -8,4 +8,7 @@ Vue.use(VueChimera, {
     }
 })
 
-export default NuxtPlugin
+export default NuxtPlugin({
+  prefetch: true,
+  prefetchTimeout: 1000
+})
