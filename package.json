@@ -4,6 +4,7 @@
   "description": "VueJS RESTful client with reactive resources and features",
   "main": "src/index.js",
   "scripts": {
+    "build": "bili --format cjs,es,umd,umd-min",
     "lint": "eslint src --ext .js",
     "test": "yarn test:unit",
     "test:unit": "karma start config/karma.unit.conf.js"
@@ -39,6 +40,7 @@
     "babel": "^6.23.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.5",
+    "bili": "^3.1.2",
     "chai": "^4.1.2",
     "eslint": "^5.4.0",
     "eslint-config-standard": "^12.0.0",
