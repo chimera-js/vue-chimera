@@ -9,7 +9,7 @@ jobs:
       # specify the version you desire here
       - image: circleci/node:latest
 
-    working_directory: ~/repo
+    working_directory: ~/vue-chimera
 
     steps:
       - checkout
@@ -29,6 +29,7 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
 
       # run tests!
+      - run: yarn build
       - run: yarn test
-
+      - run: yarn codecov
 
