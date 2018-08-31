@@ -259,7 +259,10 @@ import { NuxtPlugin } from 'vue-chimera'
  
 Vue.use(VueChimera, { /* Pass options */ })
  
-export default NuxtPlugin
+export default NuxtPlugin({
+  prefetch: true, // Enables server side prefetch on resources with `prefetch: true`
+  prefetchTimeout: 5000 // Server side timeout for prefetch
+})
 ```
 
 ## Examples

@@ -60,9 +60,7 @@ class Resource {
       headers: options.headers || {}
     }
 
-    this.requestConfig[this.requestConfig.method === 'GET'
-      ? 'params'
-      : 'data'] = options.params
+    this.requestConfig[this.requestConfig.method === 'GET' ? 'params' : 'data'] = options.params
 
     this.client = options.client || axios
 

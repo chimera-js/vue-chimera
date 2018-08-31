@@ -1,44 +1,60 @@
 import Resource from './Resource'
 
-export default function ({ beforeNuxtRender, isDev }) {
-  if (!beforeNuxtRender) { return }
+export default function (options) {
+  const { prefetch, prefetchTimeout } = Object.assign({
+    prefetch: true,
+    prefetchTimeout: 5000
+  }, options)
 
-  async function prefetchAsyncData ({ Components, nuxtState }) {
-    nuxtState.chimera = nuxtState.chimera || {}
+  return function ({ beforeNuxtRender, isDev }) {
+    if (!beforeNuxtRender) { return }
 
-    for (let i = 0, len = Components.length; i < len; i++) {
-      let component = Components[i]
-      const options = component.options
+    async function prefetchAsyncData ({ Components, nuxtState }) {
+      nuxtState.chimera = nuxtState.chimera || {}
 
-      if (!options.chimera) { continue }
+      for (let i = 0, len = Components.length; i < len; i++) {
+        let component = Components[i]
+        const options = component.options
 
-      let nuxtChimera = {}
-      for (let key in options.chimera.resources) {
-        if (key && key.charAt(0) === '$') { continue }
+        if (!options.chimera) { continue }
 
-        let resource = options.chimera.resources[key]
+        let nuxtChimera = {}
+        for (let key in options.chimera.resources) {
+          if (key && key.charAt(0) === '$') { continue }
 
-        if (resource.requestConfig && !resource.requestConfig.url) {
-          continue
+          let resource = options.chimera.resources[key]
+
+          if (resource.requestConfig && !resource.requestConfig.url) {
+            continue
+          }
+
+          if (resource && typeof resource !== 'function' && resource.prefetch) {
+            resource = resource && resource._data ? resource : Resource.from(
+              resource)
+            try {
+              if (isDev) {
+                console.log('  Prefetching: ' + resource.requestConfig.url)
+              }
+              let response = await resource.execute()
+              resource._data = response.data
+            } catch (e) {}
+            resource.ssrPrefetched = true
+            options.chimera.resources[key] = nuxtChimera[key] = resource
+          }
         }
-
-        if (resource && typeof resource !== 'function' && resource.prefetch) {
-          resource = resource && resource._data ? resource : Resource.from(
-            resource)
-          try {
-            if (isDev) {
-              console.log('  Prefetching: ' + resource.requestConfig.url)
-            }
-            let response = await resource.execute()
-            resource._data = response.data
-          } catch (e) {}
-          resource.ssrPrefetched = true
-          options.chimera.resources[key] = nuxtChimera[key] = resource
-        }
+        nuxtState.chimera[i] = nuxtChimera
       }
-      nuxtState.chimera[i] = nuxtChimera
+    }
+
+    if (prefetch) {
+      beforeNuxtRender((...args) => {
+        return new Promise((resolve, reject) => {
+          prefetchAsyncData(...args).then(resolve).catch(reject)
+          setTimeout(reject, prefetchTimeout, new Error('  SSR Prefetch Timeout.'))
+        }).catch(err => {
+          if (isDev) console.error(err.message)
+        })
+      })
     }
   }
-
-  beforeNuxtRender(prefetchAsyncData)
 }
