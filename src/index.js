@@ -14,7 +14,6 @@ const plugin = {
     cache: 'no-cache',
     debounce: 200,
     prefetch: 'GET', // false, true, '%METHOD%'
-
   },
 
   install (Vue, options = {}) {
