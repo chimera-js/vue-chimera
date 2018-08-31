@@ -189,6 +189,7 @@ let app = new Vue({
 | execute(force)  | Promise   | Same as Reload
 | on(event, handler)|           | Sets an event listener. [Events](#events)
 
+
 #### Chimera instance properties
 ```javascript
 ...
@@ -237,17 +238,39 @@ new Vue({
 ```
 
 #### Events
+
 ```javascript
 
 import { EVENT_SUCCESS, EVENT_ERROR, EVENT_LOADING } from 'vue-chimera/src/Resource.js'
 
-function aVuejsMethod() {
-  this.$chimera.users.on(EVENT_ERROR, function(err) {
-    alert('Oops error occured! status: ' + err.status)
-  })
-}
+new Vue({
+
+    chimera: {
+      resources: {
+        users: {
+          url: '/users',
+          on: {
+            [EVENT_ERROR]: (resource) => {
+              // Handles the error
+            }
+          }
+        }
+      }
+    },
+    
+    methods: {
+      // Or listen programmatically
+      listenToError() {
+        this.$chimera.users.on(EVENT_ERROR, function(err) {
+          alert('Oops error occured! status: ' + err.status)
+        })
+      }
+    }
+    
+})
 
 ```
+
 
 ## Using with Nuxt.js
 You can use Vue-Chimera with nuxtjs to use it's SSR features. You can easily prefetch the resources that has been marked with `prefetch: true` to prefetch the data.
