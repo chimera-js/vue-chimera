@@ -12,7 +12,9 @@ const plugin = {
   options: {
     axios: null,
     cache: 'no-cache',
-    debounce: 200
+    debounce: 200,
+    prefetch: 'GET', // false, true, '%METHOD%'
+
   },
 
   install (Vue, options = {}) {

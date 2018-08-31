@@ -8,8 +8,10 @@ export default function (config) {
       const options = this.$options
       let _chimera
 
+      // Stop if instance doesn't have chimera or already initialized
       if (!options.chimera || options._chimera) return
-      else if (options.chimera instanceof VueChimera) _chimera = options.chimera
+
+      if (options.chimera instanceof VueChimera) _chimera = options.chimera
       else if (isPlainObject(options.chimera)) _chimera = new VueChimera(options.chimera, this)
 
       this._chimeraWatcher = _chimera.watch()
@@ -29,8 +31,7 @@ export default function (config) {
         : (typeof window !== 'undefined' ? window.__NUXT__ : null)
       if (_chimera && NUXT && NUXT.chimera) {
         if (this.$router) {
-          let matched = this.$router.match(
-            this.$router.currentRoute.fullPath);
+          let matched = this.$router.match(this.$router.currentRoute.fullPath);
           (matched ? matched.matched : []).forEach((m, i) => {
             let nuxtChimera = NUXT.chimera[i]
             if (nuxtChimera) {

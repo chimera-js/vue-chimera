@@ -18,7 +18,7 @@ export default class VueChimera {
 
       if (typeof r === 'function') {
         resources[key] = new NullResource()
-        this._reactiveResources[key] = r.bind(context)
+        this._reactiveResources[key] = r.bind(this._context)
       } else {
         resources[key] = Resource.from(r)
       }

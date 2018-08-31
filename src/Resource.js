@@ -37,6 +37,11 @@ class Resource {
         resource.setResponseTransformer(value.transformer.response)
         resource.setErrorTransformer(value.transformer.error)
       }
+      if (typeof value.on === 'object' && value.on) {
+        for (let key in value.on) {
+          resource.on(key, value.on[key])
+        }
+      }
       return resource
     }
   }
