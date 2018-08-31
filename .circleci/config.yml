@@ -9,7 +9,7 @@ jobs:
       # specify the version you desire here
       - image: circleci/node:10-browsers
 
-    working_directory: ~/vue-chimera
+    working_directory: ~/repo
 
     steps:
       - checkout
@@ -31,5 +31,5 @@ jobs:
       # run tests!
       - run: yarn build
       - run: yarn test
-      - run: yarn codecov
+      - run: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/repo/.npmrc && yarn publish
 
