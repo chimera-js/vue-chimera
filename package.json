@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "lint": "eslint src --ext .js",
+    "test": "yarn test:unit",
     "test:unit": "karma start config/karma.unit.conf.js"
   },
   "repository": {
