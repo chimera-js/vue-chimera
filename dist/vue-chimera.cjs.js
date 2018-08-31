@@ -705,7 +705,7 @@ function mixin (config) {
       } // Nuxtjs prefetch
 
 
-      var NUXT = process.server && this.$ssrContext ? this.$ssrContext.nuxt : typeof window !== 'undefined' ? window.__NUXT__ : null;
+      var NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext ? this.$ssrContext.nuxt : typeof window !== 'undefined' ? window.__NUXT__ : null;
 
       if (_chimera && NUXT && NUXT.chimera) {
         if (this.$router) {

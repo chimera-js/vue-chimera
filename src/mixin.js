@@ -26,7 +26,7 @@ export default function (config) {
       }
 
       // Nuxtjs prefetch
-      const NUXT = process.server && this.$ssrContext
+      const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
         ? this.$ssrContext.nuxt
         : (typeof window !== 'undefined' ? window.__NUXT__ : null)
       if (_chimera && NUXT && NUXT.chimera) {
