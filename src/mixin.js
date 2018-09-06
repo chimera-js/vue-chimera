@@ -46,6 +46,7 @@ export default function (config) {
               })
             }
           })
+          if (process.client) delete NUXT.chimera
         }
       }
 
