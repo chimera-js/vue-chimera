@@ -37,7 +37,9 @@ export default function (options) {
             options.chimera.resources[key] = nuxtChimera[key] = resource
           }
         }
-        nuxtState.chimera[i] = nuxtChimera
+        if (Object.keys(nuxtChimera).length) {
+          nuxtState.chimera[i] = nuxtChimera
+        }
       }
     }
 
