@@ -2,6 +2,7 @@ import Vue from 'vue'
 import mixin from './mixin'
 import Resource from './Resource'
 import { createAxios } from './utils'
+import NuxtPlugin from './NuxtPlugin'
 
 Vue.config.silent = true
 Vue.config.productionTip = false
@@ -21,7 +22,9 @@ const plugin = {
     Resource.cache = this.options.cache
     Resource.axios = createAxios(this.options.axios)
     Vue.mixin(mixin(this.options))
-  }
+  },
+
+  NuxtPlugin
 
 }
 
@@ -36,7 +39,5 @@ if (typeof window !== 'undefined') {
 if (GlobalVue) {
   GlobalVue.use(plugin)
 }
-
-export { default as NuxtPlugin } from './NuxtPlugin'
 
 export default plugin

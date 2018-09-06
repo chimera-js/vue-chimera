@@ -24,17 +24,12 @@ export default function (options) {
 
           let resource = options.chimera.resources[key]
 
-          if (resource.requestConfig && !resource.requestConfig.url) {
-            continue
-          }
-
-          if (resource && typeof resource !== 'function' && resource.prefetch) {
-            resource = resource && resource._data ? resource : Resource.from(
-              resource)
+          if (resource && typeof resource !== 'function') {
+            resource = resource && resource._data ? resource : Resource.from(resource)
+            if (!resource.prefetch) continue
             try {
-              if (isDev) {
-                console.log('  Prefetching: ' + resource.requestConfig.url)
-              }
+              isDev && console.log('  Prefetching: ' + resource.requestConfig.url)
+
               let response = await resource.execute()
               resource._data = response.data
             } catch (e) {}

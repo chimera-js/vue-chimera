@@ -9,6 +9,8 @@ export const EVENT_LOADING = 'loading'
 
 class Resource {
   static from (value) {
+    if (value == null) throw new Error('Cannot create resource from `null`')
+
     if (value instanceof Resource) { return value }
 
     if (typeof value === 'string') { return new Resource(value, 'GET') }

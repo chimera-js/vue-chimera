@@ -11,7 +11,7 @@ export default class VueChimera {
     this._context = context
     this._reactiveResources = {}
 
-    const resources = options.resources
+    const resources = Object.assign({}, options.resources);
 
     for (let key in resources) {
       let r = resources[key]
@@ -73,7 +73,7 @@ export default class VueChimera {
   }
 
   updateReactiveResource (key) {
-    let r = this._resources[key] = Resource.from(this._reactiveResources[key](), this._axios)
+    let r = this._resources[key] = Resource.from(this._reactiveResources[key]())
     if (r.prefetch) r.reload()
   }
 

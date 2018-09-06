@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (factory((global.vueChimera = {})));
-}(this, (function (exports) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+  typeof define === 'function' && define.amd ? define(factory) :
+  (global.vueChimera = factory());
+}(this, (function () { 'use strict';
 
   /*!
    * Vue.js v2.5.17
@@ -9575,6 +9575,8 @@
     _createClass(Resource, null, [{
       key: "from",
       value: function from(value) {
+        if (value == null) throw new Error('Cannot create resource from `null`');
+
         if (value instanceof Resource) {
           return value;
         }
@@ -9898,7 +9900,7 @@
       this._listeners = [];
       this._context = context;
       this._reactiveResources = {};
-      var resources = options.resources;
+      var resources = Object.assign({}, options.resources);
 
       for (var key in resources) {
         var r = resources[key];
@@ -9989,7 +9991,7 @@
     }, {
       key: "updateReactiveResource",
       value: function updateReactiveResource(key) {
-        var r = this._resources[key] = Resource.from(this._reactiveResources[key](), this._axios);
+        var r = this._resources[key] = Resource.from(this._reactiveResources[key]());
         if (r.prefetch) r.reload();
       }
     }, {
@@ -10212,149 +10214,166 @@
     };
   }
 
-  function NuxtPlugin (_ref) {
-    var beforeNuxtRender = _ref.beforeNuxtRender,
-        isDev = _ref.isDev;
+  function NuxtPlugin (options) {
+    var _Object$assign = Object.assign({
+      prefetch: true,
+      prefetchTimeout: 5000
+    }, options),
+        prefetch = _Object$assign.prefetch,
+        prefetchTimeout = _Object$assign.prefetchTimeout;
 
-    if (!beforeNuxtRender) {
-      return;
-    }
+    return function (_ref) {
+      var beforeNuxtRender = _ref.beforeNuxtRender,
+          isDev = _ref.isDev;
 
-    function prefetchAsyncData(_ref2) {
-      return new Promise(function ($return, $error) {
-        var Components, nuxtState, i, len, component, options, nuxtChimera, resource, response;
-        Components = _ref2.Components, nuxtState = _ref2.nuxtState;
-        nuxtState.chimera = nuxtState.chimera || {};
-        i = 0, len = Components.length;
-        var $Loop_2_trampoline;
+      if (!beforeNuxtRender) {
+        return;
+      }
 
-        function $Loop_2_step() {
-          i++;
-          return $Loop_2;
-        }
+      function prefetchAsyncData(_ref2) {
+        return new Promise(function ($return, $error) {
+          var Components, nuxtState, i, len, component, _options, nuxtChimera, resource, response;
 
-        function $Loop_2() {
-          if (i < len) {
-            component = Components[i];
-            options = component.options;
+          Components = _ref2.Components, nuxtState = _ref2.nuxtState;
+          nuxtState.chimera = nuxtState.chimera || {};
+          i = 0, len = Components.length;
+          var $Loop_2_trampoline;
 
-            if (!options.chimera) {
-              return $Loop_2_step;
-            }
+          function $Loop_2_step() {
+            i++;
+            return $Loop_2;
+          }
 
-            nuxtChimera = {};
-            var $idx_4,
-                $in_5 = [];
+          function $Loop_2() {
+            if (i < len) {
+              component = Components[i];
+              _options = component.options;
 
-            for ($idx_4 in options.chimera.resources) $in_5.push($idx_4);
+              if (!_options.chimera) {
+                return $Loop_2_step;
+              }
 
-            var key;
-            var $Loop_6_trampoline;
+              nuxtChimera = {};
+              var $idx_4,
+                  $in_5 = [];
 
-            function $Loop_6() {
-              if ($in_5.length) {
-                key = $in_5.shift();
+              for ($idx_4 in _options.chimera.resources) $in_5.push($idx_4);
 
-                if (key && key.charAt(0) === '$') {
-                  return $Loop_2_step;
-                }
+              var key;
+              var $Loop_6_trampoline;
 
-                resource = options.chimera.resources[key];
+              function $Loop_6() {
+                if ($in_5.length) {
+                  key = $in_5.shift();
 
-                if (resource.requestConfig && !resource.requestConfig.url) {
-                  return $Loop_2_step;
-                }
+                  if (key && key.charAt(0) === '$') {
+                    return $Loop_2_step;
+                  }
 
-                if (resource && typeof resource !== 'function' && resource.prefetch) {
-                  resource = resource && resource._data ? resource : Resource.from(resource);
+                  resource = _options.chimera.resources[key];
 
-                  var $Try_1_Post = function () {
-                    try {
-                      resource.ssrPrefetched = true;
-                      options.chimera.resources[key] = nuxtChimera[key] = resource;
-                      return $If_8.call(this);
-                    } catch ($boundEx) {
-                      return $error($boundEx);
-                    }
-                  }.bind(this);
+                  if (resource && typeof resource !== 'function') {
+                    resource = resource && resource._data ? resource : Resource.from(resource);
+                    if (!resource.prefetch) return $Loop_2_step;
 
-                  var $Try_1_Catch = function (e) {
-                    try {
-                      return $Try_1_Post();
-                    } catch ($boundEx) {
-                      return $error($boundEx);
-                    }
-                  };
-
-                  try {
-                    if (isDev) {
-                      console.log('  Prefetching: ' + resource.requestConfig.url);
-                    }
-
-                    return Promise.resolve(resource.execute()).then(function ($await_9) {
+                    var $Try_1_Post = function () {
                       try {
-                        response = $await_9;
-                        resource._data = response.data;
+                        resource.ssrPrefetched = true;
+                        _options.chimera.resources[key] = nuxtChimera[key] = resource;
+                        return $If_8.call(this);
+                      } catch ($boundEx) {
+                        return $error($boundEx);
+                      }
+                    }.bind(this);
+
+                    var $Try_1_Catch = function (e) {
+                      try {
                         return $Try_1_Post();
                       } catch ($boundEx) {
-                        return $Try_1_Catch($boundEx);
+                        return $error($boundEx);
                       }
-                    }, $Try_1_Catch);
-                  } catch (e) {
-                    $Try_1_Catch(e);
+                    };
+
+                    try {
+                      isDev && console.log('  Prefetching: ' + resource.requestConfig.url);
+                      return Promise.resolve(resource.execute()).then(function ($await_9) {
+                        try {
+                          response = $await_9;
+                          resource._data = response.data;
+                          return $Try_1_Post();
+                        } catch ($boundEx) {
+                          return $Try_1_Catch($boundEx);
+                        }
+                      }, $Try_1_Catch);
+                    } catch (e) {
+                      $Try_1_Catch(e);
+                    }
+                  }
+
+                  function $If_8() {
+                    return $Loop_6;
+                  }
+
+                  return $If_8.call(this);
+                } else return [1];
+              }
+
+              return ($Loop_6_trampoline = function (q) {
+                while (q) {
+                  if (q.then) return q.then($Loop_6_trampoline, $error);
+
+                  try {
+                    if (q.pop) {
+                      if (q.length) return q.pop() ? $Loop_6_exit.call(this) : q;else q = $Loop_6;
+                    } else q = q.call(this);
+                  } catch (_exception) {
+                    return $error(_exception);
                   }
                 }
+              }.bind(this))($Loop_6);
 
-                function $If_8() {
-                  return $Loop_6;
-                }
-
-                return $If_8.call(this);
-              } else return [1];
-            }
-
-            return ($Loop_6_trampoline = function (q) {
-              while (q) {
-                if (q.then) return q.then($Loop_6_trampoline, $error);
-
-                try {
-                  if (q.pop) {
-                    if (q.length) return q.pop() ? $Loop_6_exit.call(this) : q;else q = $Loop_6;
-                  } else q = q.call(this);
-                } catch (_exception) {
-                  return $error(_exception);
-                }
+              function $Loop_6_exit() {
+                nuxtState.chimera[i] = nuxtChimera;
+                return $Loop_2_step;
               }
-            }.bind(this))($Loop_6);
-
-            function $Loop_6_exit() {
-              nuxtState.chimera[i] = nuxtChimera;
-              return $Loop_2_step;
-            }
-          } else return [1];
-        }
-
-        return ($Loop_2_trampoline = function (q) {
-          while (q) {
-            if (q.then) return void q.then($Loop_2_trampoline, $error);
-
-            try {
-              if (q.pop) {
-                if (q.length) return q.pop() ? $Loop_2_exit.call(this) : q;else q = $Loop_2_step;
-              } else q = q.call(this);
-            } catch (_exception) {
-              return $error(_exception);
-            }
+            } else return [1];
           }
-        }.bind(this))($Loop_2);
 
-        function $Loop_2_exit() {
-          return $return();
-        }
-      });
-    }
+          return ($Loop_2_trampoline = function (q) {
+            while (q) {
+              if (q.then) return void q.then($Loop_2_trampoline, $error);
 
-    beforeNuxtRender(prefetchAsyncData);
+              try {
+                if (q.pop) {
+                  if (q.length) return q.pop() ? $Loop_2_exit.call(this) : q;else q = $Loop_2_step;
+                } else q = q.call(this);
+              } catch (_exception) {
+                return $error(_exception);
+              }
+            }
+          }.bind(this))($Loop_2);
+
+          function $Loop_2_exit() {
+            return $return();
+          }
+        });
+      }
+
+      if (prefetch) {
+        beforeNuxtRender(function () {
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+
+          return new Promise(function (resolve, reject) {
+            prefetchAsyncData.apply(void 0, args).then(resolve).catch(reject);
+            setTimeout(reject, prefetchTimeout, new Error('  SSR Prefetch Timeout.'));
+          }).catch(function (err) {
+            if (isDev) console.error(err.message);
+          });
+        });
+      }
+    };
   }
 
   Vue.config.silent = true;
@@ -10374,9 +10393,10 @@
       Resource.cache = this.options.cache;
       Resource.axios = createAxios(this.options.axios);
       Vue$$1.mixin(mixin(this.options));
-    }
-  }; // Auto-install
+    },
+    NuxtPlugin: NuxtPlugin // Auto-install
 
+  };
   var GlobalVue = null;
 
   if (typeof window !== 'undefined') {
@@ -10389,9 +10409,6 @@
     GlobalVue.use(plugin);
   }
 
-  exports.default = plugin;
-  exports.NuxtPlugin = NuxtPlugin;
-
-  Object.defineProperty(exports, '__esModule', { value: true });
+  return plugin;
 
 })));
