@@ -1,14 +1,13 @@
-import axios from 'axios'
-import { isPlainObject } from './utils'
-import LocalStorageCache from './LocalStorageCache'
-import NullCache from './NullCache'
-import { debounce } from 'throttle-debounce'
+import { isPlainObject, createAxios } from './utils'
+import LocalStorageCache from './cache/LocalStorageCache'
+import NullCache from './cache/NullCache'
+import pDebounce from 'p-debounce'
 
 export const EVENT_SUCCESS = 'success'
 export const EVENT_ERROR = 'error'
 export const EVENT_LOADING = 'loading'
 
-class Resource {
+export default class Resource {
   static from (value) {
     if (value == null) throw new Error('Cannot create resource from `null`')
 
@@ -17,39 +16,13 @@ class Resource {
     if (typeof value === 'string') { return new Resource(value, 'GET') }
 
     if (isPlainObject(value)) {
-      let axiosClient = Resource.axios
-
-      if (value.axios) {
-        axiosClient = isPlainObject(value.axios)
-          ? axios.create(value.axios)
-          : value.axios
-      }
-
-      let resource = new Resource(value.url, value.method, {
-        params: value.params,
-        headers: value.headers,
-        client: axiosClient,
-        cache: value.cache,
-        prefetch: value.prefetch
-      })
-      if (value.interval) { resource.setInterval(value.interval) }
-      if (typeof value.transformer === 'function') {
-        resource.setTransformer(value.transformer)
-      }
-      if (typeof value.transformer === 'object') {
-        resource.setResponseTransformer(value.transformer.response)
-        resource.setErrorTransformer(value.transformer.error)
-      }
-      if (typeof value.on === 'object' && value.on) {
-        for (let key in value.on) {
-          resource.on(key, value.on[key])
-        }
-      }
-      return resource
+      const { url, method, ...options } = value
+      return new Resource(url, method, options)
     }
   }
 
   constructor (url, method, options) {
+    let baseConfig = this.getConfig()
     options = options || {}
     method = method ? method.toLowerCase() : 'get'
     if (method &&
@@ -65,7 +38,7 @@ class Resource {
 
     this.requestConfig[this.requestConfig.method === 'GET' ? 'params' : 'data'] = options.params
 
-    this.client = options.client || axios
+    this.axios = createAxios(options.axios || baseConfig.axios)
 
     this._loading = false
     this._status = null
@@ -73,17 +46,40 @@ class Resource {
     this._error = null
     this._lastLoaded = null
     this._eventListeners = {}
-    this.prefetch = options.prefetch !== undefined
-      ? Boolean(options.prefetch)
-      : true
+    this.prefetch = options.prefetch !== undefined ? options.prefetch : baseConfig.prefetch
+    this.prefetch = typeof this.prefetch === 'string' ? this.prefetch.toLowerCase() === method : Boolean(this.prefetch)
     this.ssrPrefetched = false
 
-    this.cache = this.getCache(options)
+    this.cache = this.getCache(options.cache || baseConfig.cache)
 
-    this.errorTransformer = (err) => err
-    this.responseTransformer = (res) => res
-    this.fetchDebounced = debounce(100, true, this.fetch.bind(this))
+    // Set Transformers
+    if (options.transformer) {
+      if (typeof options.transformer === 'function') {
+        this.setTransformer(options.transformer)
+      } else if (typeof options.transformer === 'object') {
+        this.setResponseTransformer(options.transformer.response)
+        this.setErrorTransformer(options.transformer.error)
+      }
+    } else {
+      this.errorTransformer = (err) => err
+      this.responseTransformer = (res) => res
+    }
+
+    // Set interval.
+    if (options.interval) {
+      this.setInterval(options.interval)
+    }
+
+    if (typeof options.on === 'object' && options.on) {
+      for (let key in options.on) {
+        this.on(key, options.on[key])
+      }
+    }
+
+    this.fetchDebounced = pDebounce(this.fetch.bind(this), baseConfig.debounce || 80, { leading: true })
   }
+
+  getConfig () { return Resource.config || {} }
 
   setResponseTransformer (transformer) {
     this.responseTransformer = transformer
@@ -140,7 +136,7 @@ class Resource {
 
       this._loading = true
       this.emit(EVENT_LOADING)
-      this.client.request(this.requestConfig).then(res => {
+      this.axios.request(this.requestConfig).then(res => {
         setByResponse(res)
         this.setCache(res)
         this.emit(EVENT_SUCCESS)
@@ -161,7 +157,7 @@ class Resource {
   }
 
   reload (force) {
-    this.fetchDebounced(force)
+    return this.fetchDebounced(force)
   }
 
   execute () {
@@ -172,14 +168,13 @@ class Resource {
     return this.fetchDebounced(true)
   }
 
-  getCache (options) {
-    let key = options.cache || Resource.cache
-    let caches = {
+  getCache (cache) {
+    const caches = {
       'no-cache': () => new NullCache(),
-      'localStorage': () => new LocalStorageCache(options.cacheExpiration ||
-        10000)
+      'localStorage': () => new LocalStorageCache(this.getConfig().cacheExpiration || 10000)
     }
-    return caches[key] ? caches[key]() : null
+    cache = cache || 'no-cache'
+    return caches[cache] ? caches[cache]() : null
   }
 
   getCacheKey () {
@@ -215,5 +210,3 @@ class Resource {
     return this._lastLoaded
   }
 }
-
-export default Resource

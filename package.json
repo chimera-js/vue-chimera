@@ -33,13 +33,14 @@
   "homepage": "https://github.com/sasanfarrokh/vue-chimera#readme",
   "dependencies": {
     "axios": "^0.18.0",
-    "throttle-debounce": "^2.0.1",
+    "p-debounce": "^1.0.0",
     "vue": "^2.5.17"
   },
   "devDependencies": {
     "babel": "^6.23.0",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.5",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "bili": "^3.1.2",
     "chai": "^4.1.2",
     "eslint": "^5.4.0",

@@ -18,8 +18,15 @@ export function createAxios (config) {
   if (config instanceof Axios) {
     return config
   }
+  if (config && typeof config.$request === 'function') {
+    return config
+  }
   if (isPlainObject(config)) {
     return Axios.create(config)
   }
-  return Axios.create()
+  if (typeof config === 'function') {
+    let axios = config()
+    if (axios instanceof Axios) return axios
+  }
+  return Axios
 }

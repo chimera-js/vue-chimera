@@ -6,7 +6,14 @@ export default function (options) {
     prefetchTimeout: 5000
   }, options)
 
-  return function ({ beforeNuxtRender, isDev }) {
+  let baseOptions = this.options
+
+  return function ({ beforeNuxtRender, isDev, $axios }) {
+
+    if (!baseOptions.axios && $axios != null) {
+      Resource.config.axios = $axios
+    }
+
     if (!beforeNuxtRender) { return }
 
     async function prefetchAsyncData ({ Components, nuxtState }) {

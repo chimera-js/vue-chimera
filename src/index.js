@@ -1,7 +1,6 @@
 import Vue from 'vue'
 import mixin from './mixin'
 import Resource from './Resource'
-import { createAxios } from './utils'
 import NuxtPlugin from './NuxtPlugin'
 
 Vue.config.silent = true
@@ -13,14 +12,13 @@ const plugin = {
   options: {
     axios: null,
     cache: 'no-cache',
-    debounce: 200,
-    prefetch: 'GET', // false, true, '%METHOD%'
+    debounce: 80,
+    prefetch: 'get' // false, true, '%METHOD%',
   },
 
   install (Vue, options = {}) {
     Object.assign(this.options, options)
-    Resource.cache = this.options.cache
-    Resource.axios = createAxios(this.options.axios)
+    Resource.config = this.options
     Vue.mixin(mixin(this.options))
   },
 
