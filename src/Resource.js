@@ -2,6 +2,7 @@ import axios from 'axios'
 import { isPlainObject } from './utils'
 import LocalStorageCache from './LocalStorageCache'
 import NullCache from './NullCache'
+import { debounce } from 'throttle-debounce'
 
 export const EVENT_SUCCESS = 'success'
 export const EVENT_ERROR = 'error'
@@ -81,6 +82,7 @@ class Resource {
 
     this.errorTransformer = (err) => err
     this.responseTransformer = (res) => res
+    this.fetchDebounced = debounce(100, true, this.fetch.bind(this))
   }
 
   setResponseTransformer (transformer) {
@@ -115,7 +117,7 @@ class Resource {
     })
   }
 
-  reload (force) {
+  fetch (force) {
     return new Promise((resolve, reject) => {
       let setByResponse = (res) => {
         this._error = null
@@ -158,12 +160,16 @@ class Resource {
     })
   }
 
+  reload (force) {
+    this.fetchDebounced(force)
+  }
+
   execute () {
-    return this.reload(true)
+    return this.fetchDebounced(true)
   }
 
   send () {
-    return this.reload(true)
+    return this.fetchDebounced(true)
   }
 
   getCache (options) {

@@ -1,6 +1,5 @@
 import VueChimera from './VueChimera'
 import { isPlainObject } from './utils'
-import { debounce } from 'throttle-debounce'
 
 export default function (config) {
   return {
@@ -21,8 +20,7 @@ export default function (config) {
       options.watch = options.watch || {}
       for (let key in _chimera._reactiveResources) {
         options.computed['__' + key] = _chimera._reactiveResources[key]
-        options.watch['__' + key] = debounce(config.debounce, true,
-          () => _chimera.updateReactiveResource(key))
+        options.watch['__' + key] = () => _chimera.updateReactiveResource(key)
       }
 
       // Nuxtjs prefetch
@@ -59,8 +57,7 @@ export default function (config) {
         this._chimera.updateReactiveResources()
         for (let r in this._chimera._resources) {
           let resource = this._chimera._resources[r]
-          if (resource.prefetch &&
-            !resource.ssrPrefetched) { resource.reload() }
+          if (resource.prefetch && !resource.ssrPrefetched) { resource.reload() }
         }
       }
     },
