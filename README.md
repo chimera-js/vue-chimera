@@ -182,6 +182,7 @@ let app = new Vue({
 | error    | Object/string  | null | Error json object or string returned from server when request failed
 | lastLoaded | Date         | null | The date/time from last time resource successfully loaded (null if not loaded yet)
 | status    | number        | null | Resource response status
+| headers    | Object        | null | Resource response/error headers
 
 |   Method   | Return type | Description
 | ---------- | ----------- | -----------

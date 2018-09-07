@@ -98,6 +98,8 @@ export default class Resource {
   }
 
   setInterval (ms) {
+    if (process.server) return
+
     this._interval = ms
     if (this._interval_id) { clearInterval(this._interval_id) }
     this._interval_id = setInterval(() => this.reload(true), ms)
