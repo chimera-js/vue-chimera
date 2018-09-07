@@ -43,7 +43,7 @@ export default class VueChimera {
       }
     })
     data.$loading = () => this._vm.$loading
-    data.$client = () => this._axios
+    data.$axios = () => Resource.config ? Resource.config.axios : null
   }
 
   watch () {

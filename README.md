@@ -200,7 +200,7 @@ let app = new Vue({
       this.$chimera.$loading
       
       // Get the axios client to modify or ...
-      this.$chimera.$client
+      this.$chimera.$axios
       
     }
   }
@@ -279,12 +279,29 @@ Use this snippet of code in your nuxtjs plugin folder:
 import Vue from 'vue'
 import VueChimera  from 'vue-chimera'
  
-Vue.use(VueChimera, { /* Pass options */ })
- 
-export default VueChimera.NuxtPlugin({
-  prefetch: true, // Enables server side prefetch on resources with `prefetch: true`
-  prefetchTimeout: 5000 // Server side timeout for prefetch
+Vue.use(VueChimera, {
+  // Enables server side prefetch on resources
+  // true: fetched on server
+  // false: fetched on client
+  // 'override': fetched on server and client (overrided by client)
+  ssrPrefetch: true,
+  
+  ssrPrefetchTimeout: 4000 // Server side timeout for prefetch
 })
+ 
+export default VueChimera.NuxtPlugin()
+```
+
+You can also disable SSR for some heavy resources
+```javascript
+...
+    resources: {
+      myResource: {
+        url: '/api/v1/example',
+        ssrPrefetch: false
+      }
+    }
+...
 ```
 
 ## Examples

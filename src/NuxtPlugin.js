@@ -1,11 +1,6 @@
 import Resource from './Resource'
 
-export default function (options) {
-  const { prefetch, prefetchTimeout } = Object.assign({
-    prefetch: true,
-    prefetchTimeout: 5000
-  }, options)
-
+export default function () {
   let baseOptions = this.options
 
   return function ({ beforeNuxtRender, isDev, $axios }) {
@@ -52,15 +47,13 @@ export default function (options) {
       }
     }
 
-    if (prefetch) {
-      beforeNuxtRender((...args) => {
-        return new Promise((resolve, reject) => {
-          prefetchAsyncData(...args).then(resolve).catch(reject)
-          setTimeout(reject, prefetchTimeout, new Error('  SSR Prefetch Timeout.'))
-        }).catch(err => {
-          isDev && console.error(err.message) // eslint-disable-line no-console
-        })
+    beforeNuxtRender((...args) => {
+      return new Promise((resolve, reject) => {
+        prefetchAsyncData(...args).then(resolve).catch(reject)
+        setTimeout(reject, baseOptions.ssrPrefetchTimeout, new Error('  SSR Prefetch Timeout.'))
+      }).catch(err => {
+        isDev && console.error(err.message) // eslint-disable-line no-console
       })
-    }
+    })
   }
 }

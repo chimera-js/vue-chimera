@@ -45,7 +45,7 @@ export default function (config) {
             }
           })
           if (process.client) {
-            // delete NUXT.chimera
+            delete NUXT.chimera
           }
         }
       }
@@ -59,7 +59,7 @@ export default function (config) {
         this._chimera.updateReactiveResources()
         for (let r in this._chimera._resources) {
           let resource = this._chimera._resources[r]
-          if (resource.prefetch && !resource.ssrPrefetched) { resource.reload() }
+          if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) { resource.reload() }
         }
       }
     },
