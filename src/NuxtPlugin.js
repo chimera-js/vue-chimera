@@ -9,7 +9,6 @@ export default function (options) {
   let baseOptions = this.options
 
   return function ({ beforeNuxtRender, isDev, $axios }) {
-
     if (!baseOptions.axios && $axios != null) {
       Resource.config.axios = $axios
     }
@@ -33,13 +32,16 @@ export default function (options) {
 
           if (resource && typeof resource !== 'function') {
             resource = resource && resource._data ? resource : Resource.from(resource)
-            if (!resource.prefetch) continue
+            if (!resource.prefetch || !resource.ssrPrefetch) continue
             try {
-              isDev && console.log('  Prefetching: ' + resource.requestConfig.url)
+              isDev && console.log('  Prefetching: ' + resource.requestConfig.url) // eslint-disable-line no-console
 
+              // resource.axios = Axios
               let response = await resource.execute()
               resource._data = response.data
-            } catch (e) {}
+            } catch (e) {
+              isDev && console.error(e) // eslint-disable-line no-console
+            }
             resource.ssrPrefetched = true
             options.chimera.resources[key] = nuxtChimera[key] = resource
           }
@@ -56,7 +58,7 @@ export default function (options) {
           prefetchAsyncData(...args).then(resolve).catch(reject)
           setTimeout(reject, prefetchTimeout, new Error('  SSR Prefetch Timeout.'))
         }).catch(err => {
-          if (isDev) console.error(err.message)
+          isDev && console.error(err.message) // eslint-disable-line no-console
         })
       })
     }

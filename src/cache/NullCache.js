@@ -1,17 +1,11 @@
 export default class NullCache {
-  constructor () {
-  }
-
-  setItem (key, value, expiration) {
-
-  }
+  setItem (key, value, expiration) {}
 
   getItem (key) {
     return null
   }
 
-  removeItem (key) {
-  }
+  removeItem (key) {}
 
   keys () {
     return []
@@ -25,7 +19,5 @@ export default class NullCache {
     return 0
   }
 
-  clearCache () {
-
-  }
+  clearCache () {}
 }

@@ -48,6 +48,8 @@ export default class Resource {
     this._eventListeners = {}
     this.prefetch = options.prefetch !== undefined ? options.prefetch : baseConfig.prefetch
     this.prefetch = typeof this.prefetch === 'string' ? this.prefetch.toLowerCase() === method : Boolean(this.prefetch)
+
+    this.ssrPrefetch = Boolean(options.ssrPrefetch !== undefined ? options.ssrPrefetch : baseConfig.ssrPrefetch)
     this.ssrPrefetched = false
 
     this.cache = this.getCache(options.cache || baseConfig.cache)

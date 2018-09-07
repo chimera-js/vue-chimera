@@ -11,7 +11,7 @@ export default class VueChimera {
     this._context = context
     this._reactiveResources = {}
 
-    const resources = Object.assign({}, options.resources);
+    const resources = Object.assign({}, options.resources)
 
     for (let key in resources) {
       let r = resources[key]

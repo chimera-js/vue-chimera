@@ -13,7 +13,8 @@ const plugin = {
     axios: null,
     cache: 'no-cache',
     debounce: 80,
-    prefetch: 'get' // false, true, '%METHOD%',
+    prefetch: 'get', // false, true, '%METHOD%',
+    ssrPrefetch: true
   },
 
   install (Vue, options = {}) {
