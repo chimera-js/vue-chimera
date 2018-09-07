@@ -35,7 +35,7 @@ export default function () {
               let response = await resource.execute()
               resource._data = response.data
             } catch (e) {
-              isDev && console.error(e) // eslint-disable-line no-console
+              isDev && console.error(e.message) // eslint-disable-line no-console
             }
             resource.ssrPrefetched = true
             options.chimera.resources[key] = nuxtChimera[key] = resource

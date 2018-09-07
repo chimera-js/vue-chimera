@@ -36,10 +36,10 @@ export default function (config) {
               Object.keys(_chimera.resources).forEach(key => {
                 let localResource = _chimera.resources[key]
                 let ssrResource = nuxtChimera[key]
-                if (localResource && ssrResource &&
-                  ssrResource._data) {
-                  _chimera.resources[key]._data = nuxtChimera[key]._data
-                  _chimera.resources[key].ssrPrefetched = nuxtChimera[key].ssrPrefetched
+                if (localResource && ssrResource && ssrResource._data) {
+                  ['_data', '_status', '_headers', 'ssrPrefetched'].forEach(key => {
+                    localResource[key] = ssrResource[key]
+                  })
                 }
               })
             }

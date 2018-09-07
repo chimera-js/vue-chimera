@@ -43,6 +43,7 @@ export default class Resource {
     this._loading = false
     this._status = null
     this._data = null
+    this._headers = null
     this._error = null
     this._lastLoaded = null
     this._eventListeners = {}
@@ -123,6 +124,7 @@ export default class Resource {
         if (res) {
           this._status = res.status
           this._data = this.responseTransformer(res.data)
+          this._headers = res.headers
           this._lastLoaded = new Date()
         }
       }
@@ -150,6 +152,7 @@ export default class Resource {
         if (errorResponse) {
           this._status = errorResponse.status
           this._error = this.errorTransformer(errorResponse.data)
+          this._headers = errorResponse.headers
         }
         this.emit(EVENT_ERROR)
 
@@ -202,6 +205,10 @@ export default class Resource {
 
   get data () {
     return this._data
+  }
+
+  get headers () {
+    return this._headers
   }
 
   get error () {
