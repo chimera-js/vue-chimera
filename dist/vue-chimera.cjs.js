@@ -79,8 +79,10 @@ function createAxios(config) {
 class LocalStorageCache {
   constructor(defaultExpiration) {
     if (typeof window === 'undefined' || !window.localStorage) {
-      throw 'LocalStorageCache: Local storage is not available.';
-    } else this.storage = window.localStorage;
+      throw Error('LocalStorageCache: Local storage is not available.');
+    } else {
+      this.storage = window.localStorage;
+    }
 
     this.defaultExpiration = defaultExpiration;
   }
@@ -143,8 +145,6 @@ class LocalStorageCache {
 }
 
 class NullCache {
-  constructor() {}
-
   setItem(key, value, expiration) {}
 
   getItem(key) {
@@ -214,11 +214,13 @@ class Resource {
     this._loading = false;
     this._status = null;
     this._data = null;
+    this._headers = null;
     this._error = null;
     this._lastLoaded = null;
     this._eventListeners = {};
     this.prefetch = options.prefetch !== undefined ? options.prefetch : baseConfig.prefetch;
     this.prefetch = typeof this.prefetch === 'string' ? this.prefetch.toLowerCase() === method : Boolean(this.prefetch);
+    this.ssrPrefetch = options.ssrPrefetch !== undefined ? options.ssrPrefetch : baseConfig.ssrPrefetch;
     this.ssrPrefetched = false;
     this.cache = this.getCache(options.cache || baseConfig.cache); // Set Transformers
 
@@ -246,7 +248,7 @@ class Resource {
       }
     }
 
-    this.fetchDebounced = pDebounce(this.fetch.bind(this), baseConfig.debounce, {
+    this.fetchDebounced = pDebounce(this.fetch.bind(this), baseConfig.debounce || 80, {
       leading: true
     });
   }
@@ -269,6 +271,7 @@ class Resource {
   }
 
   setInterval(ms) {
+    if (process.server) return;
     this._interval = ms;
 
     if (this._interval_id) {
@@ -300,6 +303,7 @@ class Resource {
         if (res) {
           this._status = res.status;
           this._data = this.responseTransformer(res.data);
+          this._headers = res.headers;
           this._lastLoaded = new Date();
         }
       };
@@ -329,6 +333,7 @@ class Resource {
         if (errorResponse) {
           this._status = errorResponse.status;
           this._error = this.errorTransformer(errorResponse.data);
+          this._headers = errorResponse.headers;
         }
 
         this.emit(EVENT_ERROR);
@@ -350,10 +355,11 @@ class Resource {
   }
 
   getCache(cache) {
-    let caches = {
+    const caches = {
       'no-cache': () => new NullCache(),
       'localStorage': () => new LocalStorageCache(this.getConfig().cacheExpiration || 10000)
     };
+    cache = cache || 'no-cache';
     return caches[cache] ? caches[cache]() : null;
   }
 
@@ -377,6 +383,10 @@ class Resource {
 
   get data() {
     return this._data;
+  }
+
+  get headers() {
+    return this._headers;
   }
 
   get error() {
@@ -459,7 +469,7 @@ class VueChimera {
 
     data.$loading = () => this._vm.$loading;
 
-    data.$client = () => this._axios;
+    data.$axios = () => Resource.config ? Resource.config.axios : null;
   }
 
   watch() {
@@ -541,13 +551,17 @@ function mixin (config) {
                 let ssrResource = nuxtChimera[key];
 
                 if (localResource && ssrResource && ssrResource._data) {
-                  _chimera.resources[key]._data = nuxtChimera[key]._data;
-                  _chimera.resources[key].ssrPrefetched = nuxtChimera[key].ssrPrefetched;
+                  ['_data', '_status', '_headers', 'ssrPrefetched'].forEach(key => {
+                    localResource[key] = ssrResource[key];
+                  });
                 }
               });
             }
           });
-          if (process.client) delete NUXT.chimera;
+
+          if (process.client) {
+            delete NUXT.chimera;
+          }
         }
       }
 
@@ -562,7 +576,7 @@ function mixin (config) {
         for (let r in this._chimera._resources) {
           let resource = this._chimera._resources[r];
 
-          if (resource.prefetch && !resource.ssrPrefetched) {
+          if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
             resource.reload();
           }
         }
@@ -588,15 +602,8 @@ function mixin (config) {
   };
 }
 
-function NuxtPlugin (options) {
-  const {
-    prefetch,
-    prefetchTimeout
-  } = Object.assign({
-    prefetch: true,
-    prefetchTimeout: 5000
-  }, options);
-  let baseOptions = this.options;
+function NuxtPlugin () {
+  const baseOptions = this.options;
   return function ({
     beforeNuxtRender,
     isDev,
@@ -635,13 +642,17 @@ function NuxtPlugin (options) {
 
           if (resource && typeof resource !== 'function') {
             resource = resource && resource._data ? resource : Resource.from(resource);
-            if (!resource.prefetch) continue;
+            if (!resource.prefetch || !resource.ssrPrefetch) continue;
 
             try {
-              isDev && console.log('  Prefetching: ' + resource.requestConfig.url);
+              isDev && console.log('  Prefetching: ' + resource.requestConfig.url); // eslint-disable-line no-console
+              // resource.axios = Axios
+
               let response = await resource.execute();
               resource._data = response.data;
-            } catch (e) {}
+            } catch (e) {
+              isDev && console.error(e.message); // eslint-disable-line no-console
+            }
 
             resource.ssrPrefetched = true;
             options.chimera.resources[key] = nuxtChimera[key] = resource;
@@ -654,16 +665,14 @@ function NuxtPlugin (options) {
       }
     }
 
-    if (prefetch) {
-      beforeNuxtRender((...args) => {
-        return new Promise((resolve, reject) => {
-          prefetchAsyncData(...args).then(resolve).catch(reject);
-          setTimeout(reject, prefetchTimeout, new Error('  SSR Prefetch Timeout.'));
-        }).catch(err => {
-          if (isDev) console.error(err.message);
-        });
+    beforeNuxtRender((...args) => {
+      return new Promise((resolve, reject) => {
+        prefetchAsyncData(...args).then(resolve).catch(reject);
+        setTimeout(reject, baseOptions.ssrPrefetchTimeout, new Error('  SSR Prefetch Timeout.'));
+      }).catch(err => {
+        isDev && console.error(err.message); // eslint-disable-line no-console
       });
-    }
+    });
   };
 }
 
@@ -675,8 +684,10 @@ const plugin = {
     axios: null,
     cache: 'no-cache',
     debounce: 80,
-    prefetch: 'get' // false, true, '%METHOD%',
-
+    prefetch: 'get',
+    // false, true, '%METHOD%',
+    ssrPrefetch: true,
+    ssrPrefetchTimeout: 4000
   },
 
   install(Vue$$1, options = {}) {

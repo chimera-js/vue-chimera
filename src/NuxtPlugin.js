@@ -1,7 +1,7 @@
 import Resource from './Resource'
 
 export default function () {
-  let baseOptions = this.options
+  const baseOptions = this.options
 
   return function ({ beforeNuxtRender, isDev, $axios }) {
     if (!baseOptions.axios && $axios != null) {
