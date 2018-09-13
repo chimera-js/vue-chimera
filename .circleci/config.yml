@@ -4,14 +4,13 @@
 #
 version: 2
 
-defaults:
+defaults: &defaults
   working_directory: ~/repo
   docker:
     # specify the version you desire here
     - image: circleci/node:10-browsers
 
 jobs:
-
   setup:
     <<: *defaults
     steps:
@@ -92,5 +91,4 @@ workflows:
             tags:
               only: /^v.*/
             branches:
-              only:
-                - master
+              ignore: /.*/
