@@ -7,7 +7,7 @@ VueJS RESTful client with reactive features.
 Vue-Chimera is based on [axios](https://github.com/axios/axios) http client library.
 
 ## Demo
-[Demo: vue-chimera](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/e1bd4faf/example/simple/index.html)
+[Demo: vue-chimera](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/f4312e49/example/simple/index.html)
 
 ## Installing
 
