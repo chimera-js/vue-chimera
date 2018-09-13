@@ -3,14 +3,17 @@
 # Check https://circleci.com/docs/2.0/language-javascript/ for more details
 #
 version: 2
+
+defaults:
+  working_directory: ~/repo
+  docker:
+    # specify the version you desire here
+    - image: circleci/node:10-browsers
+
 jobs:
-  build:
-    docker:
-      # specify the version you desire here
-      - image: circleci/node:10-browsers
 
-    working_directory: ~/repo
-
+  setup:
+    <<: *defaults
     steps:
       - checkout
 
@@ -27,9 +30,67 @@ jobs:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
+      - persist_to_workspace:
+          root: ~/repo
+          paths: .
 
-      # run tests!
+  lint:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - run: yarn lint
+
+  build:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/repo
       - run: yarn build
+
+  # run tests!
+  test:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/repo
       - run: yarn test
+
+  deploy:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/repo
       - run: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/repo/.npmrc && yarn publish
 
+workflows:
+  version: 2
+  setup-lint-build-test-deploy:
+    jobs:
+      - setup
+
+      - lint:
+          requires:
+            - setup
+
+      - build:
+          requires:
+            - setup
+
+      - test:
+          requires:
+            - setup
+            - lint
+            - build
+          filters:
+            tags:
+              only: /^v.*/
+      - deploy:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only:
+                - master

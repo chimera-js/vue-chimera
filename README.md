@@ -1,7 +1,14 @@
-# Vue Chimera
+<p align="center">
+    <a href="https://github.com/SasanFarrokh/vue-chimera">
+        <img src="https://github.com/SasanFarrokh/vue-chimera/raw/master/VueChimeraLogo.png" width="300px">
+    </a>
+</p>
+<h1 align="center">Vue Chimera</h1>
 
+[![vuejs](https://img.shields.io/badge/vue.js-2.x-green.svg?style=flat-square)](https://vuejs.org)
+[![circle ci](https://img.shields.io/circleci/project/github/SasanFarrokh/vue-chimera/master.svg?style=flat-square)](https://circleci.com/gh/SasanFarrokh/vue-chimera)
 [![npm version](https://img.shields.io/npm/v/vue-chimera.svg?style=flat-square)](https://www.npmjs.org/package/vue-chimera)
-[![npm downloads](https://img.shields.io/npm/dm/vue-chimera.svg?style=flat-square)](http://npm-stat.com/charts.html?package=vue-chimera)
+[![npm downloads](https://img.shields.io/npm/dt/vue-chimera.svg?style=flat-square)](http://npm-stat.com/charts.html?package=vue-chimera)
 
 VueJS RESTful client with reactive features.
 Vue-Chimera is based on [axios](https://github.com/axios/axios) http client library.
