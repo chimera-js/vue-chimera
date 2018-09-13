@@ -98,7 +98,7 @@ export default class Resource {
   }
 
   setInterval (ms) {
-    if (process.server) return
+    if (typeof process !== 'undefined' && process.server) return
 
     this._interval = ms
     if (this._interval_id) { clearInterval(this._interval_id) }

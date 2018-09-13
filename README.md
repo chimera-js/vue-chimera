@@ -6,6 +6,9 @@
 VueJS RESTful client with reactive features.
 Vue-Chimera is based on [axios](https://github.com/axios/axios) http client library.
 
+## Demo
+[Demo: vue-chimera](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/e1bd4faf/example/simple/index.html)
+
 ## Installing
 
 Using npm:
@@ -64,8 +67,8 @@ Vue Chimera automatically converts your `resources` to [Resource](https://github
 Your resources can be:
 * A simple **string** for simple GET requests
 * An **Object** for complex resources like: POST, PATCH, with Parameters, with Headers, Response/Error transformer, Event listeners
-* A instance of **Resource**
-* It can also be a **Function** for a reactive resource. The function must return a string, plain object or a Resource instance
+* An instance of **Resource**
+* A **Function** for reactive resources [Reactive-Resources](#reactive-resources)
 
 ```javascript
 
@@ -87,9 +90,6 @@ var app = new Vue({
       resources: {
       
         users: '/users',
-        
-        // This resource will change when 'selectedUserID' changes and view updates automatically.
-        selectedUser: () => `/users/${this.selectedUserID}`,
         
         time: {
           'url': '/time',
@@ -191,6 +191,42 @@ let app = new Vue({
 | on(event, handler)|           | Sets an event listener. [Events](#events)
 
 
+#### Reactive Resources
+You can also set a **function** to a resource that will return **String**, **Object**, **instance of Resource** same as before,
+to let your resources be reactive and change.
+```javascript
+let app = new Vue({
+
+    data() {
+      return {
+        selectedUserId: 1,
+        postId: 2
+      }
+    },
+
+    chimera: {
+      resources: {
+        
+        post() {
+          return {
+            url: '/api/v1/posts',
+            params: {
+              postId: this.postId
+            },
+            method: 'post',
+            prefetch: true
+          }
+        },
+        
+        user: () => `/api/v1/users/${this.selectedUserId}`
+      }
+    }
+
+})
+```
+
+_Note that `prefetch` evaluates to false, your data will be reactive and change but won't be fetched until you call the `reload` function of the resource_
+
 #### Chimera instance properties
 ```javascript
 ...
@@ -274,23 +310,30 @@ new Vue({
 
 
 ## Using with Nuxt.js
-You can use Vue-Chimera with nuxtjs to use it's SSR features. You can easily prefetch the resources that has been marked with `prefetch: true` to prefetch the data.
-Use this snippet of code in your nuxtjs plugin folder:
+You can use Vue-Chimera with nuxtjs to use it's SSR features so you can easily prefetch the data.
 ```javascript
-import Vue from 'vue'
-import VueChimera  from 'vue-chimera'
- 
-Vue.use(VueChimera, {
-  // Enables server side prefetch on resources
-  // true: fetched on server
-  // false: fetched on client
-  // 'override': fetched on server and client (overrided by client)
-  ssrPrefetch: true,
+// nuxt.config.js
+
+module.exports = {
   
-  ssrPrefetchTimeout: 4000 // Server side timeout for prefetch
-})
- 
-export default VueChimera.NuxtPlugin()
+  modules: [
+    'vue-chimera/nuxt'
+  ],
+  
+  chimera: {
+    // Server side prefetch will only be available for resources that has `prefetch` and `ssrPrefetch`
+    prefetch: 'get',
+    
+    // Enables server side prefetch on resources
+    // true: fetched on server
+    // false: fetched on client
+    // 'override': fetched on server and client (overrided by client)
+    ssrPrefetch: true,
+    
+    ssrPrefetchTimeout: 2000 // Server side timeout for prefetch
+  }
+  
+}
 ```
 
 You can also disable SSR for some heavy resources
@@ -299,14 +342,11 @@ You can also disable SSR for some heavy resources
     resources: {
       myResource: {
         url: '/api/v1/example',
-        ssrPrefetch: false
+        ssrPrefetch: false // Prefetch enabled on client side but has no server side prefetch
       }
     }
 ...
 ```
-
-## Examples
-[example](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/e1bd4faf/example/simple/index.html)
 
 ## Maintainer
 <p>

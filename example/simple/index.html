@@ -23,6 +23,12 @@
             margin-bottom: 40px;
             color: #fff;
         }
+        pre {
+            background-color: #666;
+            color: #f8f8f8;
+            padding: 20px;
+            text-indent: 0;
+        }
     </style>
 </head>
 <body>
@@ -30,7 +36,8 @@
 
     <div align="center">
         <img src="logo.png" alt="VueJS is Awesome">
-        <h1>Vue is Awesome, Vue-Chimera too...</h1>
+        <h1>Vue-Chimera</h1>
+        <p>Easiest way to interact with RESTful APIs</p>
     </div>
     <hr/>
     <div class="con">
@@ -39,6 +46,25 @@
             <span v-if="!$chimera.simple.loading && $chimera.simple.data">{{ $chimera.simple.data.title }}</span>
             <span v-else>Loading...</span>
         </p>
+        <pre>
+resources: {
+    myResource: '/api/v1/posts/1'
+}
+        </pre>
+    </div>
+
+    <div class="con">
+        <h3>Reactive GET</h3>
+        Post id: <input type="number" v-model="postId">
+        <p>
+            <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
+            <small v-if="$chimera.reactive.loading">Loading...</small>
+        </p>
+        <pre>
+resources: {
+    myResource: () => `/api/v1/posts/${this.postId}`,
+}
+        </pre>
     </div>
 
     <div class="con">
@@ -48,15 +74,12 @@
             <span style="font-family: arial;" v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
             <small v-if="$chimera.time.loading">Refreshing...</small>
         </p>
-    </div>
-
-    <div class="con">
-        <h3>Reactive GET</h3>
-        Post id: <input type="number" v-model="postNumber">
-        <p>
-            <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
-            <small v-if="$chimera.reactive.loading">Loading...</small>
-        </p>
+        <pre>
+resources: {
+    myResource: '/api/v1/posts/1',
+    interval: 2000
+}
+        </pre>
     </div>
 
     <div class="con">
@@ -72,6 +95,12 @@
             <button v-if="!$chimera.prefetch.lastLoaded" @click="load">Execute</button>
             <small v-if="$chimera.prefetch.loading">Loading...</small>
         </div>
+        <pre>
+resources: {
+    myResource: '/api/v1/posts/1',
+    prefetch: false
+}
+        </pre>
     </div>
 
 </div>
@@ -94,7 +123,7 @@
                 },
 
                 reactive: function() {
-                    return 'https://idehhub.com/api/v1/blog/posts/' + this.postNumber + '?lang=en'
+                    return 'https://idehhub.com/api/v1/blog/posts/' + this.postId + '?lang=en'
                 },
 
                 prefetch: {
@@ -110,7 +139,7 @@
         },
 
         data: {
-            postNumber: 27
+            postId: 27
         },
 
         methods: {
