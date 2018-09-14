@@ -32,7 +32,7 @@ describe('resource', function () {
     it('should instantiate Resource from string', function () {
       let r = Resource.from('/users')
       assert.instanceOf(r, Resource)
-      assert.equal(r.requestConfig.method, 'GET')
+      assert.equal(r.requestConfig.method.toLowerCase(), 'get')
       assert.equal(r.requestConfig.url, '/users')
     })
 
@@ -53,7 +53,7 @@ describe('resource', function () {
         }
       })
       assert.instanceOf(r, Resource)
-      assert.equal(r.requestConfig.method, 'POST')
+      assert.equal(r.requestConfig.method.toLowerCase(), 'post')
       assert.equal(r.requestConfig.url, '/u')
       assert.equal(r.responseTransformer, tr)
       assert.equal(r.errorTransformer, tr)

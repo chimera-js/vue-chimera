@@ -4,14 +4,14 @@ import NullResource from './NullResource'
 import { remove } from './utils'
 
 export default class VueChimera {
-  constructor (options = {}, context) {
+  constructor ({ resources, ...options }, context) {
     this._vm = null
-
     this._listeners = []
     this._context = context
     this._reactiveResources = {}
+    this.options = options
 
-    const resources = Object.assign({}, options.resources)
+    resources = Object.assign({}, resources)
 
     for (let key in resources) {
       let r = resources[key]
@@ -20,7 +20,7 @@ export default class VueChimera {
         resources[key] = new NullResource()
         this._reactiveResources[key] = r.bind(this._context)
       } else {
-        resources[key] = Resource.from(r)
+        resources[key] = Resource.from(r, this.options)
       }
     }
 
@@ -47,15 +47,18 @@ export default class VueChimera {
   }
 
   watch () {
-    return this._vm.$watch('$data', () => {
-      let i = this._listeners.length
-      while (i--) {
-        let vm = this._listeners[i]
-        if (vm) {
-          vm.$nextTick(() => vm.$forceUpdate())
+    if (!this._watcher) {
+      this._watcher = this._vm.$watch('$data', () => {
+        let i = this._listeners.length
+        while (i--) {
+          let vm = this._listeners[i]
+          if (vm) {
+            vm.$nextTick(() => vm.$forceUpdate())
+          }
         }
-      }
-    }, { deep: true })
+      }, { deep: true })
+    }
+    return this._watcher
   }
 
   subscribe (vm) {
@@ -73,7 +76,7 @@ export default class VueChimera {
   }
 
   updateReactiveResource (key) {
-    let r = this._resources[key] = Resource.from(this._reactiveResources[key]())
+    let r = this._resources[key] = Resource.from(this._reactiveResources[key](), this.options)
     if (r.prefetch) r.reload()
   }
 

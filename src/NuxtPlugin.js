@@ -1,13 +1,10 @@
 import Resource from './Resource'
 
 export default function () {
+  this.options = this.options || {}
   const baseOptions = this.options
 
   return function ({ beforeNuxtRender, isDev, $axios }) {
-    if (!baseOptions.axios && $axios != null) {
-      Resource.config.axios = $axios
-    }
-
     if (!beforeNuxtRender) { return }
 
     async function prefetchAsyncData ({ Components, nuxtState }) {
@@ -15,18 +12,24 @@ export default function () {
 
       for (let i = 0, len = Components.length; i < len; i++) {
         let component = Components[i]
-        const options = component.options
+        let chimera = component.options ? component.options.chimera : null
 
-        if (!options.chimera) { continue }
+        if (typeof chimera === 'function') {
+          // Append @Nuxtjs/axios to component (maybe needed by constructor)
+          if ($axios && !component.$axios) component.$axios = $axios
+          chimera = chimera.bind(component)()
+        }
 
-        let nuxtChimera = {}
-        for (let key in options.chimera.resources) {
+        if (!chimera) { continue }
+
+        const nuxtChimera = {}
+        const { resources, ...options } = chimera
+        for (let key in resources) {
           if (key && key.charAt(0) === '$') { continue }
 
-          let resource = options.chimera.resources[key]
-
+          let resource = resources[key]
           if (resource && typeof resource !== 'function') {
-            resource = resource && resource._data ? resource : Resource.from(resource)
+            resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, options))
             if (!resource.prefetch || !resource.ssrPrefetch) continue
             try {
               isDev && console.log('  Prefetching: ' + resource.requestConfig.url) // eslint-disable-line no-console
@@ -34,11 +37,11 @@ export default function () {
               // resource.axios = Axios
               let response = await resource.execute()
               resource._data = response.data
-            } catch (e) {
-              isDev && console.error(e.message) // eslint-disable-line no-console
+            } catch (err) {
+              isDev && console.error(err.message) // eslint-disable-line no-console
             }
             resource.ssrPrefetched = true
-            options.chimera.resources[key] = nuxtChimera[key] = resource
+            resources[key] = nuxtChimera[key] = resource
           }
         }
         if (Object.keys(nuxtChimera).length) {

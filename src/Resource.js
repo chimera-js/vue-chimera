@@ -8,21 +8,20 @@ export const EVENT_ERROR = 'error'
 export const EVENT_LOADING = 'loading'
 
 export default class Resource {
-  static from (value) {
+  static from (value, baseOptions = {}) {
     if (value == null) throw new Error('Cannot create resource from `null`')
 
     if (value instanceof Resource) { return value }
 
-    if (typeof value === 'string') { return new Resource(value, 'GET') }
+    if (typeof value === 'string') { return new Resource(value, 'get', baseOptions) }
 
     if (isPlainObject(value)) {
       const { url, method, ...options } = value
-      return new Resource(url, method, options)
+      return new Resource(url, method, Object.assign(baseOptions, options))
     }
   }
 
   constructor (url, method, options) {
-    let baseConfig = this.getConfig()
     options = options || {}
     method = method ? method.toLowerCase() : 'get'
     if (method &&
@@ -32,13 +31,13 @@ export default class Resource {
 
     this.requestConfig = {
       url: url,
-      method: method ? method.toUpperCase() : 'GET',
+      method: method ? method.toLowerCase() : 'get',
       headers: options.headers || {}
     }
 
-    this.requestConfig[this.requestConfig.method === 'GET' ? 'params' : 'data'] = options.params
+    this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params
 
-    this.axios = createAxios(options.axios || baseConfig.axios)
+    this.axios = createAxios(options.axios)
 
     this._loading = false
     this._status = null
@@ -47,13 +46,13 @@ export default class Resource {
     this._error = null
     this._lastLoaded = null
     this._eventListeners = {}
-    this.prefetch = options.prefetch !== undefined ? options.prefetch : baseConfig.prefetch
-    this.prefetch = typeof this.prefetch === 'string' ? this.prefetch.toLowerCase() === method : Boolean(this.prefetch)
 
-    this.ssrPrefetch = options.ssrPrefetch !== undefined ? options.ssrPrefetch : baseConfig.ssrPrefetch
     this.ssrPrefetched = false
 
-    this.cache = this.getCache(options.cache || baseConfig.cache)
+    this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch)
+    this.ssrPrefetch = options.ssrPrefetch
+    this.cache = this.getCache(options.cache)
+    this.fetchDebounced = pDebounce(this.fetch.bind(this), options.debounce || 80, { leading: true })
 
     // Set Transformers
     if (options.transformer) {
@@ -78,11 +77,7 @@ export default class Resource {
         this.on(key, options.on[key])
       }
     }
-
-    this.fetchDebounced = pDebounce(this.fetch.bind(this), baseConfig.debounce || 80, { leading: true })
   }
-
-  getConfig () { return Resource.config || {} }
 
   setResponseTransformer (transformer) {
     this.responseTransformer = transformer

@@ -1,6 +1,5 @@
 import Vue from 'vue'
 import mixin from './mixin'
-import Resource from './Resource'
 import NuxtPlugin from './NuxtPlugin'
 
 Vue.config.silent = true
@@ -20,7 +19,6 @@ const plugin = {
 
   install (Vue, options = {}) {
     Object.assign(this.options, options)
-    Resource.config = this.options
     Vue.mixin(mixin(this.options))
   },
 
