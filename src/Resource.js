@@ -17,7 +17,7 @@ export default class Resource {
 
     if (isPlainObject(value)) {
       const { url, method, ...options } = value
-      return new Resource(url, method, Object.assign(baseOptions, options))
+      return new Resource(url, method, Object.assign({}, baseOptions, options))
     }
   }
 

@@ -23,6 +23,7 @@
             margin-bottom: 40px;
             color: #fff;
         }
+
         pre {
             background-color: #666;
             color: #f8f8f8;
@@ -71,7 +72,8 @@ resources: {
         <h3>Simple GET with auto refresh interval</h3>
         <p>
             Current UTC time:
-            <span style="font-family: arial;" v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
+            <span style="font-family: arial;"
+                  v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
             <small v-if="$chimera.time.loading">Refreshing...</small>
         </p>
         <pre>
@@ -109,44 +111,47 @@ resources: {
 <!--<script src="https://unpkg.com/vue-chimera@0.3.4/dist/vue-chimera.js"></script>-->
 <script src="../../dist/vue-chimera.min.js"></script>
 <script>
-    var app = new Vue({
-        el: '#app',
+var app = new Vue({
+  el: '#app',
 
-        chimera: {
-            resources: {
+  chimera: {
 
-                simple: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
+    prefetch: true,
 
-                time: {
-                    url: 'https://reqres.in/api/users',
-                    interval: 2000,
-                },
+    resources: {
 
-                reactive: function() {
-                    return 'https://idehhub.com/api/v1/blog/posts/' + this.postId + '?lang=en'
-                },
+      simple: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
 
-                prefetch: {
-                    url: 'https://reqres.in/api/users',
-                    method: 'POST',
-                    params: {
-                        "name": "morpheus",
-                        "job": "leader"
-                    },
-                    prefetch: false
-                },
-            }
+      time: {
+        url: 'https://reqres.in/api/users',
+        interval: 2000,
+      },
+
+      reactive: function () {
+        return 'https://idehhub.com/api/v1/blog/posts/' + this.postId + '?lang=en'
+      },
+
+      prefetch: {
+        url: 'https://reqres.in/api/users',
+        method: 'POST',
+        params: {
+          'name': 'morpheus',
+          'job': 'leader'
         },
+        prefetch: false
+      }
+    }
+  },
 
-        data: {
-            postId: 27
-        },
+  data: {
+    postId: 27
+  },
 
-        methods: {
-            load: function () {
-                this.$chimera.prefetch.execute();
-            }
-        }
-    })
+  methods: {
+    load: function () {
+      this.$chimera.prefetch.execute()
+    }
+  }
+})
 </script>
 </html>

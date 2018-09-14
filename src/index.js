@@ -35,7 +35,7 @@ if (typeof window !== 'undefined') {
 }
 
 if (GlobalVue) {
-  GlobalVue.use(plugin)
+  GlobalVue.use(plugin, plugin.options)
 }
 
 export default plugin

@@ -191,7 +191,7 @@ class Resource {
       } = value,
             options = _objectWithoutProperties(value, ["url", "method"]);
 
-      return new Resource(url, method, Object.assign(baseOptions, options));
+      return new Resource(url, method, Object.assign({}, baseOptions, options));
     }
   }
 
@@ -472,19 +472,23 @@ class VueChimera {
   }
 
   watch() {
-    return this._vm.$watch('$data', () => {
-      let i = this._listeners.length;
+    if (!this._watcher) {
+      this._watcher = this._vm.$watch('$data', () => {
+        let i = this._listeners.length;
 
-      while (i--) {
-        let vm = this._listeners[i];
+        while (i--) {
+          let vm = this._listeners[i];
 
-        if (vm) {
-          vm.$nextTick(() => vm.$forceUpdate());
+          if (vm) {
+            vm.$nextTick(() => vm.$forceUpdate());
+          }
         }
-      }
-    }, {
-      deep: true
-    });
+      }, {
+        deep: true
+      });
+    }
+
+    return this._watcher;
   }
 
   subscribe(vm) {
@@ -526,8 +530,12 @@ var mixin = ((config = {}) => ({
     } else if (typeof options.chimera === 'function') {
       // Initialize with function
       let chimeraOptions = options.chimera.bind(this)();
-      chimeraOptions = Object.assign({}, config, chimeraOptions);
-      _chimera = chimeraOptions instanceof VueChimera ? chimeraOptions : new VueChimera(chimeraOptions, this);
+
+      if (chimeraOptions instanceof VueChimera) {
+        _chimera = chimeraOptions;
+      } else {
+        _chimera = new VueChimera(Object.assign({}, config, chimeraOptions), this);
+      }
     } else if (isPlainObject(options.chimera)) {
       _chimera = new VueChimera(Object.assign({}, config, options.chimera), this);
     }
@@ -560,7 +568,7 @@ var mixin = ((config = {}) => ({
               let ssrResource = nuxtChimera[key];
 
               if (localResource && ssrResource && ssrResource._data) {
-                ['_data', '_status', '_headers', 'ssrPrefetched'].forEach(key => {
+                ['_data', '_status', '_headers', 'ssrPrefetched', '_lastLoaded'].forEach(key => {
                   localResource[key] = ssrResource[key];
                 });
               }
@@ -611,16 +619,13 @@ var mixin = ((config = {}) => ({
 }));
 
 function NuxtPlugin () {
+  this.options = this.options || {};
   const baseOptions = this.options;
   return function ({
     beforeNuxtRender,
     isDev,
     $axios
   }) {
-    if (!baseOptions.axios && $axios != null) {
-      Resource.config.axios = $axios;
-    }
-
     if (!beforeNuxtRender) {
       return;
     }
@@ -636,6 +641,8 @@ function NuxtPlugin () {
         let chimera = component.options ? component.options.chimera : null;
 
         if (typeof chimera === 'function') {
+          // Append @Nuxtjs/axios to component (maybe needed by constructor)
+          if ($axios && !component.$axios) component.$axios = $axios;
           chimera = chimera.bind(component)();
         }
 
@@ -643,17 +650,22 @@ function NuxtPlugin () {
           continue;
         }
 
-        let nuxtChimera = {};
+        const nuxtChimera = {};
 
-        for (let key in chimera.resources) {
+        const {
+          resources
+        } = chimera,
+              options = _objectWithoutProperties(chimera, ["resources"]);
+
+        for (let key in resources) {
           if (key && key.charAt(0) === '$') {
             continue;
           }
 
-          let resource = chimera.resources[key];
+          let resource = resources[key];
 
           if (resource && typeof resource !== 'function') {
-            resource = resource && resource._data ? resource : Resource.from(resource);
+            resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, options));
             if (!resource.prefetch || !resource.ssrPrefetch) continue;
 
             try {
@@ -662,12 +674,12 @@ function NuxtPlugin () {
 
               let response = await resource.execute();
               resource._data = response.data;
-            } catch (e) {
-              isDev && console.error(e.message); // eslint-disable-line no-console
+            } catch (err) {
+              isDev && console.error(err.message); // eslint-disable-line no-console
             }
 
             resource.ssrPrefetched = true;
-            chimera.resources[key] = nuxtChimera[key] = resource;
+            resources[key] = nuxtChimera[key] = resource;
           }
         }
 
@@ -719,7 +731,7 @@ if (typeof window !== 'undefined') {
 }
 
 if (GlobalVue) {
-  GlobalVue.use(plugin);
+  GlobalVue.use(plugin, plugin.options);
 }
 
 module.exports = plugin;
