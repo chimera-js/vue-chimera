@@ -61,4 +61,24 @@ describe('vue-test-reactivity', function () {
       }, 100)
     })
   })
+
+  describe('test-function-init', function() {
+
+    const app = new Vue({
+      chimera() {
+        return {
+          resources: {
+            users: '/users'
+          }
+        }
+      }
+    })
+
+    it('should initialized with a function', function () {
+      assert.equal(app._chimera.constructor.name, 'VueChimera')
+      assert.equal(app.$chimera.users.constructor.name, 'Resource')
+    })
+
+  })
+
 })
