@@ -13,7 +13,9 @@ export default function (config) {
       if (options.chimera instanceof VueChimera) {
         _chimera = options.chimera
       } else if (typeof options.chimera === 'function') {
-        _chimera = new VueChimera(options.chimera.bind(this)(), this)
+        // Initialize with function
+        const chimeraOptions = options.chimera.bind(this)()
+        _chimera = chimeraOptions instanceof VueChimera ? chimeraOptions : new VueChimera(chimeraOptions, this)
       } else if (isPlainObject(options.chimera)) {
         _chimera = new VueChimera(options.chimera, this)
       }
