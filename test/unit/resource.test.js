@@ -62,11 +62,12 @@ describe('resource', function () {
 
   describe('test-execution', function () {
     let data = [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }]
+    let headers = { 'content-type': 'application/json', 'x-my-custom-header': 'my-custom-value' }
 
     it('should recieve status 200', function (done) {
       server.respondWith('GET', '/users', [
         200,
-        { 'Content-Type': 'application/json' },
+        headers,
         JSON.stringify(data)
       ])
 
@@ -75,6 +76,7 @@ describe('resource', function () {
       resource.execute().then(res => {
         assert.equal(resource.status, 200)
         assert.deepEqual(resource.data, data)
+        assert.deepEqual(resource.headers, headers)
         assert.equal(resource.loading, false)
         assert.instanceOf(resource.lastLoaded, Date)
         done()
