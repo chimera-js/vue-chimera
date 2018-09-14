@@ -10,9 +10,13 @@ export default function (config) {
       // Stop if instance doesn't have chimera or already initialized
       if (!options.chimera || options._chimera) return
 
-      if (options.chimera instanceof VueChimera) _chimera = options.chimera
-      else if (isPlainObject(options.chimera)) _chimera = new VueChimera(options.chimera, this)
-      else if (typeof options.chimera === 'function') _chimera = new VueChimera(options.chimera.bind(this)(), this)
+      if (options.chimera instanceof VueChimera) {
+        _chimera = options.chimera
+      } else if (typeof options.chimera === 'function') {
+        _chimera = new VueChimera(options.chimera.bind(this)(), this)
+      } else if (isPlainObject(options.chimera)) {
+        _chimera = new VueChimera(options.chimera, this)
+      }
 
       this._chimeraWatcher = _chimera.watch()
       _chimera.subscribe(this)

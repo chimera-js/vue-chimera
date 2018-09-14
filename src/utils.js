@@ -2,7 +2,7 @@ import Axios from 'axios'
 
 export function isPlainObject (value) {
   const OBJECT_STRING = '[object Object]'
-  return Object.prototype.toString(value) === OBJECT_STRING
+  return typeof value === 'object' && Object.prototype.toString(value) === OBJECT_STRING
 }
 
 export function remove (arr, item) {
