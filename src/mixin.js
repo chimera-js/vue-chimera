@@ -12,6 +12,7 @@ export default function (config) {
 
       if (options.chimera instanceof VueChimera) _chimera = options.chimera
       else if (isPlainObject(options.chimera)) _chimera = new VueChimera(options.chimera, this)
+      else if (typeof options.chimera === 'function') _chimera = new VueChimera(options.chimera.bind(this)(), this)
 
       this._chimeraWatcher = _chimera.watch()
       _chimera.subscribe(this)
