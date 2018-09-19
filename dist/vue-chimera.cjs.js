@@ -675,7 +675,7 @@ function NuxtPlugin () {
       return;
     }
 
-    const resources = [];
+    const cancelTokens = [];
 
     async function prefetchAsyncData({
       Components,
@@ -709,7 +709,7 @@ function NuxtPlugin () {
 
           if (resource && typeof resource !== 'function') {
             resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, options));
-            resources.push(resource);
+            cancelTokens.push(resource.cancel.bind(resource));
             if (!resource.prefetch || !resource.ssrPrefetch) continue;
 
             try {
@@ -738,7 +738,7 @@ function NuxtPlugin () {
         prefetchAsyncData(...args).then(resolve).catch(reject);
         setTimeout(reject, baseOptions.ssrPrefetchTimeout, new Error('  SSR Prefetch Timeout.'));
       }).catch(err => {
-        for (let resource of resources) typeof resource === 'object' && resource.cancel && resource.cancel();
+        for (let cancel of cancelTokens) if (typeof cancel === 'function') cancel();
 
         isDev && console.error(err.message); // eslint-disable-line no-console
       });

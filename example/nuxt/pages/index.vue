@@ -36,7 +36,7 @@ export default {
     resources: {
       blogPost: {
         url: 'https://jsonplaceholder.typicode.com/posts',
-        ssrPrefetch: false
+        ssrPrefetch: true
       }
     }
   },
