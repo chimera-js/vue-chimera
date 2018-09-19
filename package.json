@@ -2,7 +2,7 @@
   "name": "vue-chimera",
   "version": "0.7.2",
   "description": "VueJS RESTful client with reactive resources and features",
-  "main": "dist/vue-chimera.es.js",
+  "main": "dist/vue-chimera.cjs.js",
   "scripts": {
     "build": "bili --format cjs,es,umd,umd-min",
     "lint": "eslint src --ext .js",
