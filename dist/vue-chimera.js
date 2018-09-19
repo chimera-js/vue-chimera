@@ -9544,6 +9544,7 @@
   } = axios$1;
   const EVENT_SUCCESS = 'success';
   const EVENT_ERROR = 'error';
+  const EVENT_CANCEL = 'cancel';
   const EVENT_LOADING = 'loading';
   class Resource {
     static from(value, baseOptions = {}) {
@@ -9695,9 +9696,9 @@
           this.emit(EVENT_SUCCESS);
           resolve(res);
         }).catch(err => {
-          let errorResponse = err.response;
           this._data = null;
           this._loading = false;
+          const errorResponse = err.response;
 
           if (errorResponse) {
             this._status = errorResponse.status;
@@ -9705,7 +9706,12 @@
             this._headers = errorResponse.headers;
           }
 
-          this.emit(EVENT_ERROR);
+          if (axios$1.isCancel(err)) {
+            this.emit(EVENT_CANCEL);
+          } else {
+            this.emit(EVENT_ERROR);
+          }
+
           reject(err);
         });
       });
@@ -9780,9 +9786,11 @@
   }
 
   class NullResource extends Resource {
-    reload(force) {
-      return null;
+    fetch(force) {
+      return Promise.reject(new Error('Null Resource'));
     }
+
+    cancel() {}
 
     get loading() {
       return false;
@@ -9852,10 +9860,15 @@
 
         }
       });
-
-      data.$loading = () => this._vm.$loading;
-
-      data.$axios = () => Resource.config ? Resource.config.axios : null;
+      Object.defineProperty(data, '$loading', {
+        get: () => this._vm.$loading
+      });
+      Object.defineProperty(data, '$axios', {
+        get: () => Resource.config ? Resource.config.axios : null
+      });
+      Object.defineProperty(data, '$cancelAll', {
+        value: () => this.cancelAll()
+      });
     }
 
     watch() {
@@ -9895,6 +9908,12 @@
     updateReactiveResource(key) {
       let r = this._resources[key] = Resource.from(this._reactiveResources[key](), this.options);
       if (r.prefetch) r.reload();
+    }
+
+    cancelAll() {
+      Object.keys(this._resources).forEach(r => {
+        this._resources[r].cancel();
+      });
     }
 
     get resources() {
@@ -9999,6 +10018,8 @@
       }
 
       this._chimera.unsubscribe(this);
+
+      this._chimera.cancelAll();
 
       if (this._chimeraWatcher) {
         this._chimeraWatcher();

@@ -85,6 +85,7 @@ export default (config = {}) => ({
     }
 
     this._chimera.unsubscribe(this)
+    this._chimera.cancelAll()
 
     if (this._chimeraWatcher) {
       this._chimeraWatcher()

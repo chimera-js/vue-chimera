@@ -42,8 +42,9 @@ export default class VueChimera {
         }
       }
     })
-    data.$loading = () => this._vm.$loading
-    data.$axios = () => Resource.config ? Resource.config.axios : null
+    Object.defineProperty(data, '$loading', { get: () => this._vm.$loading })
+    Object.defineProperty(data, '$axios', { get: () => Resource.config ? Resource.config.axios : null })
+    Object.defineProperty(data, '$cancelAll', { value: () => this.cancelAll() })
   }
 
   watch () {
@@ -78,6 +79,12 @@ export default class VueChimera {
   updateReactiveResource (key) {
     let r = this._resources[key] = Resource.from(this._reactiveResources[key](), this.options)
     if (r.prefetch) r.reload()
+  }
+
+  cancelAll () {
+    Object.keys(this._resources).forEach(r => {
+      this._resources[r].cancel()
+    })
   }
 
   get resources () {
