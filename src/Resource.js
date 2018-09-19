@@ -2,9 +2,12 @@ import { isPlainObject, createAxios } from './utils'
 import LocalStorageCache from './cache/LocalStorageCache'
 import NullCache from './cache/NullCache'
 import pDebounce from 'p-debounce'
+import Axios from 'axios'
+const { CancelToken } = Axios
 
 export const EVENT_SUCCESS = 'success'
 export const EVENT_ERROR = 'error'
+export const EVENT_CANCEL = 'cancel'
 export const EVENT_LOADING = 'loading'
 
 export default class Resource {
@@ -29,15 +32,16 @@ export default class Resource {
       throw new Error('Bad Method requested: ' + method)
     }
 
+    this.axios = createAxios(options.axios)
+
     this.requestConfig = {
       url: url,
       method: method ? method.toLowerCase() : 'get',
-      headers: options.headers || {}
+      headers: options.headers || {},
+      cancelToken: new CancelToken(c => { this._canceler = c })
     }
 
     this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params
-
-    this.axios = createAxios(options.axios)
 
     this._loading = false
     this._status = null
@@ -130,7 +134,7 @@ export default class Resource {
         let cacheValue = this.cache.getItem(this.getCacheKey())
         if (cacheValue) {
           setByResponse(cacheValue)
-          resolve()
+          resolve(cacheValue)
           return
         }
       }
@@ -143,15 +147,19 @@ export default class Resource {
         this.emit(EVENT_SUCCESS)
         resolve(res)
       }).catch(err => {
-        let errorResponse = err.response
         this._data = null
         this._loading = false
+        const errorResponse = err.response
         if (errorResponse) {
           this._status = errorResponse.status
           this._error = this.errorTransformer(errorResponse.data)
           this._headers = errorResponse.headers
         }
-        this.emit(EVENT_ERROR)
+        if (Axios.isCancel(err)) {
+          this.emit(EVENT_CANCEL)
+        } else {
+          this.emit(EVENT_ERROR)
+        }
 
         reject(err)
       })
@@ -168,6 +176,15 @@ export default class Resource {
 
   send () {
     return this.fetchDebounced(true)
+  }
+
+  cancel () {
+    if (typeof this._canceler === 'function') this._canceler()
+    this.requestConfig.cancelToken = new CancelToken(c => { this._canceler = c })
+  }
+
+  stop () {
+    this.cancel()
   }
 
   getCache (cache) {

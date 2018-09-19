@@ -9539,6 +9539,9 @@
   	};
   };
 
+  const {
+    CancelToken: CancelToken$1
+  } = axios$1;
   const EVENT_SUCCESS = 'success';
   const EVENT_ERROR = 'error';
   const EVENT_LOADING = 'loading';
@@ -9573,13 +9576,16 @@
         throw new Error('Bad Method requested: ' + method);
       }
 
+      this.axios = createAxios(options.axios);
       this.requestConfig = {
         url: url,
         method: method ? method.toLowerCase() : 'get',
-        headers: options.headers || {}
+        headers: options.headers || {},
+        cancelToken: new CancelToken$1(c => {
+          this._canceler = c;
+        })
       };
       this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params;
-      this.axios = createAxios(options.axios);
       this._loading = false;
       this._status = null;
       this._data = null;
@@ -9676,7 +9682,7 @@
 
           if (cacheValue) {
             setByResponse(cacheValue);
-            resolve();
+            resolve(cacheValue);
             return;
           }
         }
@@ -9715,6 +9721,17 @@
 
     send() {
       return this.fetchDebounced(true);
+    }
+
+    cancel() {
+      if (typeof this._canceler === 'function') this._canceler();
+      this.requestConfig.cancelToken = new CancelToken$1(c => {
+        this._canceler = c;
+      });
+    }
+
+    stop() {
+      this.cancel();
     }
 
     getCache(cache) {

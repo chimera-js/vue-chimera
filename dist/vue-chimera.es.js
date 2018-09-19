@@ -165,6 +165,9 @@ class NullCache {
 
 }
 
+const {
+  CancelToken
+} = Axios;
 const EVENT_SUCCESS = 'success';
 const EVENT_ERROR = 'error';
 const EVENT_LOADING = 'loading';
@@ -199,13 +202,16 @@ class Resource {
       throw new Error('Bad Method requested: ' + method);
     }
 
+    this.axios = createAxios(options.axios);
     this.requestConfig = {
       url: url,
       method: method ? method.toLowerCase() : 'get',
-      headers: options.headers || {}
+      headers: options.headers || {},
+      cancelToken: new CancelToken(c => {
+        this._canceler = c;
+      })
     };
     this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params;
-    this.axios = createAxios(options.axios);
     this._loading = false;
     this._status = null;
     this._data = null;
@@ -302,7 +308,7 @@ class Resource {
 
         if (cacheValue) {
           setByResponse(cacheValue);
-          resolve();
+          resolve(cacheValue);
           return;
         }
       }
@@ -341,6 +347,17 @@ class Resource {
 
   send() {
     return this.fetchDebounced(true);
+  }
+
+  cancel() {
+    if (typeof this._canceler === 'function') this._canceler();
+    this.requestConfig.cancelToken = new CancelToken(c => {
+      this._canceler = c;
+    });
+  }
+
+  stop() {
+    this.cancel();
   }
 
   getCache(cache) {

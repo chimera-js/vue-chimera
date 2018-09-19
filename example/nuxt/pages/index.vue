@@ -25,22 +25,26 @@
 </template>
 
 <script>
-import AppLogo from '~/components/AppLogo.vue';
+import AppLogo from '~/components/AppLogo.vue'
 
 export default {
-    components: {
-        AppLogo
-    },
+  components: {
+    AppLogo
+  },
 
-    chimera: {
-        resources: {
-            blogPost: {
-                url: 'https://jsonplaceholder.typicode.com/posts',
-                prefetch: true
-            }
-        }
+  chimera: {
+    resources: {
+      blogPost: {
+        url: 'https://jsonplaceholder.typicode.com/posts',
+        ssrPrefetch: false
+      }
     }
-};
+  },
+
+  mounted() {
+    window.app = this
+  }
+}
 </script>
 
 <style>
