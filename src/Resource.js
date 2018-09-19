@@ -178,7 +178,8 @@ export default class Resource {
     return this.fetchDebounced(true)
   }
 
-  cancel () {
+  cancel (unload) {
+    if (unload) this._data = null
     if (typeof this._canceler === 'function') this._canceler()
     this.requestConfig.cancelToken = new CancelToken(c => { this._canceler = c })
   }
