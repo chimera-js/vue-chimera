@@ -28,6 +28,11 @@ export default (config = {}) => ({
 
     options.computed = options.computed || {}
     options.watch = options.watch || {}
+    for (let key in _chimera.resources) {
+      options.computed[key] = function () {
+        return this.$chimera[key]
+      }
+    }
     for (let key in _chimera._reactiveResources) {
       options.computed['__' + key] = _chimera._reactiveResources[key]
       options.watch['__' + key] = () => _chimera.updateReactiveResource(key)

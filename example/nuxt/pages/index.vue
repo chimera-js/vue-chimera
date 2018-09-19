@@ -5,11 +5,11 @@
             <h1 class="title">
                 Nuxt.js
             </h1>
-            <h2 class="subtitle" v-if="$chimera">
-                <small v-if="$chimera.blogPost.loading">loading...</small>
-                <span v-if="$chimera.blogPost.data">{{ $chimera.blogPost.data[0].title }}</span>
+            <h2 class="subtitle">
+                <small v-if="blogPost.loading">loading...</small>
+                <span v-if="blogPost.data">{{ blogPost.data[0].title }}</span>
             </h2>
-            <small v-if="$chimera.blogPost.ssrPrefetched">SSR Prefetched!</small>
+            <small v-if="blogPost.ssrPrefetched">SSR Prefetched!</small>
             <div class="links">
                 <a
                         href="https://nuxtjs.org/"
@@ -35,7 +35,7 @@ export default {
     chimera: {
         resources: {
             blogPost: {
-                url: '/posts',
+                url: 'https://jsonplaceholder.typicode.com/posts',
                 prefetch: true
             }
         }
