@@ -9729,7 +9729,8 @@
       return this.fetchDebounced(true);
     }
 
-    cancel() {
+    cancel(unload) {
+      if (unload) this._data = null;
       if (typeof this._canceler === 'function') this._canceler();
       this.requestConfig.cancelToken = new CancelToken$1(c => {
         this._canceler = c;
@@ -10044,6 +10045,8 @@
         return;
       }
 
+      const resources = [];
+
       async function prefetchAsyncData({
         Components,
         nuxtState
@@ -10072,14 +10075,11 @@
                 options = _objectWithoutProperties(chimera, ["resources"]);
 
           for (let key in resources) {
-            if (key && key.charAt(0) === '$') {
-              continue;
-            }
-
             let resource = resources[key];
 
             if (resource && typeof resource !== 'function') {
               resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, options));
+              resources.push(resource);
               if (!resource.prefetch || !resource.ssrPrefetch) continue;
 
               try {
@@ -10108,6 +10108,8 @@
           prefetchAsyncData(...args).then(resolve).catch(reject);
           setTimeout(reject, baseOptions.ssrPrefetchTimeout, new Error('  SSR Prefetch Timeout.'));
         }).catch(err => {
+          for (let resource of resources) typeof resource === 'object' && resource.cancel && resource.cancel();
+
           isDev && console.error(err.message); // eslint-disable-line no-console
         });
       });

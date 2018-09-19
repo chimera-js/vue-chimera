@@ -150,7 +150,7 @@ describe('resource', function () {
       resource.execute().then(res => {
         assert.deepEqual(resource.data, tr(data))
         done()
-      }).catch(done)
+      }).catch(Promise.reject)
     })
 
     it('should transform error', function (done) {
@@ -212,6 +212,29 @@ describe('resource', function () {
       })
 
       resource.execute()
+    })
+  })
+
+  describe('test-cancellation', function () {
+    it('should cancel the request', function (done) {
+      server.respondWith('GET', '/users', [
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({})
+      ])
+
+      assert.equal(resource.loading, false)
+      resource.execute().then(() => {
+        done()
+        throw new Error('Not cancelled')
+      }).catch((err) => {
+        assert.equal(err.__CANCEL__, true)
+        assert.equal(resource.loading, false)
+        assert.equal(resource.data, null)
+        done()
+      })
+      assert.equal(resource.loading, true)
+      resource.cancel()
     })
   })
 })
