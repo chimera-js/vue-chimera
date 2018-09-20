@@ -135,16 +135,17 @@ Now it's time to use our resources in our vue template or inside vue methods.
 
 #### Use Resources in template
 
-`chimera` instance can be accessed in templates with `$chimera` (Dollar sign prepended)
+`chimera` instance can be accessed in templates with `$chimera` (Dollar sign prepended) or you can get resources by simply type it's name, It had been injected in computed properties by the plugin.
 `data` is the final json result of our restful resource
-`loading` is a boolean, identifies the resource is loading.
+`loading` is a boolean flag, identifies the resource is loading.
 You can read other resource property and methods [here](#resource-properties-and-methods).
 
 ```html
 <template>
   <div>
-    <ul v-if="$chimera.users.data && !$chimera.users.loading">
-      <li v-for="user in $chimera.users.data">
+    <!-- `users` is Resource object defined in chimera (same as: `$chimera.users`) -->
+    <ul v-if="users.data && !users.loading">
+      <li v-for="user in users.data">
         {{ user.name }}
       </li>
     </ul>
@@ -196,6 +197,7 @@ let app = new Vue({
 | reload(force)    | Promise   | Fetches the resource from server. `force`: True for cache busting
 | execute(force)  | Promise   | Same as Reload
 | on(event, handler)|           | Sets an event listener. [Events](#events)
+| cancel()         | void       | Interupts request
 
 
 #### Reactive Resources
@@ -285,7 +287,7 @@ new Vue({
 
 ```javascript
 
-import { EVENT_SUCCESS, EVENT_ERROR, EVENT_LOADING } from 'vue-chimera/src/Resource.js'
+import { EVENT_SUCCESS, EVENT_ERROR, EVENT_LOADING, EVENT_CANCEL } from 'vue-chimera/src/Resource.js'
 
 new Vue({
 
@@ -294,8 +296,8 @@ new Vue({
         users: {
           url: '/users',
           on: {
-            [EVENT_ERROR]: (resource) => {
-              // Handles the error
+            [EVENT_CANCEL]: (resource) => {
+                // Calls when a request interrupted and cancelled
             }
           }
         }
@@ -349,7 +351,7 @@ You can also disable SSR for some heavy resources
     resources: {
       myResource: {
         url: '/api/v1/example',
-        ssrPrefetch: false // Prefetch enabled on client side but has no server side prefetch
+        ssrPrefetch: false // Prefetch disabled on a specific resource
       }
     }
 ...
