@@ -367,11 +367,9 @@ This project is open for any contribution. We are waiting for your pull requests
 Thanks to all our contributors.
 
 ## Roadmap
-* Unit/Integration/e2e Tests
 * Vue Directives
 * Different Cache implementations
 * Vuex Implementation
-* Inject restful resources to children components
 * Vuejs web components
 
 ## License
