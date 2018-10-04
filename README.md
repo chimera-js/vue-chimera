@@ -1,12 +1,12 @@
 <p align="center">
-    <a href="https://github.com/SasanFarrokh/vue-chimera">
-        <img src="https://github.com/SasanFarrokh/vue-chimera/raw/master/VueChimeraLogo.png" width="300px">
+    <a href="https://github.com/chimera-js/vue-chimera">
+        <img src="https://github.com/chimera-js/vue-chimera/raw/master/VueChimeraLogo.png" width="300px">
     </a>
 </p>
 <h1 align="center">Vue Chimera</h1>
 
 [![vuejs](https://img.shields.io/badge/vue.js-2.x-green.svg?style=flat-square)](https://vuejs.org)
-[![circle ci](https://img.shields.io/circleci/project/github/SasanFarrokh/vue-chimera/master.svg?style=flat-square)](https://circleci.com/gh/SasanFarrokh/vue-chimera)
+[![circle ci](https://img.shields.io/circleci/project/github/chimera-js/vue-chimera/master.svg?style=flat-square)](https://circleci.com/gh/chimera-js/vue-chimera)
 [![npm version](https://img.shields.io/npm/v/vue-chimera.svg?style=flat-square)](https://www.npmjs.org/package/vue-chimera)
 [![npm downloads](https://img.shields.io/npm/dt/vue-chimera.svg?style=flat-square)](http://npm-stat.com/charts.html?package=vue-chimera)
 
@@ -14,7 +14,7 @@ VueJS RESTful client with reactive features.
 Vue-Chimera is based on [axios](https://github.com/axios/axios) http client library.
 
 ## Demo
-[Demo: vue-chimera](https://cdn.rawgit.com/sasanfarrokh/vue-chimera/f4312e49/example/simple/index.html)
+[Demo: vue-chimera](https://cdn.rawgit.com/chimera-js/vue-chimera/f4312e49/example/simple/index.html)
 
 ## Installing
 
@@ -70,7 +70,7 @@ let app = new Vue({
 })
 ```
 
-Vue Chimera automatically converts your `resources` to [Resource](https://github.com/SasanFarrokh/vue-chimera/blob/master/src/Resource.js) Object
+Vue Chimera automatically converts your `resources` to [Resource](https://github.com/chimera-js/vue-chimera/blob/master/src/Resource.js) Object
 Your resources can be:
 * A simple **string** for simple GET requests
 * An **Object** for complex resources like: POST, PATCH, with Parameters, with Headers, Response/Error transformer, Event listeners
@@ -373,4 +373,4 @@ Thanks to all our contributors.
 * Vuejs web components
 
 ## License
-[MIT](https://github.com/SasanFarrokh/vue-chimera/blob/master/LICENSE.MD)
+[MIT](https://github.com/chimera-js/vue-chimera/blob/master/LICENSE.MD)
