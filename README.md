@@ -13,6 +13,18 @@
 VueJS RESTful client with reactive features.
 Vue-Chimera is based on [axios](https://github.com/axios/axios) http client library.
 
+Overview of features: 
+- Reactive endpoints and requests based on vue instance data
+- Loading flags
+- Get time when the resource was latestly loaded
+- Set interval time to refresh data on an endpoint
+- Simple robust resource definition
+- Nuxtjs compatible with Server side prefetching
+- Simple cancelation on requests
+- Cancel all pending requests on vue instance destroy
+- Events and handlings
+- Lightweight
+
 ## Demo
 [Demo: vue-chimera](https://cdn.rawgit.com/chimera-js/vue-chimera/f4312e49/example/simple/index.html)
 
