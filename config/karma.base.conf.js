@@ -1,5 +1,3 @@
-const webpack = require('webpack')
-
 const webpackConfig = {
     module: {
         rules: [{
@@ -19,9 +17,7 @@ module.exports = {
     preprocessors: {
         '../test/unit/index.js': ['webpack', 'sourcemap']
     },
-    webpack: Object.assign({
-        mode: 'development',
-    }, webpackConfig),
+    webpack: Object.assign({}, webpackConfig),
     webpackMiddleware: {
         noInfo: true
     },
