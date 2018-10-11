@@ -5,7 +5,7 @@
   "main": "dist/vue-chimera.cjs.js",
   "module": "dist/vue-chimera.es.js",
   "scripts": {
-    "build": "bili --format cjs,es,umd,umd-min",
+    "build": "bili --format cjs,es,umd,umd-min --externals vue,axios",
     "lint": "eslint src --ext .js",
     "test": "yarn test:unit",
     "test:unit": "karma start config/karma.unit.conf.js"
