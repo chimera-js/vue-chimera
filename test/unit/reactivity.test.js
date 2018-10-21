@@ -15,9 +15,7 @@ describe('vue-test-reactivity', function () {
     app = new Vue({
 
       chimera: {
-        resources: {
-          users: '/users'
-        }
+        users: '/users'
       }
 
     })
@@ -67,9 +65,7 @@ describe('vue-test-reactivity', function () {
     const app = new Vue({
       chimera() {
         return {
-          resources: {
-            users: '/users'
-          }
+          users: '/users'
         }
       }
     })

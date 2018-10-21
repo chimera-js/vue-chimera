@@ -35,6 +35,14 @@ export default class VueChimera {
 
     Object.defineProperty(resources, '$cancelAll', { value: this.cancelAll.bind(this) })
     Object.defineProperty(resources, '$axios', { get: () => this._axios })
+    Object.defineProperty(resources, '$loading', {
+      get () {
+        for (let r in this) {
+          if (r.loading) return true
+        }
+        return false
+      }
+    })
     this.resources = resources
   }
 

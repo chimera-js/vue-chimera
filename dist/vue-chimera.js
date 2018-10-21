@@ -61,6 +61,7 @@
     }
 
     if (typeof config === 'function') {
+      if (typeof config.request === 'function') return config;
       let axios = config();
       if (axios instanceof Axios) return axios;
     }
@@ -211,7 +212,7 @@
   const EVENT_CANCEL = 'cancel';
   const EVENT_LOADING = 'loading';
   class Resource {
-    static from(value, chimera) {
+    static from(value, baseOptions = {}) {
       if (value == null) throw new Error('Cannot create resource from `null`');
 
       if (value instanceof Resource) {
@@ -219,7 +220,7 @@
       }
 
       if (typeof value === 'string') {
-        return new Resource(value, 'get', null, chimera);
+        return new Resource(value, 'get', baseOptions);
       }
 
       if (isPlainObject(value)) {
@@ -229,23 +230,19 @@
         } = value,
               options = _objectWithoutProperties(value, ["url", "method"]);
 
-        return new Resource(url, method, options, chimera);
+        return new Resource(url, method, Object.assign({}, baseOptions, options));
       }
     }
 
-    constructor(url, method, options, chimera) {
-      options = { ...chimera.options,
-        ...(options || {})
-      };
+    constructor(url, method, options) {
+      options = options || {};
       method = method ? method.toLowerCase() : 'get';
 
       if (method && ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
         throw new Error('Bad Method requested: ' + method);
       }
 
-      this.chimera = chimera;
-      console.log(this.chimera);
-      this.axios = chimera.axios;
+      this.axios = createAxios(options.axios);
       this.requestConfig = {
         url: url,
         method: method ? method.toLowerCase() : 'get',
@@ -488,7 +485,7 @@
       this._vm = vm;
       this._reactiveResources = {};
       this.options = options || {};
-      this.axios = createAxios(options.axios);
+      this._axios = this.options.axios = createAxios(this.options.axios);
       const vmOptions = this._vm.$options;
       vmOptions.computed = vmOptions.computed || {};
       vmOptions.watch = vmOptions.watch || {};
@@ -506,7 +503,7 @@
 
           vmOptions.watch['__' + key] = t => this.updateReactiveResource(key, t);
         } else {
-          resources[key] = Resource.from(r, this);
+          resources[key] = Resource.from(r, this.options);
         }
 
         vmOptions.computed[key] = () => resources[key];
@@ -516,7 +513,17 @@
         value: this.cancelAll.bind(this)
       });
       Object.defineProperty(resources, '$axios', {
-        get: () => this.axios
+        get: () => this._axios
+      });
+      Object.defineProperty(resources, '$loading', {
+        get() {
+          for (let r in this) {
+            if (r.loading) return true;
+          }
+
+          return false;
+        }
+
       });
       this.resources = resources;
     }
@@ -528,7 +535,7 @@
     }
 
     updateReactiveResource(key) {
-      let r = this.resources[key] = Resource.from(this._reactiveResources[key](), this);
+      let r = this.resources[key] = Resource.from(this._reactiveResources[key](), this.options);
       if (r.prefetch) r.reload();
     }
 

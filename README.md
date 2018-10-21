@@ -71,9 +71,7 @@ let app = new Vue({
   chimera: {
     
     // Here you can define your restful resources and api endpoints
-    resources: {
-      mySampleResource: '/users'
-    }
+    mySampleResource: '/users'
   },
   
   data() {
@@ -96,38 +94,40 @@ var app = new Vue({
     
     chimera: {
       
-      // You can use axios config to set default config for your axios http client library
-      axios: {
-        baseURL: 'https://my-domain.com/api/v1',
-        headers: {
-          'X-Sample-Access-Token': 'xxx'
-        }
+      // Define options and configs inside `$options` special key
+      $options: {
+        // You can use axios config to set default config for your axios http client library
+        axios: {
+          baseURL: 'https://my-domain.com/api/v1',
+          headers: {
+            'X-Sample-Access-Token': 'xxx'
+          }
+        },
+          
+        // Or you can directly pass a axios client for more control over your client
+        axios: axios.create(),
       },
       
-      // Or you can directly pass a axios client for more control over your client
-      axios: axios.create(),
-      
-      
-    users: '/users',
-    
-    time: {
-      'url': '/time',
-      // With interval option set to 5000, resource will be refreshed every 5000 miliseconds
-      'interval': 5000
-    },
-    
-    // a sample POST request
-    sendPost: {
-      url: '/posts',
-      method: 'POST',
-      params: {
-        title: 'Sample',
-        body: '<h1>Vue Chimera is awesome...</h1>'
+      // Define resources inside chimera
+      users: '/users',
+        
+      time: {'url': '/time',
+        // With interval option set to 5000, resource will be refreshed every 5000 miliseconds
+        'interval': 5000
       },
-      
-      // Set prefetch to false to prevent request from sending on application load.
-      prefetch: false
-    }
+        
+      // a sample POST request
+      sendPost: {
+        url: '/posts',
+        method: 'POST',
+        params: {
+          title: 'Sample',
+          body: '<h1>Vue Chimera is awesome...</h1>'
+        },
+          
+        // Set prefetch to false to prevent request from sending on application load.
+        prefetch: false
+      }
       
     },
     
@@ -224,21 +224,19 @@ let app = new Vue({
     },
 
     chimera: {
-      resources: {
         
-        post() {
-          return {
-            url: '/api/v1/posts',
-            params: {
-              postId: this.postId
-            },
-            method: 'post',
-            prefetch: true
-          }
-        },
+      post() {
+        return {
+          url: '/api/v1/posts',
+          params: {
+            postId: this.postId
+          },
+          method: 'post',
+          prefetch: true
+        }
+      },
         
-        user: () => `/api/v1/users/${this.selectedUserId}`
-      }
+      user: () => `/api/v1/users/${this.selectedUserId}`
     }
 
 })
@@ -258,6 +256,8 @@ _Note that `prefetch` evaluates to false, your data will be reactive and change 
       // Get the axios client to modify or ...
       this.$chimera.$axios
       
+      // Cancels all requests (Automatically called on instance destory)
+      this.$chimera.$cancelAll()
     }
   }
 ...
@@ -270,21 +270,19 @@ Transformers is used to change the response to another format. It would be calle
 new Vue({
   
   chimera: {
-    resources: {
-      users: {
+    users: {
         
-        url: '/users',
-        
-        transformers: {
-          response: (response) => {
-            if (response.user)
-              response.user.id = 'UID: ' + response.user.id
-            return response
-          },
-          error: (error) => {
-            error.msg = error.msg || 'Something went wrong'
-            return error
-          }
+      url: '/users',
+    
+      transformers: {
+        response: (response) => {
+          if (response.user)
+            response.user.id = 'UID: ' + response.user.id
+          return response
+        },
+        error: (error) => {
+          error.msg = error.msg || 'Something went wrong'
+          return error
         }
       }
     }
@@ -302,13 +300,11 @@ import { EVENT_SUCCESS, EVENT_ERROR, EVENT_LOADING, EVENT_CANCEL } from 'vue-chi
 new Vue({
 
     chimera: {
-      resources: {
-        users: {
-          url: '/users',
-          on: {
-            [EVENT_CANCEL]: (resource) => {
-                // Calls when a request interrupted and cancelled
-            }
+      users: {
+        url: '/users',
+        on: {
+          [EVENT_CANCEL]: (resource) => {
+              // Calls when a request interrupted and cancelled
           }
         }
       }
@@ -358,7 +354,7 @@ module.exports = {
 You can also disable SSR for some heavy resources
 ```javascript
 ...
-    resources: {
+    chimera: {
       myResource: {
         url: '/api/v1/example',
         ssrPrefetch: false // Prefetch disabled on a specific resource
