@@ -41,87 +41,87 @@
         <p>Easiest way to interact with RESTful APIs</p>
     </div>
     <hr/>
-    <div class="con">
-        <h3>Simple GET</h3>
-        <p>
-            <span v-if="!$chimera.simple.loading && $chimera.simple.data">{{ $chimera.simple.data.title }}</span>
-            <span v-else>Loading...</span>
-        </p>
-        <pre>
+    <div v-if="$chimera">
+        <div class="con">
+            <h3>Simple GET</h3>
+            <p>
+                <span v-if="!$chimera.simple.loading && $chimera.simple.data">{{ $chimera.simple.data.title }}</span>
+                <span v-else>Loading...</span>
+            </p>
+            <pre>
 resources: {
     myResource: '/api/v1/posts/1'
 }
         </pre>
-    </div>
+        </div>
 
-    <div class="con">
-        <h3>Reactive GET</h3>
-        Post id: <input type="number" v-model="postId">
-        <p>
-            <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
-            <small v-if="$chimera.reactive.loading">Loading...</small>
-        </p>
-        <pre>
+        <div class="con">
+            <h3>Reactive GET</h3>
+            Post id: <input type="number" v-model="postId">
+            <p>
+                <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
+                <small v-if="$chimera.reactive.loading">Loading...</small>
+            </p>
+            <pre>
 resources: {
     myResource: () => `/api/v1/posts/${this.postId}`,
 }
         </pre>
-    </div>
+        </div>
 
-    <div class="con">
-        <h3>Simple GET with auto refresh interval</h3>
-        <p>
-            Current UTC time:
-            <span style="font-family: arial;"
-                  v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
-            <small v-if="$chimera.time.loading">Refreshing...</small>
-        </p>
-        <pre>
+        <div class="con">
+            <h3>Simple GET with auto refresh interval</h3>
+            <p>
+                Current UTC time:
+                <span style="font-family: arial;"
+                      v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
+                <small v-if="$chimera.time.loading">Refreshing...</small>
+            </p>
+            <pre>
 resources: {
     myResource: '/api/v1/posts/1',
     interval: 2000
 }
         </pre>
-    </div>
+        </div>
 
-    <div class="con">
-        <h3>POST Without prefetch</h3>
-        <p>
+        <div class="con">
+            <h3>POST Without prefetch</h3>
+            <p>
             <span v-if="!$chimera.prefetch.loading && $chimera.prefetch.data">
                 <span style="color: #4cbd51">Successfully created:</span>
                 {{ $chimera.prefetch.data.name }}
                 {{ $chimera.prefetch.data.job }}
             </span>
-        </p>
-        <div>
-            <button v-if="!$chimera.prefetch.lastLoaded" @click="load">Execute</button>
-            <small v-if="$chimera.prefetch.loading">Loading...</small>
-        </div>
-        <pre>
+            </p>
+            <div>
+                <button v-if="!$chimera.prefetch.lastLoaded" @click="load">Execute</button>
+                <small v-if="$chimera.prefetch.loading">Loading...</small>
+            </div>
+            <pre>
 resources: {
     myResource: '/api/v1/posts/1',
     prefetch: false
 }
         </pre>
+        </div>
     </div>
 
 </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.min.js"></script>
 <!--<script src="https://unpkg.com/vue-chimera@0.3.4/dist/vue-chimera.js"></script>-->
-<script src="../../dist/vue-chimera.min.js"></script>
 <script>
-var app = new Vue({
-  el: '#app',
+  var app = new Vue({
+    el: '#app',
 
-  chimera: {
+    chimera: {
 
-    prefetch: true,
-
-    resources: {
+      $options: {
+        prefetch: true,
+      },
 
       simple: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
-
       time: {
         url: 'https://reqres.in/api/users',
         interval: 2000,
@@ -140,18 +140,18 @@ var app = new Vue({
         },
         prefetch: false
       }
-    }
-  },
+    },
 
-  data: {
-    postId: 27
-  },
+    data: {
+      postId: 27
+    },
 
-  methods: {
-    load: function () {
-      this.$chimera.prefetch.execute()
+    methods: {
+      load: function () {
+        this.$chimera.prefetch.execute()
+      }
     }
-  }
-})
+  })
 </script>
+<script src="../../dist/vue-chimera.min.js"></script>
 </html>

@@ -1,73 +1,41 @@
-import Vue from 'vue'
 import Resource from './Resource'
 import NullResource from './NullResource'
-import { remove } from './utils'
+import { createAxios } from './utils'
 
 export default class VueChimera {
-  constructor ({ resources, ...options }, context) {
-    this._vm = null
-    this._listeners = []
-    this._context = context
+  constructor (vm, resources, options) {
+    this._vm = vm
     this._reactiveResources = {}
-    this.options = options
+    this.options = options || {}
+
+    this._axios = this.options.axios = createAxios(this.options.axios)
+
+    const vmOptions = this._vm.$options
+    vmOptions.computed = vmOptions.computed || {}
+    vmOptions.watch = vmOptions.watch || {}
 
     resources = Object.assign({}, resources)
 
     for (let key in resources) {
+      if (key.charAt(0) === '$') continue
+
       let r = resources[key]
 
       if (typeof r === 'function') {
+        r = r.bind(this._vm)
         resources[key] = new NullResource()
-        this._reactiveResources[key] = r.bind(this._context)
+        this._reactiveResources[key] = r
+        vmOptions.computed['__' + key] = r
+        vmOptions.watch['__' + key] = (t) => this.updateReactiveResource(key, t)
       } else {
         resources[key] = Resource.from(r, this.options)
       }
+      vmOptions.computed[key] = () => resources[key]
     }
 
-    this._initVM(resources)
-    this._resources = resources
-  }
-
-  _initVM (data) {
-    this._vm = new Vue({
-      data,
-      computed: {
-        $loading () {
-          for (let key in this.$data) {
-            if (this.$data[key].loading) {
-              return true
-            }
-          }
-          return false
-        }
-      }
-    })
-    Object.defineProperty(data, '$loading', { get: () => this._vm.$loading })
-    Object.defineProperty(data, '$axios', { get: () => Resource.config ? Resource.config.axios : null })
-    Object.defineProperty(data, '$cancelAll', { value: () => this.cancelAll() })
-  }
-
-  watch () {
-    if (!this._watcher) {
-      this._watcher = this._vm.$watch('$data', () => {
-        let i = this._listeners.length
-        while (i--) {
-          let vm = this._listeners[i]
-          if (vm) {
-            vm.$nextTick(() => vm.$forceUpdate())
-          }
-        }
-      }, { deep: true })
-    }
-    return this._watcher
-  }
-
-  subscribe (vm) {
-    this._listeners.push(vm)
-  }
-
-  unsubscribe (vm) {
-    remove(this._listeners, vm)
+    Object.defineProperty(resources, '$cancelAll', { value: this.cancelAll.bind(this) })
+    Object.defineProperty(resources, '$axios', { get: () => this._axios })
+    this.resources = resources
   }
 
   updateReactiveResources () {
@@ -77,17 +45,13 @@ export default class VueChimera {
   }
 
   updateReactiveResource (key) {
-    let r = this._resources[key] = Resource.from(this._reactiveResources[key](), this.options)
+    let r = this.resources[key] = Resource.from(this._reactiveResources[key](), this.options)
     if (r.prefetch) r.reload()
   }
 
   cancelAll () {
-    Object.keys(this._resources).forEach(r => {
-      this._resources[r].cancel()
+    Object.keys(this.resources).forEach(r => {
+      this.resources[r].cancel()
     })
-  }
-
-  get resources () {
-    return this._resources
   }
 }

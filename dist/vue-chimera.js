@@ -47,15 +47,6 @@
     const OBJECT_STRING = '[object Object]';
     return typeof value === 'object' && Object.prototype.toString(value) === OBJECT_STRING;
   }
-  function remove(arr, item) {
-    if (arr.length) {
-      const index = arr.indexOf(item);
-
-      if (index > -1) {
-        return arr.splice(index, 1);
-      }
-    }
-  }
   function createAxios(config) {
     if (config instanceof Axios) {
       return config;
@@ -220,7 +211,7 @@
   const EVENT_CANCEL = 'cancel';
   const EVENT_LOADING = 'loading';
   class Resource {
-    static from(value, baseOptions = {}) {
+    static from(value, chimera) {
       if (value == null) throw new Error('Cannot create resource from `null`');
 
       if (value instanceof Resource) {
@@ -228,7 +219,7 @@
       }
 
       if (typeof value === 'string') {
-        return new Resource(value, 'get', baseOptions);
+        return new Resource(value, 'get', null, chimera);
       }
 
       if (isPlainObject(value)) {
@@ -238,19 +229,23 @@
         } = value,
               options = _objectWithoutProperties(value, ["url", "method"]);
 
-        return new Resource(url, method, Object.assign({}, baseOptions, options));
+        return new Resource(url, method, options, chimera);
       }
     }
 
-    constructor(url, method, options) {
-      options = options || {};
+    constructor(url, method, options, chimera) {
+      options = { ...chimera.options,
+        ...(options || {})
+      };
       method = method ? method.toLowerCase() : 'get';
 
       if (method && ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
         throw new Error('Bad Method requested: ' + method);
       }
 
-      this.axios = createAxios(options.axios);
+      this.chimera = chimera;
+      console.log(this.chimera);
+      this.axios = chimera.axios;
       this.requestConfig = {
         url: url,
         method: method ? method.toLowerCase() : 'get',
@@ -489,88 +484,41 @@
   }
 
   class VueChimera {
-    constructor(_ref, context) {
-      let {
-        resources
-      } = _ref,
-          options = _objectWithoutProperties(_ref, ["resources"]);
-
-      this._vm = null;
-      this._listeners = [];
-      this._context = context;
+    constructor(vm, resources, options) {
+      this._vm = vm;
       this._reactiveResources = {};
-      this.options = options;
+      this.options = options || {};
+      this.axios = createAxios(options.axios);
+      const vmOptions = this._vm.$options;
+      vmOptions.computed = vmOptions.computed || {};
+      vmOptions.watch = vmOptions.watch || {};
       resources = Object.assign({}, resources);
 
       for (let key in resources) {
+        if (key.charAt(0) === '$') continue;
         let r = resources[key];
 
         if (typeof r === 'function') {
+          r = r.bind(this._vm);
           resources[key] = new NullResource();
-          this._reactiveResources[key] = r.bind(this._context);
+          this._reactiveResources[key] = r;
+          vmOptions.computed['__' + key] = r;
+
+          vmOptions.watch['__' + key] = t => this.updateReactiveResource(key, t);
         } else {
-          resources[key] = Resource.from(r, this.options);
+          resources[key] = Resource.from(r, this);
         }
+
+        vmOptions.computed[key] = () => resources[key];
       }
 
-      this._initVM(resources);
-
-      this._resources = resources;
-    }
-
-    _initVM(data) {
-      this._vm = new Vue({
-        data,
-        computed: {
-          $loading() {
-            for (let key in this.$data) {
-              if (this.$data[key].loading) {
-                return true;
-              }
-            }
-
-            return false;
-          }
-
-        }
+      Object.defineProperty(resources, '$cancelAll', {
+        value: this.cancelAll.bind(this)
       });
-      Object.defineProperty(data, '$loading', {
-        get: () => this._vm.$loading
+      Object.defineProperty(resources, '$axios', {
+        get: () => this.axios
       });
-      Object.defineProperty(data, '$axios', {
-        get: () => Resource.config ? Resource.config.axios : null
-      });
-      Object.defineProperty(data, '$cancelAll', {
-        value: () => this.cancelAll()
-      });
-    }
-
-    watch() {
-      if (!this._watcher) {
-        this._watcher = this._vm.$watch('$data', () => {
-          let i = this._listeners.length;
-
-          while (i--) {
-            let vm = this._listeners[i];
-
-            if (vm) {
-              vm.$nextTick(() => vm.$forceUpdate());
-            }
-          }
-        }, {
-          deep: true
-        });
-      }
-
-      return this._watcher;
-    }
-
-    subscribe(vm) {
-      this._listeners.push(vm);
-    }
-
-    unsubscribe(vm) {
-      remove(this._listeners, vm);
+      this.resources = resources;
     }
 
     updateReactiveResources() {
@@ -580,18 +528,14 @@
     }
 
     updateReactiveResource(key) {
-      let r = this._resources[key] = Resource.from(this._reactiveResources[key](), this.options);
+      let r = this.resources[key] = Resource.from(this._reactiveResources[key](), this);
       if (r.prefetch) r.reload();
     }
 
     cancelAll() {
-      Object.keys(this._resources).forEach(r => {
-        this._resources[r].cancel();
+      Object.keys(this.resources).forEach(r => {
+        this.resources[r].cancel();
       });
-    }
-
-    get resources() {
-      return this._resources;
     }
 
   }
@@ -605,40 +549,28 @@
 
       if (!options.chimera || options._chimera) return;
 
+      if (typeof options.chimera === 'function') {
+        // Initialize with function
+        options.chimera = options.chimera.bind(this)();
+      }
+
       if (options.chimera instanceof VueChimera) {
         _chimera = options.chimera;
-      } else if (typeof options.chimera === 'function') {
-        // Initialize with function
-        let chimeraOptions = options.chimera.bind(this)();
-
-        if (chimeraOptions instanceof VueChimera) {
-          _chimera = chimeraOptions;
-        } else {
-          _chimera = new VueChimera(Object.assign({}, config, chimeraOptions), this);
-        }
       } else if (isPlainObject(options.chimera)) {
-        _chimera = new VueChimera(Object.assign({}, config, options.chimera), this);
+        const _options$chimera = options.chimera,
+              {
+          $options
+        } = _options$chimera,
+              resources = _objectWithoutProperties(_options$chimera, ["$options"]);
+
+        _chimera = new VueChimera(this, { ...resources
+        }, { ...config,
+          ...$options
+        });
       }
-
-      this._chimeraWatcher = _chimera.watch();
-
-      _chimera.subscribe(this);
 
       options.computed = options.computed || {};
-      options.watch = options.watch || {};
-
-      for (let key in _chimera.resources) {
-        options.computed[key] = function () {
-          return this.$chimera[key];
-        };
-      }
-
-      for (let key in _chimera._reactiveResources) {
-        options.computed['__' + key] = _chimera._reactiveResources[key];
-
-        options.watch['__' + key] = () => _chimera.updateReactiveResource(key);
-      } // Nuxtjs prefetch
-
+      options.watch = options.watch || {}; // Nuxtjs prefetch
 
       const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext ? this.$ssrContext.nuxt : typeof window !== 'undefined' ? window.__NUXT__ : null;
 
@@ -668,16 +600,25 @@
         }
       }
 
-      this.$chimera = _chimera.resources;
       this._chimera = _chimera;
+    },
+
+    data() {
+      if (this._chimera) {
+        return {
+          $chimera: this._chimera.resources
+        };
+      }
+
+      return {};
     },
 
     mounted() {
       if (this._chimera) {
         this._chimera.updateReactiveResources();
 
-        for (let r in this._chimera._resources) {
-          let resource = this._chimera._resources[r];
+        for (let r in this._chimera.resources) {
+          let resource = this._chimera.resources[r];
 
           if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
             resource.reload();
@@ -691,17 +632,10 @@
         return;
       }
 
-      this._chimera.unsubscribe(this);
-
       this._chimera.cancelAll();
 
-      if (this._chimeraWatcher) {
-        this._chimeraWatcher();
-
-        delete this._chimeraWatcher;
-      }
-
       this._chimera = null;
+      delete this._chimera;
     }
 
   }));
@@ -743,15 +677,15 @@
           const nuxtChimera = {};
 
           const {
-            resources
+            $options
           } = chimera,
-                options = _objectWithoutProperties(chimera, ["resources"]);
+                resources = _objectWithoutProperties(chimera, ["$options"]);
 
           for (let key in resources) {
             let resource = resources[key];
 
             if (resource && typeof resource !== 'function') {
-              resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, options));
+              resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, $options));
               cancelTokens.push(resource.cancel.bind(resource));
               if (!resource.prefetch || !resource.ssrPrefetch) continue;
 
@@ -800,11 +734,31 @@
       prefetch: 'get',
       // false, true, '%METHOD%',
       ssrPrefetch: true,
-      ssrPrefetchTimeout: 4000
+      ssrPrefetchTimeout: 4000,
+      transformer: null,
+      headers: null
     },
 
     install(Vue$$1, options = {}) {
-      Object.assign(this.options, options);
+      Object.keys(options).forEach(key => {
+        if (key in this.options) {
+          this.options[key] = options[key];
+        }
+      });
+
+      if (!Vue$$1.prototype.hasOwnProperty('$chimera')) {
+        Object.defineProperty(Vue$$1.prototype, '$chimera', {
+          get() {
+            if (this._chimera) {
+              return this._chimera.resources;
+            }
+
+            return null;
+          }
+
+        });
+      }
+
       Vue$$1.mixin(mixin(this.options));
     },
 

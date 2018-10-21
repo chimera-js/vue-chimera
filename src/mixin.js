@@ -9,34 +9,24 @@ export default (config = {}) => ({
     // Stop if instance doesn't have chimera or already initialized
     if (!options.chimera || options._chimera) return
 
-    if (options.chimera instanceof VueChimera) {
-      _chimera = options.chimera
-    } else if (typeof options.chimera === 'function') {
+    if (typeof options.chimera === 'function') {
       // Initialize with function
-      let chimeraOptions = options.chimera.bind(this)()
-      if (chimeraOptions instanceof VueChimera) {
-        _chimera = chimeraOptions
-      } else {
-        _chimera = new VueChimera(Object.assign({}, config, chimeraOptions), this)
-      }
-    } else if (isPlainObject(options.chimera)) {
-      _chimera = new VueChimera(Object.assign({}, config, options.chimera), this)
+      options.chimera = options.chimera.bind(this)()
     }
 
-    this._chimeraWatcher = _chimera.watch()
-    _chimera.subscribe(this)
+    if (options.chimera instanceof VueChimera) {
+      _chimera = options.chimera
+    } else if (isPlainObject(options.chimera)) {
+      const { $options, ...resources } = options.chimera
+      _chimera = new VueChimera(
+        this,
+        { ...resources },
+        { ...config, ...$options }
+      )
+    }
 
     options.computed = options.computed || {}
     options.watch = options.watch || {}
-    for (let key in _chimera.resources) {
-      options.computed[key] = function () {
-        return this.$chimera[key]
-      }
-    }
-    for (let key in _chimera._reactiveResources) {
-      options.computed['__' + key] = _chimera._reactiveResources[key]
-      options.watch['__' + key] = () => _chimera.updateReactiveResource(key)
-    }
 
     // Nuxtjs prefetch
     const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
@@ -65,15 +55,21 @@ export default (config = {}) => ({
       }
     }
 
-    this.$chimera = _chimera.resources
     this._chimera = _chimera
+  },
+
+  data () {
+    if (this._chimera) {
+      return { $chimera: this._chimera.resources }
+    }
+    return {}
   },
 
   mounted () {
     if (this._chimera) {
       this._chimera.updateReactiveResources()
-      for (let r in this._chimera._resources) {
-        let resource = this._chimera._resources[r]
+      for (let r in this._chimera.resources) {
+        let resource = this._chimera.resources[r]
         if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) { resource.reload() }
       }
     }
@@ -84,14 +80,8 @@ export default (config = {}) => ({
       return
     }
 
-    this._chimera.unsubscribe(this)
     this._chimera.cancelAll()
-
-    if (this._chimeraWatcher) {
-      this._chimeraWatcher()
-      delete this._chimeraWatcher
-    }
-
     this._chimera = null
+    delete this._chimera
   }
 })

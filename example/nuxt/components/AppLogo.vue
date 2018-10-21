@@ -7,6 +7,14 @@
   </div>
 </template>
 
+<script>
+  export default {
+    chimera: {
+      blogPost: 'https://jsonplaceholder.typicode.com/posts'
+    }
+  }
+</script>
+
 <style>
 .VueToNuxtLogo {
   display: inline-block;

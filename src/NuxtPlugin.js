@@ -24,11 +24,11 @@ export default function () {
         if (!chimera) { continue }
 
         const nuxtChimera = {}
-        const { resources, ...options } = chimera
+        const { $options, ...resources } = chimera
         for (let key in resources) {
           let resource = resources[key]
           if (resource && typeof resource !== 'function') {
-            resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, options))
+            resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, $options))
             cancelTokens.push(resource.cancel.bind(resource))
             if (!resource.prefetch || !resource.ssrPrefetch) continue
             try {

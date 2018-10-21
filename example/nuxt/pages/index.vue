@@ -33,12 +33,17 @@ export default {
   },
 
   chimera: {
-    resources: {
-      blogPost: {
-        url: 'https://jsonplaceholder.typicode.com/posts',
-        ssrPrefetch: true
+
+    $options: {
+      axios: {
+        baseURL: 'https://jsonplaceholder.typicode.com'
       }
-    }
+    },
+
+    blogPost: {
+      url: '/posts',
+      ssrPrefetch: true
+    },
   },
 
   mounted() {

@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueChimera from '../../../dist/vue-chimera.umd'
+import VueChimera from '../../../src/index'
 import App from './App.vue'
 
 Vue.use(VueChimera)
