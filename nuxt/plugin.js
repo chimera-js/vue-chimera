@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueChimera from 'vue-chimera/dist/vue-chimera.es'
+import VueChimera from 'vue-chimera/dist/vue-chimera.cjs'
 
 Vue.use(VueChimera, <%= JSON.stringify(options, null, 2) %>)
 
