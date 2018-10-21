@@ -25,7 +25,7 @@ export function createAxios (config) {
     return Axios.create(config)
   }
   if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config;
+    if (typeof config.request === 'function') return config
     let axios = config()
     if (axios instanceof Axios) return axios
   }
