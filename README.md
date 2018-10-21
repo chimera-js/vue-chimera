@@ -107,30 +107,27 @@ var app = new Vue({
       // Or you can directly pass a axios client for more control over your client
       axios: axios.create(),
       
-      resources: {
       
-        users: '/users',
-        
-        time: {
-          'url': '/time',
-          // With interval option set to 5000, resource will be refreshed every 5000 miliseconds
-          'interval': 5000
-        },
-        
-        // a sample POST request
-        sendPost: {
-          url: '/posts',
-          method: 'POST',
-          params: {
-            title: 'Sample',
-            body: '<h1>Vue Chimera is awesome...</h1>'
-          },
-          
-          // Set prefetch to false to prevent request from sending on application load.
-          prefetch: false
-        }
-        
-      }
+    users: '/users',
+    
+    time: {
+      'url': '/time',
+      // With interval option set to 5000, resource will be refreshed every 5000 miliseconds
+      'interval': 5000
+    },
+    
+    // a sample POST request
+    sendPost: {
+      url: '/posts',
+      method: 'POST',
+      params: {
+        title: 'Sample',
+        body: '<h1>Vue Chimera is awesome...</h1>'
+      },
+      
+      // Set prefetch to false to prevent request from sending on application load.
+      prefetch: false
+    }
       
     },
     
