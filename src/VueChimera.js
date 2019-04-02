@@ -58,7 +58,7 @@ export default class VueChimera {
     // Keep data
     if (this.resources[key].keepData) {
       ['_status', '_data', '_headers', '_error'].forEach(key => {
-        r[key] = this.resources[key];
+        r[key] = this.resources[key]
       })
     }
 
