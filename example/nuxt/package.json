@@ -13,7 +13,8 @@
     "precommit": "npm run lint"
   },
   "dependencies": {
-    "nuxt": "^1.0.0",
+    "@nuxtjs/axios": "^5.3.6",
+    "nuxt": "^2.5.0",
     "vue-chimera": "^0.3.1"
   },
   "devDependencies": {

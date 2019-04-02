@@ -37,11 +37,16 @@ module.exports = {
   },
 
   modules: [
-    '../../nuxt'
+    '../../../nuxt',
+    '@nuxtjs/axios'
   ],
 
+  axios: {
+    baseURL: 'https://jsonplaceholder.typicode.com'
+  },
+
   chimera: {
-    ssrPrefetch: true,
+    ssrPrefetch: false,
     ssrPrefetchTimeout: 2000
   }
 
