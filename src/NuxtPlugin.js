@@ -25,16 +25,17 @@ export default function () {
 
         const nuxtChimera = {}
         const { $options, ...resources } = chimera
+        const options = Object.assign({}, baseOptions, $options)
+        if (!options.axios) options.axios = $axios
+
         for (let key in resources) {
           let resource = resources[key]
           if (resource && typeof resource !== 'function') {
-            resource = resource && resource._data ? resource : Resource.from(resource, Object.assign({}, baseOptions, $options))
+            resource = resource && resource._data ? resource : Resource.from(resource, options)
             cancelTokens.push(resource.cancel.bind(resource))
             if (!resource.prefetch || !resource.ssrPrefetch) continue
             try {
               isDev && console.log('  Prefetching: ' + resource.requestConfig.url) // eslint-disable-line no-console
-
-              // resource.axios = Axios
               let response = await resource.execute()
               resource._data = response.data
             } catch (err) {

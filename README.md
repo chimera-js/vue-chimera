@@ -294,8 +294,7 @@ new Vue({
 #### Events
 
 ```javascript
-
-import { EVENT_SUCCESS, EVENT_ERROR, EVENT_LOADING, EVENT_CANCEL } from 'vue-chimera/src/Resource.js'
+// Events: cancel, error, success, loading
 
 new Vue({
 
@@ -303,7 +302,7 @@ new Vue({
       users: {
         url: '/users',
         on: {
-          [EVENT_CANCEL]: (resource) => {
+          'cancel': (resource) => {
               // Calls when a request interrupted and cancelled
           }
         }

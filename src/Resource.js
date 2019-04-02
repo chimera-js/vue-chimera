@@ -24,8 +24,9 @@ export default class Resource {
     }
   }
 
-  constructor (url, method, options) {
+  constructor (url, method, options, context) {
     options = options || {}
+    this._context = context
     method = method ? method.toLowerCase() : 'get'
     if (method &&
       ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
@@ -76,6 +77,7 @@ export default class Resource {
       this.setInterval(options.interval)
     }
 
+    // Set Events
     if (typeof options.on === 'object' && options.on) {
       for (let key in options.on) {
         this.on(key, options.on[key])
@@ -113,7 +115,7 @@ export default class Resource {
 
   emit (event) {
     (this._eventListeners[event] || []).forEach(handler => {
-      handler(this)
+      handler.call(this._context)
     })
   }
 
@@ -208,6 +210,14 @@ export default class Resource {
 
   setCache (value) {
     if (this.cache) { this.cache.setItem(this.getCacheKey(), value) }
+  }
+
+  toJSON () {
+    const json = {};
+    ['_loading', '_status', '_data', '_headers', '_error', '_lastLoaded', 'ssrPrefetched'].forEach(key => {
+      json[key] = this[key]
+    })
+    return JSON.stringify(json)
   }
 
   get loading () {
