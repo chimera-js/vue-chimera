@@ -51,6 +51,7 @@ export default class Resource {
     this._error = null
     this._lastLoaded = null
     this._eventListeners = {}
+    this.keepData = options.keepData || false
 
     this.ssrPrefetched = false
 
@@ -102,8 +103,12 @@ export default class Resource {
     if (typeof process !== 'undefined' && process.server) return
 
     this._interval = ms
-    if (this._interval_id) { clearInterval(this._interval_id) }
+    this.clearInterval()
     this._interval_id = setInterval(() => this.reload(true), ms)
+  }
+
+  clearInterval () {
+    if (this._interval_id) clearInterval(this._interval_id)
   }
 
   on (event, handler) {
@@ -181,6 +186,7 @@ export default class Resource {
   }
 
   cancel (unload) {
+    this.clearInterval()
     if (unload) this._data = null
     if (typeof this._canceler === 'function') this._canceler()
     this.requestConfig.cancelToken = new CancelToken(c => { this._canceler = c })

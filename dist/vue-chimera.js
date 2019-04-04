@@ -294,6 +294,7 @@
       this._error = null;
       this._lastLoaded = null;
       this._eventListeners = {};
+      this.keepData = options.keepData || false;
       this.ssrPrefetched = false;
       this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch);
       this.ssrPrefetch = options.ssrPrefetch;
@@ -344,12 +345,12 @@
     setInterval(ms) {
       if (typeof process !== 'undefined' && process.server) return;
       this._interval = ms;
-
-      if (this._interval_id) {
-        clearInterval(this._interval_id);
-      }
-
+      this.clearInterval();
       this._interval_id = setInterval(() => this.reload(true), ms);
+    }
+
+    clearInterval() {
+      if (this._interval_id) clearInterval(this._interval_id);
     }
 
     on(event, handler) {
@@ -431,6 +432,7 @@
     }
 
     cancel(unload) {
+      this.clearInterval();
       if (unload) this._data = null;
       if (typeof this._canceler === 'function') this._canceler();
       this.requestConfig.cancelToken = new CancelToken(c => {
@@ -579,6 +581,7 @@
     }
 
     updateReactiveResource(key) {
+      this.resources[key].clearInterval();
       let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this); // Keep data
 
       if (this.resources[key].keepData) {

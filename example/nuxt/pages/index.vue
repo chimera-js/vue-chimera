@@ -7,6 +7,10 @@
             <li v-if="blogPostPrefetch.data">
                 <strong>Prefetch:</strong> {{ blogPostPrefetch.data[2].title }} ({{ prefetched(blogPostPrefetch) }})
             </li>
+            <li>
+                <nuxt-link to="page">NextPage</nuxt-link>
+                <a href="#" @click="i++">increment</a>
+            </li>
         </ul>
     </section>
 </template>
@@ -18,7 +22,11 @@ export default {
   components: {
     AppLogo
   },
-
+  data() {
+      return {
+          i: 0
+      }
+  },
   chimera: {
 
     $options: {
@@ -30,8 +38,16 @@ export default {
     },
     blogPost: {
       url: '/posts?i=1',
-      ssrPrefetch: false
+      ssrPrefetch: false,
+      // interval: 3000
     },
+
+    blogPostReactive() {
+        return {
+            url: '/posts?i=' + this.i,
+            interval: 3000
+        }
+    }
   },
 
   mounted() {

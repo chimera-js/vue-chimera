@@ -53,6 +53,7 @@ export default class VueChimera {
   }
 
   updateReactiveResource (key) {
+    this.resources[key].clearInterval()
     let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this)
 
     // Keep data
