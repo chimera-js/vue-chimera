@@ -208,6 +208,8 @@ let app = new Vue({
 | execute(force)  | Promise   | Same as Reload
 | on(event, handler)|           | Sets an event listener. [Events](#events)
 | cancel()         | void       | Interupts request
+| startInterval()  | void       | Manually starts interval (auto refresh)
+| stopInterval()         | void       | Manually stops interval
 
 
 #### Reactive Resources

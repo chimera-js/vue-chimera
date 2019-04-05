@@ -75,7 +75,7 @@ export default class Resource {
 
     // Set interval.
     if (options.interval) {
-      this.setInterval(options.interval)
+      this.startInterval(options.interval)
     }
 
     // Set Events
@@ -99,15 +99,15 @@ export default class Resource {
     this.errorTransformer = transformer
   }
 
-  setInterval (ms) {
+  startInterval (ms) {
     if (typeof process !== 'undefined' && process.server) return
 
-    this._interval = ms
-    this.clearInterval()
-    this._interval_id = setInterval(() => this.reload(true), ms)
+    if (ms) this._interval = ms
+    this.stopInterval()
+    this._interval_id = setInterval(() => this.reload(true), this._interval)
   }
 
-  clearInterval () {
+  stopInterval () {
     if (this._interval_id) clearInterval(this._interval_id)
   }
 
@@ -186,7 +186,7 @@ export default class Resource {
   }
 
   cancel (unload) {
-    this.clearInterval()
+    this.stopInterval()
     if (unload) this._data = null
     if (typeof this._canceler === 'function') this._canceler()
     this.requestConfig.cancelToken = new CancelToken(c => { this._canceler = c })
