@@ -1,10 +1,9 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('vue'), require('axios')) :
-  typeof define === 'function' && define.amd ? define(['vue', 'axios'], factory) :
-  (global = global || self, global['vue-chimera'] = factory(global.Vue, global.Axios));
-}(this, function (Vue, Axios) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('axios')) :
+  typeof define === 'function' && define.amd ? define(['axios'], factory) :
+  (global = global || self, global['vue-chimera'] = factory(global.Axios));
+}(this, function (Axios) { 'use strict';
 
-  Vue = Vue && Vue.hasOwnProperty('default') ? Vue['default'] : Vue;
   Axios = Axios && Axios.hasOwnProperty('default') ? Axios['default'] : Axios;
 
   function _defineProperty(obj, key, value) {
@@ -318,7 +317,7 @@
 
 
       if (options.interval) {
-        this.setInterval(options.interval);
+        this.startInterval(options.interval);
       } // Set Events
 
 
@@ -342,14 +341,14 @@
       this.errorTransformer = transformer;
     }
 
-    setInterval(ms) {
+    startInterval(ms) {
       if (typeof process !== 'undefined' && process.server) return;
-      this._interval = ms;
-      this.clearInterval();
-      this._interval_id = setInterval(() => this.reload(true), ms);
+      if (ms) this._interval = ms;
+      this.stopInterval();
+      this._interval_id = setInterval(() => this.reload(true), this._interval);
     }
 
-    clearInterval() {
+    stopInterval() {
       if (this._interval_id) clearInterval(this._interval_id);
     }
 
@@ -432,7 +431,7 @@
     }
 
     cancel(unload) {
-      this.clearInterval();
+      this.stopInterval();
       if (unload) this._data = null;
       if (typeof this._canceler === 'function') this._canceler();
       this.requestConfig.cancelToken = new CancelToken(c => {
@@ -581,7 +580,7 @@
     }
 
     updateReactiveResource(key) {
-      this.resources[key].clearInterval();
+      this.resources[key].stopInterval();
       let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this); // Keep data
 
       if (this.resources[key].keepData) {
@@ -785,9 +784,6 @@
     };
   }
 
-  Vue.config.silent = true;
-  Vue.config.productionTip = false;
-  Vue.config.devtools = false;
   const plugin = {
     options: {
       axios: null,

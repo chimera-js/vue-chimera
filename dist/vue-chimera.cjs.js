@@ -2,7 +2,6 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var Vue = _interopDefault(require('vue'));
 var Axios = _interopDefault(require('axios'));
 var pDebounce = _interopDefault(require('p-debounce'));
 
@@ -275,7 +274,7 @@ class Resource {
 
 
     if (options.interval) {
-      this.setInterval(options.interval);
+      this.startInterval(options.interval);
     } // Set Events
 
 
@@ -299,14 +298,14 @@ class Resource {
     this.errorTransformer = transformer;
   }
 
-  setInterval(ms) {
+  startInterval(ms) {
     if (typeof process !== 'undefined' && process.server) return;
-    this._interval = ms;
-    this.clearInterval();
-    this._interval_id = setInterval(() => this.reload(true), ms);
+    if (ms) this._interval = ms;
+    this.stopInterval();
+    this._interval_id = setInterval(() => this.reload(true), this._interval);
   }
 
-  clearInterval() {
+  stopInterval() {
     if (this._interval_id) clearInterval(this._interval_id);
   }
 
@@ -389,7 +388,7 @@ class Resource {
   }
 
   cancel(unload) {
-    this.clearInterval();
+    this.stopInterval();
     if (unload) this._data = null;
     if (typeof this._canceler === 'function') this._canceler();
     this.requestConfig.cancelToken = new CancelToken(c => {
@@ -538,7 +537,7 @@ class VueChimera {
   }
 
   updateReactiveResource(key) {
-    this.resources[key].clearInterval();
+    this.resources[key].stopInterval();
     let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this); // Keep data
 
     if (this.resources[key].keepData) {
@@ -742,9 +741,6 @@ function NuxtPlugin () {
   };
 }
 
-Vue.config.silent = true;
-Vue.config.productionTip = false;
-Vue.config.devtools = false;
 const plugin = {
   options: {
     axios: null,

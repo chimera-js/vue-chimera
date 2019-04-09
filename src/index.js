@@ -1,10 +1,5 @@
-import Vue from 'vue'
 import mixin from './mixin'
 import NuxtPlugin from './NuxtPlugin'
-
-Vue.config.silent = true
-Vue.config.productionTip = false
-Vue.config.devtools = false
 
 const plugin = {
 

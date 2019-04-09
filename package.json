@@ -35,8 +35,7 @@
   "dependencies": {
     "axios": "^0.18.0",
     "lodash": ">=4.17.11",
-    "p-debounce": "^1.0.0",
-    "vue": "^2.5.17"
+    "p-debounce": "^1.0.0"
   },
   "devDependencies": {
     "@babel/plugin-proposal-object-rest-spread": "^7.4.0",
