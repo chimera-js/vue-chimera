@@ -53,17 +53,18 @@ export default class VueChimera {
   }
 
   updateReactiveResource (key) {
-    this.resources[key].stopInterval()
+    const oldResource = this.resources[key]
+    oldResource.stopInterval()
     let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this)
 
     // Keep data
-    if (this.resources[key].keepData) {
+    if (oldResource.keepData !== false) {
       ['_status', '_data', '_headers', '_error'].forEach(key => {
-        r[key] = this.resources[key]
+        r[key] = oldResource
       })
     }
 
-    r._lastLoaded = this.resources[key]._lastLoaded
+    r._lastLoaded = oldResource._lastLoaded
     if (r.prefetch) r.reload()
     this.resources[key] = r
   }
