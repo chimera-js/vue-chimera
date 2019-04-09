@@ -246,7 +246,7 @@ class Resource {
     this._error = null;
     this._lastLoaded = null;
     this._eventListeners = {};
-    this.keepData = options.keepData || false;
+    this.keepData = !!options.keepData;
     this.ssrPrefetched = false;
     this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch);
     this.ssrPrefetch = options.ssrPrefetch;
@@ -533,16 +533,18 @@ class VueChimera {
   }
 
   updateReactiveResource(key) {
-    this.resources[key].stopInterval();
+    const oldResource = this.resources[key];
+    oldResource.stopInterval();
     let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this); // Keep data
 
-    if (this.resources[key].keepData) {
-      ['_status', '_data', '_headers', '_error'].forEach(key => {
-        r[key] = this.resources[key];
-      });
+    if (oldResource.keepData) {
+      r._data = oldResource._data;
+      r._status = oldResource._status;
+      r._headers = oldResource._headers;
+      r._error = oldResource._error;
     }
 
-    r._lastLoaded = this.resources[key]._lastLoaded;
+    r._lastLoaded = oldResource._lastLoaded;
     if (r.prefetch) r.reload();
     this.resources[key] = r;
   }

@@ -58,10 +58,11 @@ export default class VueChimera {
     let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this)
 
     // Keep data
-    if (oldResource.keepData !== false) {
-      ['_status', '_data', '_headers', '_error'].forEach(key => {
-        r[key] = oldResource
-      })
+    if (oldResource.keepData) {
+      r._data = oldResource._data
+      r._status = oldResource._status
+      r._headers = oldResource._headers
+      r._error = oldResource._error
     }
 
     r._lastLoaded = oldResource._lastLoaded

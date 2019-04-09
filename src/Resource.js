@@ -51,7 +51,7 @@ export default class Resource {
     this._error = null
     this._lastLoaded = null
     this._eventListeners = {}
-    this.keepData = options.keepData || false
+    this.keepData = !!options.keepData
 
     this.ssrPrefetched = false
 
