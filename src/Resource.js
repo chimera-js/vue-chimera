@@ -24,9 +24,8 @@ export default class Resource {
     }
   }
 
-  constructor (url, method, options, context) {
+  constructor (url, method, options) {
     options = options || {}
-    this._context = context
     method = method ? method.toLowerCase() : 'get'
     if (method &&
       ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
@@ -120,7 +119,7 @@ export default class Resource {
 
   emit (event) {
     (this._eventListeners[event] || []).forEach(handler => {
-      handler.call(this._context)
+      handler()
     })
   }
 

@@ -276,7 +276,7 @@ new Vue({
         
       url: '/users',
     
-      transformers: {
+      transformer: {
         response: (response) => {
           if (response.user)
             response.user.id = 'UID: ' + response.user.id

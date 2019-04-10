@@ -28,7 +28,7 @@ export default class VueChimera {
         vmOptions.computed['__' + key] = r
         vmOptions.watch['__' + key] = (t) => this.updateReactiveResource(key, t)
       } else {
-        resources[key] = Resource.from(r, this.options, this._vm, this)
+        resources[key] = Resource.from(r, this.options)
       }
       vmOptions.computed[key] = () => resources[key]
     }
@@ -55,7 +55,7 @@ export default class VueChimera {
   updateReactiveResource (key) {
     const oldResource = this.resources[key]
     oldResource.stopInterval()
-    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this)
+    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options)
 
     // Keep data
     if (oldResource.keepData) {
