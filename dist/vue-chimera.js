@@ -244,6 +244,7 @@
   const EVENT_ERROR = 'error';
   const EVENT_CANCEL = 'cancel';
   const EVENT_LOADING = 'loading';
+  const EVENT_TIMEOUT = 'timeout';
   class Resource {
     static from(value, baseOptions = {}) {
       if (value == null) throw new Error('Cannot create resource from `null`');
@@ -267,9 +268,8 @@
       }
     }
 
-    constructor(url, method, options, context) {
+    constructor(url, method, options) {
       options = options || {};
-      this._context = context;
       method = method ? method.toLowerCase() : 'get';
 
       if (method && ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
@@ -306,8 +306,8 @@
         if (typeof options.transformer === 'function') {
           this.setTransformer(options.transformer);
         } else if (typeof options.transformer === 'object') {
-          this.setResponseTransformer(options.transformer.response);
-          this.setErrorTransformer(options.transformer.error);
+          options.transformer.response && this.setResponseTransformer(options.transformer.response);
+          options.transformer.error && this.setErrorTransformer(options.transformer.error);
         }
       } else {
         this.errorTransformer = err => err;
@@ -361,11 +361,11 @@
 
     emit(event) {
       (this._eventListeners[event] || []).forEach(handler => {
-        handler.call(this._context);
+        handler();
       });
     }
 
-    fetch(force) {
+    fetch(force, extraData) {
       return new Promise((resolve, reject) => {
         let setByResponse = res => {
           this._error = null;
@@ -390,8 +390,12 @@
         }
 
         this._loading = true;
-        this.emit(EVENT_LOADING);
-        this.axios.request(this.requestConfig).then(res => {
+        this.emit(EVENT_LOADING); // Assign Extra data
+
+        let requestConfig = Object.assign({}, this.requestConfig, typeof extraData === 'object' ? {
+          [this.requestConfig.method === 'get' ? 'params' : 'data']: extraData
+        } : {});
+        this.axios.request(requestConfig).then(res => {
           setByResponse(res);
           this.setCache(res);
           this.emit(EVENT_SUCCESS);
@@ -409,6 +413,8 @@
 
           if (Axios.isCancel(err)) {
             this.emit(EVENT_CANCEL);
+          } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
+            this.emit(EVENT_TIMEOUT);
           } else {
             this.emit(EVENT_ERROR);
           }
@@ -426,8 +432,8 @@
       return this.fetchDebounced(true);
     }
 
-    send() {
-      return this.fetchDebounced(true);
+    send(extra) {
+      return this.fetchDebounced(true, extra);
     }
 
     cancel(unload) {
@@ -544,11 +550,11 @@
           r = r.bind(this._vm);
           resources[key] = new NullResource();
           this._reactiveResources[key] = r;
-          vmOptions.computed['__' + key] = r;
+          vmOptions.computed['$_chimera__' + key] = r;
 
-          vmOptions.watch['__' + key] = t => this.updateReactiveResource(key, t);
+          vmOptions.watch['$_chimera__' + key] = t => this.updateReactiveResource(key, t);
         } else {
-          resources[key] = Resource.from(r, this.options, this._vm, this);
+          resources[key] = Resource.from(r, this.options);
         }
 
         vmOptions.computed[key] = () => resources[key];
@@ -582,7 +588,7 @@
     updateReactiveResource(key) {
       const oldResource = this.resources[key];
       oldResource.stopInterval();
-      let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, this); // Keep data
+      let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options); // Keep data
 
       if (oldResource.keepData) {
         r._data = oldResource._data;
