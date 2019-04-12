@@ -9,6 +9,7 @@ export const EVENT_SUCCESS = 'success'
 export const EVENT_ERROR = 'error'
 export const EVENT_CANCEL = 'cancel'
 export const EVENT_LOADING = 'loading'
+export const EVENT_TIMEOUT = 'timeout'
 
 export default class Resource {
   static from (value, baseOptions = {}) {
@@ -64,8 +65,8 @@ export default class Resource {
       if (typeof options.transformer === 'function') {
         this.setTransformer(options.transformer)
       } else if (typeof options.transformer === 'object') {
-        this.setResponseTransformer(options.transformer.response)
-        this.setErrorTransformer(options.transformer.error)
+        options.transformer.response && this.setResponseTransformer(options.transformer.response)
+        options.transformer.error && this.setErrorTransformer(options.transformer.error)
       }
     } else {
       this.errorTransformer = (err) => err
@@ -123,7 +124,7 @@ export default class Resource {
     })
   }
 
-  fetch (force) {
+  fetch (force, extraData) {
     return new Promise((resolve, reject) => {
       let setByResponse = (res) => {
         this._error = null
@@ -147,7 +148,13 @@ export default class Resource {
 
       this._loading = true
       this.emit(EVENT_LOADING)
-      this.axios.request(this.requestConfig).then(res => {
+
+      // Assign Extra data
+      let requestConfig = Object.assign({}, this.requestConfig, typeof extraData === 'object' ? {
+        [this.requestConfig.method === 'get' ? 'params' : 'data']: extraData
+      } : {})
+
+      this.axios.request(requestConfig).then(res => {
         setByResponse(res)
         this.setCache(res)
         this.emit(EVENT_SUCCESS)
@@ -163,6 +170,8 @@ export default class Resource {
         }
         if (Axios.isCancel(err)) {
           this.emit(EVENT_CANCEL)
+        } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
+          this.emit(EVENT_TIMEOUT)
         } else {
           this.emit(EVENT_ERROR)
         }
@@ -180,8 +189,8 @@ export default class Resource {
     return this.fetchDebounced(true)
   }
 
-  send () {
-    return this.fetchDebounced(true)
+  send (extra) {
+    return this.fetchDebounced(true, extra)
   }
 
   cancel (unload) {

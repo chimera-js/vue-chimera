@@ -296,7 +296,7 @@ new Vue({
 #### Events
 
 ```javascript
-// Events: cancel, error, success, loading
+// Events: cancel, error, success, loading, timeout
 
 new Vue({
 

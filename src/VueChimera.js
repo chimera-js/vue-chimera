@@ -25,8 +25,8 @@ export default class VueChimera {
         r = r.bind(this._vm)
         resources[key] = new NullResource()
         this._reactiveResources[key] = r
-        vmOptions.computed['__' + key] = r
-        vmOptions.watch['__' + key] = (t) => this.updateReactiveResource(key, t)
+        vmOptions.computed['$_chimera__' + key] = r
+        vmOptions.watch['$_chimera__' + key] = (t) => this.updateReactiveResource(key, t)
       } else {
         resources[key] = Resource.from(r, this.options)
       }
