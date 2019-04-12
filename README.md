@@ -206,6 +206,7 @@ let app = new Vue({
 | ---------- | ----------- | -----------
 | reload(force)    | Promise   | Fetches the resource from server. `force`: True for cache busting
 | execute(force)  | Promise   | Same as Reload
+| send(extraParams)  | Promise   | Sends request with extra data
 | on(event, handler)|           | Sets an event listener. [Events](#events)
 | cancel()         | void       | Interupts request
 | startInterval()  | void       | Manually starts interval (auto refresh)
