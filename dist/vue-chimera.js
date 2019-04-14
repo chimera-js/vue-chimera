@@ -306,14 +306,14 @@
         if (typeof options.transformer === 'function') {
           this.setTransformer(options.transformer);
         } else if (typeof options.transformer === 'object') {
-          options.transformer.response && this.setResponseTransformer(options.transformer.response);
-          options.transformer.error && this.setErrorTransformer(options.transformer.error);
+          this.setResponseTransformer(options.transformer.response);
+          this.setErrorTransformer(options.transformer.error);
         }
-      } else {
-        this.errorTransformer = err => err;
+      }
 
-        this.responseTransformer = res => res;
-      } // Set interval.
+      this.responseTransformer = this.responseTransformer || (r => r);
+
+      this.errorTransformer = this.errorTransformer || (r => r); // Set interval.
 
 
       if (options.interval) {
@@ -359,9 +359,17 @@
       return this;
     }
 
+    bindListeners(obj) {
+      Object.keys(this._eventListeners).forEach(key => {
+        (this._eventListeners[key] || []).forEach((handler, i) => {
+          this._eventListeners[key][i] = handler.bind(obj);
+        });
+      });
+    }
+
     emit(event) {
       (this._eventListeners[event] || []).forEach(handler => {
-        handler();
+        handler(this);
       });
     }
 
@@ -543,7 +551,7 @@
       resources = Object.assign({}, resources);
 
       for (let key in resources) {
-        if (key.charAt(0) === '$') continue;
+        if (key.charAt(0) === '$' || !resources.hasOwnProperty(key)) continue;
         let r = resources[key];
 
         if (typeof r === 'function') {
@@ -558,6 +566,8 @@
         }
 
         vmOptions.computed[key] = () => resources[key];
+
+        resources[key].bindListeners(this._vm);
       }
 
       Object.defineProperty(resources, '$cancelAll', {
@@ -580,9 +590,9 @@
     }
 
     updateReactiveResources() {
-      for (let key in this._reactiveResources) {
+      Object.keys(this._reactiveResources).forEach(key => {
         this.updateReactiveResource(key);
-      }
+      });
     }
 
     updateReactiveResource(key) {

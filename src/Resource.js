@@ -65,13 +65,12 @@ export default class Resource {
       if (typeof options.transformer === 'function') {
         this.setTransformer(options.transformer)
       } else if (typeof options.transformer === 'object') {
-        options.transformer.response && this.setResponseTransformer(options.transformer.response)
-        options.transformer.error && this.setErrorTransformer(options.transformer.error)
+        this.setResponseTransformer(options.transformer.response)
+        this.setErrorTransformer(options.transformer.error)
       }
-    } else {
-      this.errorTransformer = (err) => err
-      this.responseTransformer = (res) => res
     }
+    this.responseTransformer = this.responseTransformer || (r => r)
+    this.errorTransformer = this.errorTransformer || (r => r)
 
     // Set interval.
     if (options.interval) {
@@ -118,9 +117,17 @@ export default class Resource {
     return this
   }
 
+  bindListeners (obj) {
+    Object.keys(this._eventListeners).forEach(key => {
+      (this._eventListeners[key] || []).forEach((handler, i) => {
+        this._eventListeners[key][i] = handler.bind(obj)
+      })
+    })
+  }
+
   emit (event) {
     (this._eventListeners[event] || []).forEach(handler => {
-      handler()
+      handler(this)
     })
   }
 

@@ -2,6 +2,7 @@ import Vue from 'vue'
 import VueChimera from '../../dist/vue-chimera.es'
 import sinon from 'sinon'
 import { assert } from 'chai'
+import { EVENT_SUCCESS } from '../../src/Resource'
 
 Vue.use(VueChimera)
 Vue.config.devtools = false
@@ -23,6 +24,7 @@ describe('vue-test-reactivity', function () {
     responseData = [{ id: 1, name: 'chimera1' }, { id: 2, name: 'chimera2' }]
 
     server = sinon.createFakeServer()
+
     // server.respondWith('GET', '/users', [
     //     200, {'Content-Type': 'application/json'}, JSON.stringify(responseData)
     // ])
@@ -61,7 +63,6 @@ describe('vue-test-reactivity', function () {
   })
 
   describe('test-function-init', function() {
-
     const app = new Vue({
       chimera() {
         return {
@@ -74,7 +75,41 @@ describe('vue-test-reactivity', function () {
       assert.equal(app._chimera.constructor.name, 'VueChimera')
       assert.equal(app.$chimera.users.constructor.name, 'Resource')
     })
+  })
 
+  describe('test-event-handler-context', function() {
+    this.timeout(10000)
+    it('should broadcast success event', function (done) {
+      server.respondWith('GET', '/users', [
+        200,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({})
+      ])
+
+      const app = new Vue({
+        chimera() {
+          return {
+            users: {
+              url: '/users',
+              on: {
+                success(resource) {
+                  assert(app === this, 'This is not the Vue instance')
+                  assert.equal(resource.constructor.name, 'Resource')
+                  assert(!!resource.data)
+                  done()
+                },
+              }
+            }
+          }
+        }
+      })
+
+      app.$chimera.users.execute()
+
+      setTimeout(() => {
+        server.respond([200, { 'Content-Type': 'application/json' }, JSON.stringify(responseData)])
+      }, 100)
+    })
   })
 
 })

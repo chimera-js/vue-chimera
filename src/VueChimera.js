@@ -17,7 +17,7 @@ export default class VueChimera {
     resources = Object.assign({}, resources)
 
     for (let key in resources) {
-      if (key.charAt(0) === '$') continue
+      if (key.charAt(0) === '$' || !resources.hasOwnProperty(key)) continue
 
       let r = resources[key]
 
@@ -31,6 +31,7 @@ export default class VueChimera {
         resources[key] = Resource.from(r, this.options)
       }
       vmOptions.computed[key] = () => resources[key]
+      resources[key].bindListeners(this._vm)
     }
 
     Object.defineProperty(resources, '$cancelAll', { value: this.cancelAll.bind(this) })
@@ -47,9 +48,9 @@ export default class VueChimera {
   }
 
   updateReactiveResources () {
-    for (let key in this._reactiveResources) {
+    Object.keys(this._reactiveResources).forEach(key => {
       this.updateReactiveResource(key)
-    }
+    })
   }
 
   updateReactiveResource (key) {
