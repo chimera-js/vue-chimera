@@ -7,7 +7,7 @@ module.exports = config => {
             // 'Firefox',
             // 'Safari'
         ],
-        reporters: ['progress'],
+        reporters: ['progress', 'coverage'],
         singleRun: true,
         plugins: base.plugins.concat([
             'karma-chrome-launcher',

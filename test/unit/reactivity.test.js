@@ -2,7 +2,6 @@ import Vue from 'vue'
 import VueChimera from '../../dist/vue-chimera.es'
 import sinon from 'sinon'
 import { assert } from 'chai'
-import { EVENT_SUCCESS } from '../../src/Resource'
 
 Vue.use(VueChimera)
 Vue.config.devtools = false
