@@ -29,10 +29,10 @@ module.exports = {
     preprocessors: {
         '../test/unit/index.js': ['webpack', 'sourcemap'],
     },
-    reporters: ['coverage'],
-    coverageReporter: {
-      type : 'html',
-      dir : '../coverage/'
+    reporters: ['coverage-istanbul'],
+    coverageIstanbulReporter: {
+      dir : resolve(__dirname, '../coverage/'),
+      reports: ['html', 'lcovonly', 'text-summary']
     },
     webpack: Object.assign({}, webpackConfig),
     webpackMiddleware: {
@@ -43,7 +43,7 @@ module.exports = {
         'karma-mocha-reporter',
         'karma-sourcemap-loader',
         'karma-webpack',
-        'karma-coverage',
+        'karma-coverage-istanbul-reporter',
         'istanbul-instrumenter-loader'
     ]
 }
