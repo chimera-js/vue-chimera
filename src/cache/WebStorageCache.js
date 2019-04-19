@@ -1,11 +1,13 @@
-export default class LocalStorageCache {
-  constructor (defaultExpiration) {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      throw Error('LocalStorageCache: Local storage is not available.')
-    } else {
-      this.storage = window.localStorage
+export default class WebStorageCache {
+  constructor (options) {
+    if (typeof window !== 'undefined') {
+      const store = String(options.store).replace(/[\s-]/g).toLowerCase()
+      this.storage = store === 'sessionstorage' ? window.sessionStorage : window.localStorage
     }
-    this.defaultExpiration = defaultExpiration
+
+    if (!this.storage) throw Error('LocalStorageCache: Local storage is not available.')
+
+    this.defaultExpiration = options.defaultExpiration || 60000
   }
 
   /**
@@ -55,7 +57,7 @@ export default class LocalStorageCache {
     return this.keys().length
   }
 
-  clearCache () {
+  clear () {
     this.storage.clear()
   }
 }

@@ -58,6 +58,13 @@ describe('resource', function () {
       assert.equal(r.responseTransformer, tr)
       assert.equal(r.errorTransformer, tr)
     })
+
+    it('should throw error on null', function() {
+      expect(Resource.from.bind(null, null)).to.throw()
+    })
+    it('should throw error on unknown method', function() {
+      expect(Resource.from.bind(null, { url: '', method: 'SOMETHING' })).to.throw()
+    })
   })
 
   describe('test-execution', function () {

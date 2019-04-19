@@ -1,5 +1,6 @@
 import Resource from './Resource'
 import NullResource from './NullResource'
+import Cache from './cache'
 import { createAxios } from './utils'
 
 export default class VueChimera {
@@ -9,6 +10,9 @@ export default class VueChimera {
     this.options = options || {}
 
     this.axios = this.options.axios = (!this.options.axios && this._vm.$axios) ? this._vm.$axios : createAxios(this.options.axios)
+    if (this.options.cache) {
+      this.cache = this.options.cache = Cache.from(this.options.cache, this._vm)
+    }
 
     const vmOptions = this._vm.$options
     vmOptions.computed = vmOptions.computed || {}

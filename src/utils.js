@@ -15,19 +15,15 @@ export function remove (arr, item) {
 }
 
 export function createAxios (config) {
-  if (config instanceof Axios) {
-    return config
-  }
-  if (config && typeof config.$request === 'function') {
+  if (config && typeof config.request === 'function') {
     return config
   }
   if (isPlainObject(config)) {
     return Axios.create(config)
   }
   if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config
     let axios = config()
-    if (axios instanceof Axios) return axios
+    return createAxios(axios)
   }
   return Axios
 }

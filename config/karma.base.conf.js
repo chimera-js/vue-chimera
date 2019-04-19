@@ -9,7 +9,7 @@ const webpackConfig = {
             },
             {
               test: /\.js/,
-              exclude: /node_modules|test|dist/,
+              exclude: /node_modules|test|dist|NuxtPlugin/,
               enforce: 'post',
               use: {
                 loader: 'istanbul-instrumenter-loader',

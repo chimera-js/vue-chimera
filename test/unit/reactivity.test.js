@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import VueChimera from '../../dist/vue-chimera.es'
+import VueChimera from '../../src/index'
 import sinon from 'sinon'
 import { assert } from 'chai'
 

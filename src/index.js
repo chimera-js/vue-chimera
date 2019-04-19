@@ -5,7 +5,7 @@ const plugin = {
 
   options: {
     axios: null,
-    cache: 'no-cache',
+    cache: null,
     debounce: 80,
     prefetch: 'get', // false, true, '%METHOD%',
     ssrPrefetch: true,
