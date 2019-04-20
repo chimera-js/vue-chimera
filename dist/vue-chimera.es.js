@@ -76,11 +76,7 @@ function isPlainObject(value) {
   return typeof value === 'object' && Object.prototype.toString(value) === OBJECT_STRING;
 }
 function createAxios(config) {
-  if (config instanceof Axios) {
-    return config;
-  }
-
-  if (config && typeof config.$request === 'function') {
+  if (config && typeof config.request === 'function') {
     return config;
   }
 
@@ -89,105 +85,11 @@ function createAxios(config) {
   }
 
   if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config;
     let axios = config();
-    if (axios instanceof Axios) return axios;
+    return createAxios(axios);
   }
 
   return Axios;
-}
-
-class LocalStorageCache {
-  constructor(defaultExpiration) {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      throw Error('LocalStorageCache: Local storage is not available.');
-    } else {
-      this.storage = window.localStorage;
-    }
-
-    this.defaultExpiration = defaultExpiration;
-  }
-  /**
-     *
-     * @param key         Key for the cache
-     * @param value       Value for cache persistence
-     * @param expiration  Expiration time in milliseconds
-     */
-
-
-  setItem(key, value, expiration) {
-    this.storage.setItem(key, JSON.stringify({
-      expiration: Date.now() + (expiration || this.defaultExpiration),
-      value
-    }));
-  }
-  /**
-     * If Cache exists return the Parsed Value, If Not returns {null}
-     *
-     * @param key
-     */
-
-
-  getItem(key) {
-    let item = this.storage.getItem(key);
-    item = JSON.parse(item);
-
-    if (item && item.value && Date.now() <= item.expiration) {
-      return item.value;
-    }
-
-    this.removeItem(key);
-    return null;
-  }
-
-  removeItem(key) {
-    this.storage.removeItem(key);
-  }
-
-  keys() {
-    return Object.keys(this.storage);
-  }
-
-  all() {
-    return this.keys().reduce((obj, str) => {
-      obj[str] = this.storage.getItem(str);
-      return obj;
-    }, {});
-  }
-
-  length() {
-    return this.keys().length;
-  }
-
-  clearCache() {
-    this.storage.clear();
-  }
-
-}
-
-class NullCache {
-  setItem(key, value, expiration) {}
-
-  getItem(key) {
-    return null;
-  }
-
-  removeItem(key) {}
-
-  keys() {
-    return [];
-  }
-
-  all() {
-    return {};
-  }
-
-  length() {
-    return 0;
-  }
-
-  clearCache() {}
-
 }
 
 const {
@@ -207,7 +109,7 @@ class Resource {
     }
 
     if (typeof value === 'string') {
-      return new Resource(value, 'get', baseOptions);
+      return new Resource(value, null, baseOptions);
     }
 
     if (isPlainObject(value)) {
@@ -216,6 +118,13 @@ class Resource {
         method
       } = value,
             options = _objectWithoutProperties(value, ["url", "method"]);
+
+      if (options.cache) {
+        if (!baseOptions.cache) throw new Error('Pre definition of cache should be on Chimera instance options');
+        if (typeof options.cache !== 'object') throw Error('Cache should be an object');
+        let cache = Object.create(baseOptions.cache);
+        options.cache = Object.assign(cache, options.cache);
+      }
 
       return new Resource(url, method, Object.assign({}, baseOptions, options));
     }
@@ -236,7 +145,8 @@ class Resource {
       headers: options.headers || {},
       cancelToken: new CancelToken(c => {
         this._canceler = c;
-      })
+      }),
+      timeout: options.timeout || undefined
     };
     this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params;
     this._loading = false;
@@ -247,10 +157,11 @@ class Resource {
     this._lastLoaded = null;
     this._eventListeners = {};
     this.keepData = !!options.keepData;
+    this.cache = options.cache;
     this.ssrPrefetched = false;
+    this.cacheHit = false;
     this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch);
     this.ssrPrefetch = options.ssrPrefetch;
-    this.cache = this.getCache(options.cache);
     this.fetchDebounced = pDebounce(this.fetch.bind(this), options.debounce || 80, {
       leading: true
     }); // Set Transformers
@@ -328,25 +239,12 @@ class Resource {
 
   fetch(force, extraData) {
     return new Promise((resolve, reject) => {
-      let setByResponse = res => {
-        this._error = null;
-        this._loading = false;
-
-        if (res) {
-          this._status = res.status;
-          this._data = this.responseTransformer(res.data);
-          this._headers = res.headers;
-          this._lastLoaded = new Date();
-        }
-      };
-
       if (this.cache && !force) {
-        let cacheValue = this.cache.getItem(this.getCacheKey());
+        let cacheResult = this.cache.assignCache(this);
 
-        if (cacheValue) {
-          setByResponse(cacheValue);
-          resolve(cacheValue);
-          return;
+        if (cacheResult) {
+          this.cacheHit = true;
+          return resolve(cacheResult._data);
         }
       }
 
@@ -357,25 +255,42 @@ class Resource {
         [this.requestConfig.method === 'get' ? 'params' : 'data']: extraData
       } : {});
       this.axios.request(requestConfig).then(res => {
-        setByResponse(res);
-        this.setCache(res);
+        this._error = null;
+        this._loading = false;
+        this._lastLoaded = new Date();
+        this._status = res.status;
+        this._data = res.data ? this.responseTransformer(res.data) : null;
+        this._headers = res.headers || {};
+        this.cache && this.cache.set(this);
         this.emit(EVENT_SUCCESS);
-        resolve(res);
+        resolve(this._data);
       }).catch(err => {
         this._data = null;
         this._loading = false;
-        const errorResponse = err.response;
+        const res = err.response;
 
-        if (errorResponse) {
-          this._status = errorResponse.status;
-          this._error = this.errorTransformer(errorResponse.data);
-          this._headers = errorResponse.headers;
+        if (res) {
+          this._status = res.status;
+          this._error = res.data = res.data ? this.errorTransformer(res.data) : true;
+          this._headers = res.headers || {};
+        } else {
+          this._status = 0;
+          this._error = true;
+          this._headers = {};
         }
 
-        if (Axios.isCancel(err)) {
-          this.emit(EVENT_CANCEL);
-        } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
+        if (this.cache && this.cache.strategy === 'network-first') {
+          this.cache.assignCache(this);
+          this.cacheHit = true;
+          return resolve(this._data);
+        }
+
+        if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
+          err.timeout = true;
           this.emit(EVENT_TIMEOUT);
+        } else if (Axios.isCancel(err)) {
+          err.cancel = true;
+          this.emit(EVENT_CANCEL);
         } else {
           this.emit(EVENT_ERROR);
         }
@@ -410,31 +325,12 @@ class Resource {
     this.cancel();
   }
 
-  getCache(cache) {
-    const caches = {
-      'no-cache': () => new NullCache(),
-      'localStorage': () => new LocalStorageCache(this.getConfig().cacheExpiration || 10000)
-    };
-    cache = cache || 'no-cache';
-    return caches[cache] ? caches[cache]() : null;
-  }
-
-  getCacheKey() {
-    return (typeof window !== 'undefined' && typeof btoa !== 'undefined' ? window.btoa : x => x)(this.requestConfig.url + this.requestConfig.params + this.requestConfig.data + this.requestConfig.method);
-  }
-
-  setCache(value) {
-    if (this.cache) {
-      this.cache.setItem(this.getCacheKey(), value);
-    }
-  }
-
   toJSON() {
     const json = {};
     ['_loading', '_status', '_data', '_headers', '_error', '_lastLoaded', 'ssrPrefetched'].forEach(key => {
       json[key] = this[key];
     });
-    return JSON.stringify(json);
+    return json;
   }
 
   get loading() {
@@ -492,12 +388,164 @@ class NullResource extends Resource {
 
 }
 
+class WebStorageCache {
+  constructor(options) {
+    if (typeof window !== 'undefined') {
+      const store = String(options.store).replace(/[\s-]/g).toLowerCase();
+      this.storage = store === 'sessionstorage' ? window.sessionStorage : window.localStorage;
+    }
+
+    if (!this.storage) throw Error('LocalStorageCache: Local storage is not available.');
+    this.defaultExpiration = options.defaultExpiration || 60000;
+  }
+
+  getObjectStore() {
+    const store = this.storage.getItem('_chimera');
+    return store ? JSON.parse(store) : {};
+  }
+
+  setObjectStore(x) {
+    this.storage.setItem('_chimera', JSON.stringify(x));
+  }
+
+  clear() {
+    this.storage.removeItem('_chimera');
+  }
+  /**
+   *
+   * @param key         Key for the cache
+   * @param value       Value for cache persistence
+   * @param expiration  Expiration time in milliseconds
+   */
+
+
+  setItem(key, value, expiration) {
+    const store = this.getObjectStore();
+    store[key] = {
+      expiration: Date.now() + (expiration || this.defaultExpiration),
+      value
+    };
+    this.setObjectStore(store);
+  }
+  /**
+   * If Cache exists return the Parsed Value, If Not returns {null}
+   *
+   * @param key
+   */
+
+
+  getItem(key) {
+    const store = this.getObjectStore();
+    let item = store[key];
+
+    if (item && item.value && Date.now() <= item.expiration) {
+      return item.value;
+    }
+
+    this.removeItem(key);
+    return null;
+  }
+
+  removeItem(key) {
+    const store = this.getObjectStore();
+    delete store[key];
+    this.setObjectStore(store);
+  }
+
+  keys() {
+    return Object.keys(this.getObjectStore());
+  }
+
+  length() {
+    return this.keys().length;
+  }
+
+}
+
+class Cache {
+  static from(options, vm) {
+    if (!options) return null;
+    let {
+      store
+    } = options;
+    return new Cache(vm, options.strategy || 'stale', store);
+  }
+
+  constructor(vm, strategy, store) {
+    this.strategy = strategy;
+    this.store = store;
+    this.vm = vm;
+  }
+
+  get(r) {
+    return this.store.getItem(this.getCacheKey(r));
+  }
+
+  set(r, value) {
+    value = value || r.toJSON();
+    delete value.ssrPrefetched;
+    this.store.setItem(this.getCacheKey(r), value);
+  }
+
+  assignCache(r, value) {
+    if (!value) value = this.get(r);
+    const strategy = this.strategy;
+
+    const assign = () => {
+      Object.assign(r, value);
+    };
+
+    if (value) {
+      if (strategy === 'cache-first') {
+        assign();
+        return r;
+      } else if (this.strategy === 'network-first') {
+        if (typeof navigator !== 'undefined' && !navigator.onLine || r.error === true) {
+          assign();
+          return r;
+        }
+      } else if (this.strategy === 'stale') {
+        assign();
+      }
+    }
+  }
+
+  clear() {
+    this.store && this.store.clear();
+  }
+
+  getCacheKey(r) {
+    const hash = typeof window !== 'undefined' ? window.btoa : x => x;
+    return '$_chimera_' + this.vm.uid + hash([r.requestConfig.url, r.requestConfig.params, r.requestConfig.data, r.requestConfig.method].join('|'));
+  }
+
+  set store(x) {
+    if (!x || typeof x !== 'object') {
+      this._store = new WebStorageCache({
+        store: x
+      });
+    } else {
+      this._store = x;
+    }
+  }
+
+  get store() {
+    return this._store;
+  }
+
+}
+
 class VueChimera {
   constructor(vm, resources, options) {
     this._vm = vm;
     this._reactiveResources = {};
     this.options = options || {};
     this.axios = this.options.axios = !this.options.axios && this._vm.$axios ? this._vm.$axios : createAxios(this.options.axios);
+
+    if (this.options.cache) {
+      this.cache = this.options.cache = Cache.from(this.options.cache, this._vm);
+    }
+
     const vmOptions = this._vm.$options;
     vmOptions.computed = vmOptions.computed || {};
     vmOptions.watch = vmOptions.watch || {};
@@ -758,7 +806,7 @@ function NuxtPlugin () {
 const plugin = {
   options: {
     axios: null,
-    cache: 'no-cache',
+    cache: null,
     debounce: 80,
     prefetch: 'get',
     // false, true, '%METHOD%',

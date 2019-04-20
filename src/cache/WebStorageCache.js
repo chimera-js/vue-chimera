@@ -10,27 +10,42 @@ export default class WebStorageCache {
     this.defaultExpiration = options.defaultExpiration || 60000
   }
 
-  /**
-     *
-     * @param key         Key for the cache
-     * @param value       Value for cache persistence
-     * @param expiration  Expiration time in milliseconds
-     */
-  setItem (key, value, expiration) {
-    this.storage.setItem(key, JSON.stringify({
-      expiration: Date.now() + (expiration || this.defaultExpiration),
-      value
-    }))
+  getObjectStore () {
+    const store = this.storage.getItem('_chimera')
+    return store ? JSON.parse(store) : {}
+  }
+
+  setObjectStore (x) {
+    this.storage.setItem('_chimera', JSON.stringify(x))
+  }
+
+  clear () {
+    this.storage.removeItem('_chimera')
   }
 
   /**
-     * If Cache exists return the Parsed Value, If Not returns {null}
-     *
-     * @param key
-     */
+   *
+   * @param key         Key for the cache
+   * @param value       Value for cache persistence
+   * @param expiration  Expiration time in milliseconds
+   */
+  setItem (key, value, expiration) {
+    const store = this.getObjectStore()
+    store[key] = {
+      expiration: Date.now() + (expiration || this.defaultExpiration),
+      value
+    }
+    this.setObjectStore(store)
+  }
+
+  /**
+   * If Cache exists return the Parsed Value, If Not returns {null}
+   *
+   * @param key
+   */
   getItem (key) {
-    let item = this.storage.getItem(key)
-    item = JSON.parse(item)
+    const store = this.getObjectStore()
+    let item = store[key]
 
     if (item && item.value && Date.now() <= item.expiration) { return item.value }
 
@@ -39,25 +54,16 @@ export default class WebStorageCache {
   }
 
   removeItem (key) {
-    this.storage.removeItem(key)
+    const store = this.getObjectStore()
+    delete store[key]
+    this.setObjectStore(store)
   }
 
   keys () {
-    return Object.keys(this.storage)
-  }
-
-  all () {
-    return this.keys().reduce((obj, str) => {
-      obj[str] = this.storage.getItem(str)
-      return obj
-    }, {})
+    return Object.keys(this.getObjectStore())
   }
 
   length () {
     return this.keys().length
-  }
-
-  clear () {
-    this.storage.clear()
   }
 }
