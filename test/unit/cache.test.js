@@ -59,6 +59,7 @@ describe('vue-test-cache', function () {
 
       cache.set(app.users)
       assert(cache.get(app.users), 'Cache should has users')
+      assert(app._uid && cache.getCacheKey(app.users).startsWith('$_chimera_' + app._uid))
 
       cache.clear()
       assert(!cache.get(app.users), 'Cache should be cleared')

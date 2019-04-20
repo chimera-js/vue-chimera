@@ -563,7 +563,7 @@
 
     getCacheKey(r) {
       const hash = typeof window !== 'undefined' ? window.btoa : x => x;
-      return '$_chimera_' + this.vm.uid + hash([r.requestConfig.url, r.requestConfig.params, r.requestConfig.data, r.requestConfig.method].join('|'));
+      return '$_chimera_' + this.vm._uid + hash([r.requestConfig.url, r.requestConfig.params, r.requestConfig.data, r.requestConfig.method].join('|'));
     }
 
     set store(x) {
