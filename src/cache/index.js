@@ -1,17 +1,18 @@
-import WebStorageCache from './WebStorageCache'
+import MemoryCache from './MemoryCache'
+import { isPlainObject } from '../utils'
 
 export default class Cache {
-  static from (options, vm) {
+  static from (options) {
     if (!options) return null
-    let { store } = options
-
-    return new Cache(vm, options.strategy || 'stale', store)
+    if (isPlainObject(options)) {
+      return new Cache(options.strategy || 'stale', options.store)
+    }
+    return new Cache('stale', options)
   }
 
-  constructor (vm, strategy, store) {
+  constructor (strategy, store) {
     this.strategy = strategy
     this.store = store
-    this.vm = vm
   }
 
   get (r) {
@@ -27,7 +28,7 @@ export default class Cache {
   assignCache (r, value) {
     if (!value) value = this.get(r)
 
-    const strategy = this.strategy
+    const strategy = (r.cacheOptions || {}).strategy || this.strategy
     const assign = () => {
       Object.assign(r, value)
     }
@@ -53,7 +54,7 @@ export default class Cache {
 
   getCacheKey (r) {
     const hash = typeof window !== 'undefined' ? window.btoa : x => x
-    return '$_chimera_' + this.vm._uid + hash([
+    return '$_chimera_' + (r.id || 'r') + '_' + hash([
       r.requestConfig.url,
       r.requestConfig.params,
       r.requestConfig.data,
@@ -63,7 +64,7 @@ export default class Cache {
 
   set store (x) {
     if (!x || typeof x !== 'object') {
-      this._store = new WebStorageCache({ store: x })
+      this._store = new MemoryCache()
     } else {
       this._store = x
     }

@@ -11,7 +11,7 @@ export default class VueChimera {
 
     this.axios = this.options.axios = (!this.options.axios && this._vm.$axios) ? this._vm.$axios : createAxios(this.options.axios)
     if (this.options.cache) {
-      this.cache = this.options.cache = Cache.from(this.options.cache, this._vm)
+      this.cache = this.options.cache = Cache.from(this.options.cache)
     }
 
     const vmOptions = this._vm.$options
@@ -21,7 +21,7 @@ export default class VueChimera {
     resources = Object.assign({}, resources)
 
     for (let key in resources) {
-      if (key.charAt(0) === '$' || !resources.hasOwnProperty(key)) continue
+      if (!resources.hasOwnProperty(key) || key.charAt(0) === '$') continue
 
       let r = resources[key]
 
@@ -32,7 +32,7 @@ export default class VueChimera {
         vmOptions.computed['$_chimera__' + key] = r
         vmOptions.watch['$_chimera__' + key] = (t) => this.updateReactiveResource(key, t)
       } else {
-        resources[key] = Resource.from(r, this.options)
+        resources[key] = Resource.from(r, this.options, key)
       }
       vmOptions.computed[key] = () => resources[key]
       resources[key].bindListeners(this._vm)
@@ -43,7 +43,7 @@ export default class VueChimera {
     Object.defineProperty(resources, '$loading', {
       get () {
         for (let r in this) {
-          if (r.loading) return true
+          if (this.hasOwnProperty(r) && r.loading) return true
         }
         return false
       }
@@ -60,7 +60,7 @@ export default class VueChimera {
   updateReactiveResource (key) {
     const oldResource = this.resources[key]
     oldResource.stopInterval()
-    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options)
+    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, key)
 
     // Keep data
     if (oldResource.keepData) {

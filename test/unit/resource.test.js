@@ -37,7 +37,7 @@ describe('resource', function () {
     })
 
     it('should remain itself', function () {
-      let r = new Resource('/u', 'POST')
+      let r = new Resource('myResource', '/u', 'POST')
       assert.equal(r, Resource.from(r))
     })
 

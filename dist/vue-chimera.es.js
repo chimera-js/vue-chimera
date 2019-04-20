@@ -101,7 +101,7 @@ const EVENT_CANCEL = 'cancel';
 const EVENT_LOADING = 'loading';
 const EVENT_TIMEOUT = 'timeout';
 class Resource {
-  static from(value, baseOptions = {}) {
+  static from(value, baseOptions = {}, id) {
     if (value == null) throw new Error('Cannot create resource from `null`');
 
     if (value instanceof Resource) {
@@ -109,7 +109,7 @@ class Resource {
     }
 
     if (typeof value === 'string') {
-      return new Resource(value, null, baseOptions);
+      return new Resource(id, value, null, baseOptions);
     }
 
     if (isPlainObject(value)) {
@@ -121,16 +121,16 @@ class Resource {
 
       if (options.cache) {
         if (!baseOptions.cache) throw new Error('Pre definition of cache should be on Chimera instance options');
-        if (typeof options.cache !== 'object') throw Error('Cache should be an object');
+        if (!isPlainObject(options.cache)) throw Error('Cache should be an object');
         let cache = Object.create(baseOptions.cache);
         options.cache = Object.assign(cache, options.cache);
       }
 
-      return new Resource(url, method, Object.assign({}, baseOptions, options));
+      return new Resource(id, url, method, Object.assign({}, baseOptions, options));
     }
   }
 
-  constructor(url, method, options) {
+  constructor(id, url, method, options) {
     options = options || {};
     method = method ? method.toLowerCase() : 'get';
 
@@ -158,6 +158,7 @@ class Resource {
     this._eventListeners = {};
     this.keepData = !!options.keepData;
     this.cache = options.cache;
+    this.id = id;
     this.ssrPrefetched = false;
     this.cacheHit = false;
     this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch);
@@ -388,55 +389,26 @@ class NullResource extends Resource {
 
 }
 
-class WebStorageCache {
-  constructor(options) {
-    if (typeof window !== 'undefined') {
-      const store = String(options.store).replace(/[\s-]/g).toLowerCase();
-      this.storage = store === 'sessionstorage' ? window.sessionStorage : window.localStorage;
-    }
-
-    if (!this.storage) throw Error('LocalStorageCache: Local storage is not available.');
+const storage = {};
+class MemoryCache {
+  constructor(options = {}) {
+    this.storage = storage;
     this.defaultExpiration = options.defaultExpiration || 60000;
   }
 
-  getObjectStore() {
-    const store = this.storage.getItem('_chimera');
-    return store ? JSON.parse(store) : {};
-  }
-
-  setObjectStore(x) {
-    this.storage.setItem('_chimera', JSON.stringify(x));
-  }
-
   clear() {
-    this.storage.removeItem('_chimera');
+    this.storage = {};
   }
-  /**
-   *
-   * @param key         Key for the cache
-   * @param value       Value for cache persistence
-   * @param expiration  Expiration time in milliseconds
-   */
-
 
   setItem(key, value, expiration) {
-    const store = this.getObjectStore();
-    store[key] = {
+    this.storage[key] = {
       expiration: Date.now() + (expiration || this.defaultExpiration),
       value
     };
-    this.setObjectStore(store);
   }
-  /**
-   * If Cache exists return the Parsed Value, If Not returns {null}
-   *
-   * @param key
-   */
-
 
   getItem(key) {
-    const store = this.getObjectStore();
-    let item = store[key];
+    let item = this.storage[key];
 
     if (item && item.value && Date.now() <= item.expiration) {
       return item.value;
@@ -447,13 +419,11 @@ class WebStorageCache {
   }
 
   removeItem(key) {
-    const store = this.getObjectStore();
-    delete store[key];
-    this.setObjectStore(store);
+    delete this.storage[key];
   }
 
   keys() {
-    return Object.keys(this.getObjectStore());
+    return Object.keys(this.storage);
   }
 
   length() {
@@ -463,18 +433,19 @@ class WebStorageCache {
 }
 
 class Cache {
-  static from(options, vm) {
+  static from(options) {
     if (!options) return null;
-    let {
-      store
-    } = options;
-    return new Cache(vm, options.strategy || 'stale', store);
+
+    if (isPlainObject(options)) {
+      return new Cache(options.strategy || 'stale', options.store);
+    }
+
+    return new Cache('stale', options);
   }
 
-  constructor(vm, strategy, store) {
+  constructor(strategy, store) {
     this.strategy = strategy;
     this.store = store;
-    this.vm = vm;
   }
 
   get(r) {
@@ -489,7 +460,7 @@ class Cache {
 
   assignCache(r, value) {
     if (!value) value = this.get(r);
-    const strategy = this.strategy;
+    const strategy = (r.cacheOptions || {}).strategy || this.strategy;
 
     const assign = () => {
       Object.assign(r, value);
@@ -516,14 +487,12 @@ class Cache {
 
   getCacheKey(r) {
     const hash = typeof window !== 'undefined' ? window.btoa : x => x;
-    return '$_chimera_' + this.vm._uid + hash([r.requestConfig.url, r.requestConfig.params, r.requestConfig.data, r.requestConfig.method].join('|'));
+    return '$_chimera_' + (r.id || 'r') + '_' + hash([r.requestConfig.url, r.requestConfig.params, r.requestConfig.data, r.requestConfig.method].join('|'));
   }
 
   set store(x) {
     if (!x || typeof x !== 'object') {
-      this._store = new WebStorageCache({
-        store: x
-      });
+      this._store = new MemoryCache();
     } else {
       this._store = x;
     }
@@ -543,7 +512,7 @@ class VueChimera {
     this.axios = this.options.axios = !this.options.axios && this._vm.$axios ? this._vm.$axios : createAxios(this.options.axios);
 
     if (this.options.cache) {
-      this.cache = this.options.cache = Cache.from(this.options.cache, this._vm);
+      this.cache = this.options.cache = Cache.from(this.options.cache);
     }
 
     const vmOptions = this._vm.$options;
@@ -552,7 +521,7 @@ class VueChimera {
     resources = Object.assign({}, resources);
 
     for (let key in resources) {
-      if (key.charAt(0) === '$' || !resources.hasOwnProperty(key)) continue;
+      if (!resources.hasOwnProperty(key) || key.charAt(0) === '$') continue;
       let r = resources[key];
 
       if (typeof r === 'function') {
@@ -563,7 +532,7 @@ class VueChimera {
 
         vmOptions.watch['$_chimera__' + key] = t => this.updateReactiveResource(key, t);
       } else {
-        resources[key] = Resource.from(r, this.options);
+        resources[key] = Resource.from(r, this.options, key);
       }
 
       vmOptions.computed[key] = () => resources[key];
@@ -580,7 +549,7 @@ class VueChimera {
     Object.defineProperty(resources, '$loading', {
       get() {
         for (let r in this) {
-          if (r.loading) return true;
+          if (this.hasOwnProperty(r) && r.loading) return true;
         }
 
         return false;
@@ -599,7 +568,7 @@ class VueChimera {
   updateReactiveResource(key) {
     const oldResource = this.resources[key];
     oldResource.stopInterval();
-    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options); // Keep data
+    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, key); // Keep data
 
     if (oldResource.keepData) {
       r._data = oldResource._data;

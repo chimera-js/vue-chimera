@@ -8,19 +8,20 @@ export default class WebStorageCache {
     if (!this.storage) throw Error('LocalStorageCache: Local storage is not available.')
 
     this.defaultExpiration = options.defaultExpiration || 60000
+    this.key = options.key
   }
 
   getObjectStore () {
-    const store = this.storage.getItem('_chimera')
+    const store = this.storage.getItem(this.key)
     return store ? JSON.parse(store) : {}
   }
 
   setObjectStore (x) {
-    this.storage.setItem('_chimera', JSON.stringify(x))
+    this.storage.setItem(this.key, JSON.stringify(x))
   }
 
   clear () {
-    this.storage.removeItem('_chimera')
+    this.storage.removeItem(this.key)
   }
 
   /**

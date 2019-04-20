@@ -10,28 +10,28 @@ export const EVENT_LOADING = 'loading'
 export const EVENT_TIMEOUT = 'timeout'
 
 export default class Resource {
-  static from (value, baseOptions = {}) {
+  static from (value, baseOptions = {}, id) {
     if (value == null) throw new Error('Cannot create resource from `null`')
 
     if (value instanceof Resource) { return value }
 
-    if (typeof value === 'string') { return new Resource(value, null, baseOptions) }
+    if (typeof value === 'string') { return new Resource(id, value, null, baseOptions) }
 
     if (isPlainObject(value)) {
       const { url, method, ...options } = value
 
       if (options.cache) {
         if (!baseOptions.cache) throw new Error('Pre definition of cache should be on Chimera instance options')
-        if (typeof options.cache !== 'object') throw Error('Cache should be an object')
+        if (!isPlainObject(options.cache)) throw Error('Cache should be an object')
         let cache = Object.create(baseOptions.cache)
         options.cache = Object.assign(cache, options.cache)
       }
 
-      return new Resource(url, method, Object.assign({}, baseOptions, options))
+      return new Resource(id, url, method, Object.assign({}, baseOptions, options))
     }
   }
 
-  constructor (url, method, options) {
+  constructor (id, url, method, options) {
     options = options || {}
     method = method ? method.toLowerCase() : 'get'
     if (method &&
@@ -60,7 +60,7 @@ export default class Resource {
     this._eventListeners = {}
     this.keepData = !!options.keepData
     this.cache = options.cache
-
+    this.id = id
     this.ssrPrefetched = false
     this.cacheHit = false
 
@@ -180,6 +180,7 @@ export default class Resource {
           this._error = true
           this._headers = {}
         }
+
         if (this.cache && this.cache.strategy === 'network-first') {
           this.cache.assignCache(this)
           this.cacheHit = true

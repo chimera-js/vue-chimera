@@ -1,9 +1,9 @@
 import Vue from 'vue'
 import VueChimera from '../../src/index'
 import Cache from '../../src/cache/index'
-import WebStorageCache from '../../src/cache/WebStorageCache'
 import sinon from 'sinon'
 import { assert } from 'chai'
+import MemoryCache from '../../src/cache/MemoryCache'
 
 Vue.use(VueChimera)
 Vue.config.devtools = false
@@ -17,28 +17,21 @@ describe('vue-test-cache', function () {
       chimera: {
         $options: {
           cache: {
-            store: 'localStorage',
             strategy: 'cache-first',
           },
           prefetch: false,
         },
         users: '/users',
-        networkFirst: {
-          url: 'users',
-          cache: {
-            strategy: 'network-first'
-          }
-        }
       }
     })
 
-
+    app._chimera.cache.clear()
     server = sinon.createFakeServer()
   })
 
   after(() => {
     server.restore()
-    localStorage.clear()
+    app._chimera.cache.clear()
   })
 
   const respond = (response, status = 200) => {
@@ -52,17 +45,52 @@ describe('vue-test-cache', function () {
       const cache = app._chimera.cache
 
       assert.instanceOf(cache, Cache)
-      assert.instanceOf(cache.store, WebStorageCache)
-      assert.equal(cache.store.storage, localStorage)
+      assert.instanceOf(cache.store, MemoryCache)
 
       respond({ test: 1 })
-
+      await app.users.fetch()
       cache.set(app.users)
       assert(cache.get(app.users), 'Cache should has users')
-      assert(app._uid && cache.getCacheKey(app.users).startsWith('$_chimera_' + app._uid))
+      assert(app.users.cache.strategy, 'cache-first')
 
       cache.clear()
       assert(!cache.get(app.users), 'Cache should be cleared')
+    })
+  })
+
+  describe('test-network-first', function () {
+    this.timeout(2000)
+    it('should try network', async function () {
+      let app = new Vue({
+        chimera: {
+          $options: {
+            cache: {
+              strategy: 'network-first',
+            },
+            prefetch: false,
+          },
+          networkFirst: '/users'
+        }
+      })
+      app._chimera.cache.clear()
+      const cache = app._chimera.cache
+
+      assert.instanceOf(cache, Cache)
+      assert.instanceOf(app.networkFirst.cache, Cache)
+
+      respond({})
+      await app.networkFirst.fetch()
+      assert.equal(app.networkFirst.cacheHit, false)
+
+      respond({ salam: true })
+      await app.networkFirst.fetch()
+      assert.equal(app.networkFirst.cacheHit, false)
+
+      respond(null, 500)
+      await app.networkFirst.fetch()
+      assert.deepEqual(app.networkFirst.data, { salam: true }, 'Response should be the last response got')
+      assert.equal(app.networkFirst.cacheHit, true)
+
     })
   })
 
@@ -96,31 +124,6 @@ describe('vue-test-cache', function () {
       assert.equal(app.users.cacheHit, true, 'Cache should be hit')
 
       assert.deepEqual(originalData, cacheData)
-    })
-  })
-
-  describe('test-network-first', function () {
-    this.timeout(2000)
-    it('should try network', async function () {
-      const cache = app._chimera.cache
-
-      assert.instanceOf(cache, Cache)
-      assert.instanceOf(app.networkFirst.cache, Cache)
-
-      respond({})
-      await app.networkFirst.fetch()
-      assert.equal(app.networkFirst.cacheHit, false)
-
-      respond({ salam: true })
-      await app.networkFirst.fetch()
-      assert.equal(app.networkFirst.cacheHit, false)
-
-      respond(null, 500)
-      await app.networkFirst.fetch()
-      // console.warn(app.networkFirst.data)
-      assert.equal(app.networkFirst.cacheHit, true)
-      assert.deepEqual(app.networkFirst.data, { salam: true }, 'Response should be the last response got')
-
     })
   })
 
