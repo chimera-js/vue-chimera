@@ -1,78 +1,80 @@
+import Vue from 'vue'
 import Resource from './Resource'
 import NullResource from './NullResource'
 import { createAxios } from './utils'
 
+// Start intervals, unregister events, prefetch
 export default class VueChimera {
-  constructor (vm, resources, options) {
+  constructor (vm, resources, { ...options }) {
     this._vm = vm
-    this._reactiveResources = {}
-    this.options = options || {}
+    this._watchers = []
 
-    this.axios = this.options.axios = (!this.options.axios && this._vm.$axios) ? this._vm.$axios : createAxios(this.options.axios)
+    this._axios = options.axios = createAxios(options.axios)
+    this._options = options
+    this._resources = resources
+    // this._vm.$on('hook:created', this.init)
+  }
 
-    const vmOptions = this._vm.$options
-    vmOptions.computed = vmOptions.computed || {}
-    vmOptions.watch = vmOptions.watch || {}
-
-    resources = Object.assign({}, resources)
-
+  init () {
+    const resources = this._resources = Object.assign({}, this._resources)
     for (let key in resources) {
       if (key.charAt(0) === '$') continue
 
       let r = resources[key]
-
       if (typeof r === 'function') {
-        r = r.bind(this._vm)
-        resources[key] = new NullResource()
-        this._reactiveResources[key] = r
-        vmOptions.computed['$_chimera__' + key] = r
-        vmOptions.watch['$_chimera__' + key] = (t) => this.updateReactiveResource(key, t)
+        this._watchers.push(this._vm.$watch(() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), {
+          immediate: true,
+          deep: true
+        }))
       } else {
-        resources[key] = Resource.from(r, this.options)
+        resources[key] = this.resourceFrom(r, key)
       }
-      vmOptions.computed[key] = () => resources[key]
+      Object.defineProperty(this._vm, key, {
+        get: () => resources[key],
+        configurable: true,
+        enumerable: true
+      })
     }
 
     Object.defineProperty(resources, '$cancelAll', { value: this.cancelAll.bind(this) })
-    Object.defineProperty(resources, '$axios', { get: () => this.axios })
-    Object.defineProperty(resources, '$loading', {
-      get () {
-        for (let r in this) {
-          if (r.loading) return true
-        }
-        return false
-      }
-    })
-    this.resources = resources
+    Object.defineProperty(resources, '$axios', { get: () => this._axios })
+    Object.defineProperty(resources, '$loading', { get () { return !!Object.values(this).find(Boolean) } })
   }
 
-  updateReactiveResources () {
-    for (let key in this._reactiveResources) {
-      this.updateReactiveResource(key)
-    }
-  }
-
-  updateReactiveResource (key) {
-    const oldResource = this.resources[key]
-    oldResource.stopInterval()
-    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options)
+  updateResource (key, newValue, oldValue) {
+    const oldResource = this._resources[key]
+    const newResource = this.resourceFrom(newValue, key)
 
     // Keep data
-    if (oldResource.keepData) {
-      r._data = oldResource._data
-      r._status = oldResource._status
-      r._headers = oldResource._headers
-      r._error = oldResource._error
+    if (oldValue && oldValue.keepData) {
+      newResource.setInitial(oldResource)
+    }
+    if (oldValue && oldResource) {
+      oldResource.stopInterval()
+      newResource.lastLoaded = oldResource.lastLoaded
     }
 
-    r._lastLoaded = oldResource._lastLoaded
-    if (r.prefetch) r.reload()
-    this.resources[key] = r
+    if (newResource.prefetch) newResource.reload()
+    this._resources[key] = newResource
+  }
+
+  resourceFrom (value, key) {
+    if (value == null) return new NullResource()
+    if (typeof value === 'string') value = { url: value }
+
+    return new Resource(Object.assign(Object.create(this._options), value))
   }
 
   cancelAll () {
-    Object.keys(this.resources).forEach(r => {
-      this.resources[r].cancel()
+    Object.values(this._resources).forEach(r => {
+      r.cancel()
     })
+  }
+
+  destroy () {
+    const vm = this._vm
+
+    this.cancelAll()
+    delete vm._chimera
   }
 }

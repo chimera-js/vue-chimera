@@ -5,13 +5,12 @@ const plugin = {
 
   options: {
     axios: null,
-    cache: 'no-cache',
-    debounce: 80,
-    prefetch: 'get', // false, true, '%METHOD%',
-    ssrPrefetch: true,
-    ssrPrefetchTimeout: 4000,
-    transformer: null,
-    headers: null
+    cache: null,
+    debounce: 50,
+    autoFetch: 'get', // false, true, '%METHOD%',
+    prefetch: null,
+    prefetchTimeout: 4000,
+    transformer: null
   },
 
   install (Vue, options = {}) {
@@ -24,10 +23,7 @@ const plugin = {
     if (!Vue.prototype.hasOwnProperty('$chimera')) {
       Object.defineProperty(Vue.prototype, '$chimera', {
         get () {
-          if (this._chimera) {
-            return this._chimera.resources
-          }
-          return null
+          return this._chimera ? this._chimera._resources : null
         }
       })
     }
@@ -52,3 +48,5 @@ if (GlobalVue) {
 }
 
 export default plugin
+
+export * from './Resource'

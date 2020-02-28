@@ -1,30 +1,25 @@
 import VueChimera from './VueChimera'
 import { isPlainObject } from './utils'
 
-export default (config = {}) => ({
+export default (options = {}) => ({
   beforeCreate () {
-    const options = this.$options
+    const vmOptions = this.$options
     let _chimera
 
     // Stop if instance doesn't have chimera or already initialized
-    if (!options.chimera || options._chimera) return
+    if (!vmOptions.chimera || vmOptions._chimera) return
 
-    if (typeof options.chimera === 'function') {
+    if (typeof vmOptions.chimera === 'function') {
       // Initialize with function
-      options.chimera = options.chimera.call(this)
+      vmOptions.chimera = vmOptions.chimera.call(this)
     }
 
-    if (options.chimera instanceof VueChimera) {
-      _chimera = options.chimera
-    } else if (isPlainObject(options.chimera)) {
-      const { $options, ...resources } = options.chimera
-      _chimera = new VueChimera(
-        this, resources, { ...config, ...$options }
-      )
+    if (vmOptions.chimera instanceof VueChimera) {
+      _chimera = vmOptions.chimera
+    } else if (isPlainObject(vmOptions.chimera)) {
+      const { $options, ...resources } = vmOptions.chimera
+      _chimera = new VueChimera(this, resources, { ...options, ...$options })
     }
-
-    options.computed = options.computed || {}
-    options.watch = options.watch || {}
 
     // Nuxtjs prefetch
     const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
@@ -60,31 +55,25 @@ export default (config = {}) => ({
   },
 
   data () {
-    if (this._chimera) {
-      return { $chimera: this._chimera.resources }
-    }
-    return {}
-  },
-
-  mounted () {
-    if (this._chimera) {
-      this._chimera.updateReactiveResources()
-      for (let r in this._chimera.resources) {
-        let resource = this._chimera.resources[r]
-        if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
-          resource.reload()
-        }
-      }
+    return {
+      $chimera: this._chimera ? this._chimera._resources : null
     }
   },
 
-  beforeDestroy () {
-    if (!this._chimera) {
-      return
-    }
-
-    this._chimera.cancelAll()
-    this._chimera = null
-    delete this._chimera
+  created () {
+    if (!this._chimera) return
+    this._chimera.init()
   }
+
+  // mounted () {
+  //   if (this._chimera) {
+  //     this._chimera.updateReactiveResources()
+  //     for (let r in this._chimera.resources) {
+  //       let resource = this._chimera.resources[r]
+  //       if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
+  //         resource.reload()
+  //       }
+  //     }
+  //   }
+  // },
 })

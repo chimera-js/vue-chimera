@@ -1,8 +1,7 @@
-import { isPlainObject, createAxios } from './utils'
-import LocalStorageCache from './cache/LocalStorageCache'
-import NullCache from './cache/NullCache'
-import pDebounce from 'p-debounce'
 import Axios from 'axios'
+import Vue from 'vue'
+import { isPlainObject, mergeExistingKeys, noopReturn } from './utils'
+import pDebounce from 'p-debounce'
 const { CancelToken } = Axios
 
 export const EVENT_SUCCESS = 'success'
@@ -12,162 +11,141 @@ export const EVENT_LOADING = 'loading'
 export const EVENT_TIMEOUT = 'timeout'
 
 export default class Resource {
-  static from (value, baseOptions = {}) {
-    if (value == null) throw new Error('Cannot create resource from `null`')
+  constructor (options, initial) {
+    if (typeof options === 'string') options = { url: options }
 
-    if (value instanceof Resource) { return value }
+    let {
+      autoFetch,
+      prefetch,
+      cache,
+      debounce,
+      transformer,
+      axios,
+      key,
+      interval,
+      ...requestConfig
+    } = options
 
-    if (typeof value === 'string') { return new Resource(value, 'get', baseOptions) }
+    requestConfig.method = (requestConfig.method || 'get').toLowerCase()
 
-    if (isPlainObject(value)) {
-      const { url, method, ...options } = value
-      return new Resource(url, method, Object.assign({}, baseOptions, options))
-    }
-  }
-
-  constructor (url, method, options) {
-    options = options || {}
-    method = method ? method.toLowerCase() : 'get'
-    if (method &&
-      ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
-      throw new Error('Bad Method requested: ' + method)
-    }
-
-    this.axios = createAxios(options.axios)
-
-    this.requestConfig = {
-      url: url,
-      method: method ? method.toLowerCase() : 'get',
-      headers: options.headers || {},
-      cancelToken: new CancelToken(c => { this._canceler = c })
+    if (typeof autoFetch === 'string') {
+      this.autoFetch = autoFetch.toLowerCase() === requestConfig.method
+    } else {
+      this.autoFetch = Boolean(prefetch)
     }
 
-    this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params
-
-    this._loading = false
-    this._status = null
-    this._data = null
-    this._headers = null
-    this._error = null
-    this._lastLoaded = null
-    this._eventListeners = {}
-    this.keepData = !!options.keepData
-
-    this.ssrPrefetched = false
-
-    this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch)
-    this.ssrPrefetch = options.ssrPrefetch
-    this.cache = this.getCache(options.cache)
-    this.fetchDebounced = pDebounce(this.fetch.bind(this), options.debounce || 80, { leading: true })
+    this.key = key
+    this.prefetch = typeof prefetch === 'boolean' ? prefetch : this.autoFetch
+    this.cache = cache
+    this.axios = axios
+    this.fetchDebounced = pDebounce(this.fetch.bind(this), debounce, { leading: true })
+    this._interval = interval
 
     // Set Transformers
-    if (options.transformer) {
-      if (typeof options.transformer === 'function') {
-        this.setTransformer(options.transformer)
-      } else if (typeof options.transformer === 'object') {
-        options.transformer.response && this.setResponseTransformer(options.transformer.response)
-        options.transformer.error && this.setErrorTransformer(options.transformer.error)
-      }
-    } else {
-      this.errorTransformer = (err) => err
-      this.responseTransformer = (res) => res
+    this.setTransformer(transformer)
+
+    if (requestConfig.data) {
+      console.warn('[Chimera]: Do not use "params" key inside resource options, use data instead')
+    }
+    if ('params' in options && !isPlainObject(options.params)) {
+      throw new Error('[Chimera]: Parameters is not a plain object')
+    }
+    if (requestConfig.method !== 'get') {
+      requestConfig.data = requestConfig.params
+      delete requestConfig.params
     }
 
-    // Set interval.
-    if (options.interval) {
-      this.startInterval(options.interval)
+    this.requestConfig = {
+      ...requestConfig,
+      cancelToken: new CancelToken(c => {
+        this._canceler = c
+      })
     }
+
+    this._listeners = {}
+    this.prefetched = false
 
     // Set Events
-    if (typeof options.on === 'object' && options.on) {
+    if (isPlainObject(options.on)) {
       for (let key in options.on) {
         this.on(key, options.on[key])
       }
     }
-  }
 
-  setResponseTransformer (transformer) {
-    this.responseTransformer = transformer
-  }
-
-  setErrorTransformer (transformer) {
-    this.errorTransformer = transformer
+    this.setInitial(initial)
   }
 
   setTransformer (transformer) {
-    this.responseTransformer = transformer
-    this.errorTransformer = transformer
+    if (typeof transformer === 'function') {
+      this.responseTransformer = transformer
+      this.errorTransformer = transformer
+    } else if (isPlainObject('object')) {
+      const { response, error } = transformer
+      this.responseTransformer = response || noopReturn
+      this.errorTransformer = error || noopReturn
+    } else {
+      this.responseTransformer = noopReturn
+      this.errorTransformer = noopReturn
+    }
   }
 
-  startInterval (ms) {
-    if (typeof process !== 'undefined' && process.server) return
-
-    if (ms) this._interval = ms
-    this.stopInterval()
-    this._interval_id = setInterval(() => this.reload(true), this._interval)
-  }
-
-  stopInterval () {
-    if (this._interval_id) clearInterval(this._interval_id)
+  setInitial (data) {
+    Object.assign(this, mergeExistingKeys({
+      loading: false,
+      status: null,
+      data: null,
+      headers: null,
+      error: null,
+      lastLoaded: null
+    }, data || {}))
   }
 
   on (event, handler) {
-    let listeners = this._eventListeners[event] || []
+    let listeners = this._listeners[event] || []
     listeners.push(handler)
-    this._eventListeners[event] = listeners
+    this._listeners[event] = listeners
     return this
   }
 
   emit (event) {
-    (this._eventListeners[event] || []).forEach(handler => {
-      handler()
+    (this._listeners[event] || []).forEach(handler => {
+      handler(this, event)
     })
   }
 
-  fetch (force, extraData) {
+  fetch (force, extraParams, extraOptions) {
     return new Promise((resolve, reject) => {
-      let setByResponse = (res) => {
-        this._error = null
-        this._loading = false
-        if (res) {
-          this._status = res.status
-          this._data = this.responseTransformer(res.data)
-          this._headers = res.headers
-          this._lastLoaded = new Date()
-        }
-      }
 
       if (this.cache && !force) {
-        let cacheValue = this.cache.getItem(this.getCacheKey())
+        let cacheValue = this.getCache()
         if (cacheValue) {
-          setByResponse(cacheValue)
-          resolve(cacheValue)
-          return
+          this.setByResponse(cacheValue)
+          return resolve(cacheValue)
         }
       }
 
-      this._loading = true
+      this.loading = true
       this.emit(EVENT_LOADING)
 
-      // Assign Extra data
-      let requestConfig = Object.assign({}, this.requestConfig, typeof extraData === 'object' ? {
-        [this.requestConfig.method === 'get' ? 'params' : 'data']: extraData
-      } : {})
+      // Merge extra options
+      let { requestConfig } = this
+      if (isPlainObject(extraOptions)) {
+        requestConfig = Object.assign({}, requestConfig, isPlainObject(extraOptions) ? {} : {})
+      }
+      // Merge extra params
+      if (isPlainObject(extraParams)) {
+        const paramKey = requestConfig.method === 'get' ? 'params' : 'data'
+        requestConfig[paramKey] = Object.assign(requestConfig[paramKey], extraParams)
+      }
 
+      // Finally make request
       this.axios.request(requestConfig).then(res => {
-        setByResponse(res)
+        this.setByResponse(res)
         this.setCache(res)
         this.emit(EVENT_SUCCESS)
         resolve(res)
       }).catch(err => {
-        this._data = null
-        this._loading = false
-        const errorResponse = err.response
-        if (errorResponse) {
-          this._status = errorResponse.status
-          this._error = this.errorTransformer(errorResponse.data)
-          this._headers = errorResponse.headers
-        }
+        this.setByResponse(err.response)
         if (Axios.isCancel(err)) {
           this.emit(EVENT_CANCEL)
         } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
@@ -177,6 +155,8 @@ export default class Resource {
         }
 
         reject(err)
+      }).finally(() => {
+        this.loading = false
       })
     })
   }
@@ -185,35 +165,18 @@ export default class Resource {
     return this.fetchDebounced(force)
   }
 
-  execute () {
-    return this.fetchDebounced(true)
-  }
-
-  send (extra) {
-    return this.fetchDebounced(true, extra)
+  send (params, options) {
+    return this.fetchDebounced(true, params, options)
   }
 
   cancel (unload) {
-    this.stopInterval()
-    if (unload) this._data = null
+    if (unload) this.data = null
     if (typeof this._canceler === 'function') this._canceler()
     this.requestConfig.cancelToken = new CancelToken(c => { this._canceler = c })
   }
 
-  stop () {
-    this.cancel()
-  }
-
-  getCache (cache) {
-    const caches = {
-      'no-cache': () => new NullCache(),
-      'localStorage': () => new LocalStorageCache(this.getConfig().cacheExpiration || 10000)
-    }
-    cache = cache || 'no-cache'
-    return caches[cache] ? caches[cache]() : null
-  }
-
   getCacheKey () {
+    if (this.key) return this.key
     return (typeof window !== 'undefined' && typeof btoa !== 'undefined'
       ? window.btoa
       : x => x)(this.requestConfig.url +
@@ -222,39 +185,56 @@ export default class Resource {
       this.requestConfig.method)
   }
 
-  setCache (value) {
-    if (this.cache) { this.cache.setItem(this.getCacheKey(), value) }
+  getCache () {
+    return this.cache ? this.cache.getItem(this.getCacheKey()) : undefined
   }
 
-  toJSON () {
+  setCache (value) {
+    this.cache && this.cache.setItem(this.getCacheKey(), value)
+  }
+
+  deleteCache () {
+    this.cache && this.cache.removeItem(this.getCacheKey())
+  }
+
+  setByResponse (res) {
+    res = res || {}
+    const isSuccessful = String(res.status).charAt(0) === '2'
+    this.status = res.status
+    this.headers = res.headers || {}
+    this.lastLoaded = new Date()
+    this.data = isSuccessful ? this.responseTransformer(res.data, this) : null
+    this.error = !isSuccessful ? this.errorTransformer(res.data, this) : null
+  }
+
+  startInterval (ms) {
+    if (typeof ms !== 'number') throw new Error('[Chimera]: interval should be number')
+    if (typeof process !== 'undefined' && process.server) return
+
+    this._interval = ms
+    this.stopInterval()
+    this._interval_id = setInterval(() => this.reload(true), this._interval)
+    this.looping = true
+  }
+
+  stopInterval () {
+    if (this._interval_id) {
+      clearInterval(this._interval_id)
+      this.looping = false
+      this._interval_id = null
+      this._interval = false
+    }
+  }
+
+  toObj () {
     const json = {};
-    ['_loading', '_status', '_data', '_headers', '_error', '_lastLoaded', 'ssrPrefetched'].forEach(key => {
+    ['loading', 'status', 'data', 'headers', 'error', 'lastLoaded', 'prefetched'].forEach(key => {
       json[key] = this[key]
     })
-    return JSON.stringify(json)
+    return json
   }
 
-  get loading () {
-    return this._loading
-  }
-
-  get status () {
-    return this._status
-  }
-
-  get data () {
-    return this._data
-  }
-
-  get headers () {
-    return this._headers
-  }
-
-  get error () {
-    return this._error
-  }
-
-  get lastLoaded () {
-    return this._lastLoaded
+  toString () {
+    return JSON.stringify(this.toObj())
   }
 }

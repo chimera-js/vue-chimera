@@ -14,10 +14,19 @@ export function remove (arr, item) {
   }
 }
 
+export function mergeExistingKeys (...obj) {
+  let o = Object.assign(...obj)
+  return Object.keys(obj[0]).reduce((carry, item) => {
+    carry[item] = o[item]
+    return carry
+  }, {})
+}
+
 export function createAxios (config) {
   if (config instanceof Axios) {
     return config
   }
+  // Support nuxt axios
   if (config && typeof config.$request === 'function') {
     return config
   }
@@ -31,3 +40,7 @@ export function createAxios (config) {
   }
   return Axios
 }
+
+export function noop () {}
+
+export function noopReturn (arg) { return arg }
