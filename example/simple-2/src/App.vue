@@ -3,7 +3,7 @@
     <img src="./assets/logo.png">
     <h1>
       <span v-if="simple.loading">Loading...</span>
-      <span v-if="simple.lastLoaded">{{ simple.data.title }}</span>
+      <span v-if="simple.data">{{ simple.data.title }}</span>
     </h1>
     <ul>
       <li><a href="https://vuejs.org" target="_blank">Core Docs</a></li>
@@ -11,7 +11,7 @@
       <li><a href="https://chat.vuejs.org" target="_blank">Community Chat</a></li>
       <li><a href="https://twitter.com/vuejs" target="_blank">Twitter</a></li>
     </ul>
-    <h2>Ecosystem</h2>
+    <h2>Ecosystem       {{ $chimera.$loading ? 'T' : 'F' }}</h2>
     <ul>
       <li><a href="http://router.vuejs.org/" target="_blank">vue-router</a></li>
       <li><a href="http://vuex.vuejs.org/" target="_blank">vuex</a></li>
@@ -23,31 +23,54 @@
 </template>
 
 <script>
+  import { StorageCache } from '../../../dist/vue-chimera'
+
   export default {
     name: 'app',
 
     chimera() {
       return {
-        simple() { return `https://idehhub.com/api/v1/blog/posts/${this.id}?lang=en` }
+        $options: {
+            cache: new StorageCache('myKey')
+        },
+        simple() {
+            return {
+                url: `https://idehhub.com/api/v1/blog/posts/${this.id}?lang=en`,
+                params: this.params,
+                key: 'key-' + this.id
+            }
+        },
+        non: 'https://idehhub.com/api/v1/blog/posts/59?lang=en',
       }
     },
 
     data () {
       return {
         msg: 'Welcome to Your Vue.js App',
-        id: 55
+        id: 55,
+          params: {
+            s: 2
+          }
       }
     },
 
     computed: {
       simpleData() {
-        return this.simple.headers;
+        return this.simple ? this.simple.headers : null;
+      },
+    },
+
+    watch: {
+      'non.data': {
+          handler (t) {
+              console.log(t)
+          }
       }
     },
 
-    mounted () {
+    created () {
       window.app = this
-    }
+    },
   }
 </script>
 

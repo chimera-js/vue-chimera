@@ -52,11 +52,15 @@ export default (options = {}) => ({
       } catch (e) {}
     }
     this._chimera = _chimera
+    Object.defineProperty(this, '$chimera', {
+      get: () => _chimera._resources
+    })
   },
 
   data () {
+    if (!this._chimera) return {}
     return {
-      $chimera: this._chimera ? this._chimera._resources : null
+      $chimera: this._chimera._resources
     }
   },
 

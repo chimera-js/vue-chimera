@@ -1,6 +1,5 @@
 import Axios from 'axios'
-import Vue from 'vue'
-import { isPlainObject, mergeExistingKeys, noopReturn } from './utils'
+import { isPlainObject, noopReturn } from './utils'
 import pDebounce from 'p-debounce'
 const { CancelToken } = Axios
 
@@ -9,6 +8,15 @@ export const EVENT_ERROR = 'error'
 export const EVENT_CANCEL = 'cancel'
 export const EVENT_LOADING = 'loading'
 export const EVENT_TIMEOUT = 'timeout'
+
+const INITIAL_DATA = {
+  loading: false,
+  status: null,
+  data: null,
+  headers: null,
+  error: null,
+  lastLoaded: null
+}
 
 export default class Resource {
   constructor (options, initial) {
@@ -23,15 +31,15 @@ export default class Resource {
       axios,
       key,
       interval,
-      ...requestConfig
+      ...request
     } = options
 
-    requestConfig.method = (requestConfig.method || 'get').toLowerCase()
+    request.method = (request.method || 'get').toLowerCase()
 
     if (typeof autoFetch === 'string') {
-      this.autoFetch = autoFetch.toLowerCase() === requestConfig.method
+      this.autoFetch = autoFetch.toLowerCase() === request.method
     } else {
-      this.autoFetch = Boolean(prefetch)
+      this.autoFetch = Boolean(autoFetch)
     }
 
     this.key = key
@@ -39,24 +47,21 @@ export default class Resource {
     this.cache = cache
     this.axios = axios
     this.fetchDebounced = pDebounce(this.fetch.bind(this), debounce, { leading: true })
-    this._interval = interval
 
     // Set Transformers
     this.setTransformer(transformer)
 
-    if (requestConfig.data) {
+    if (request.data) {
       console.warn('[Chimera]: Do not use "params" key inside resource options, use data instead')
     }
-    if ('params' in options && !isPlainObject(options.params)) {
-      throw new Error('[Chimera]: Parameters is not a plain object')
-    }
-    if (requestConfig.method !== 'get') {
-      requestConfig.data = requestConfig.params
-      delete requestConfig.params
+
+    if (request.method !== 'get') {
+      request.data = request.params
+      delete request.params
     }
 
-    this.requestConfig = {
-      ...requestConfig,
+    this.request = {
+      ...request,
       cancelToken: new CancelToken(c => {
         this._canceler = c
       })
@@ -72,7 +77,7 @@ export default class Resource {
       }
     }
 
-    this.setInitial(initial)
+    initial && Object.assign(this, INITIAL_DATA, initial)
   }
 
   setTransformer (transformer) {
@@ -87,17 +92,6 @@ export default class Resource {
       this.responseTransformer = noopReturn
       this.errorTransformer = noopReturn
     }
-  }
-
-  setInitial (data) {
-    Object.assign(this, mergeExistingKeys({
-      loading: false,
-      status: null,
-      data: null,
-      headers: null,
-      error: null,
-      lastLoaded: null
-    }, data || {}))
   }
 
   on (event, handler) {
@@ -128,18 +122,18 @@ export default class Resource {
       this.emit(EVENT_LOADING)
 
       // Merge extra options
-      let { requestConfig } = this
+      let { request } = this
       if (isPlainObject(extraOptions)) {
-        requestConfig = Object.assign({}, requestConfig, isPlainObject(extraOptions) ? {} : {})
+        request = Object.assign({}, request, isPlainObject(extraOptions) ? {} : {})
       }
       // Merge extra params
       if (isPlainObject(extraParams)) {
-        const paramKey = requestConfig.method === 'get' ? 'params' : 'data'
-        requestConfig[paramKey] = Object.assign(requestConfig[paramKey], extraParams)
+        const paramKey = request.method === 'get' ? 'params' : 'data'
+        request[paramKey] = Object.assign(request[paramKey], extraParams)
       }
 
       // Finally make request
-      this.axios.request(requestConfig).then(res => {
+      this.axios.request(request).then(res => {
         this.setByResponse(res)
         this.setCache(res)
         this.emit(EVENT_SUCCESS)
@@ -172,17 +166,17 @@ export default class Resource {
   cancel (unload) {
     if (unload) this.data = null
     if (typeof this._canceler === 'function') this._canceler()
-    this.requestConfig.cancelToken = new CancelToken(c => { this._canceler = c })
+    this.request.cancelToken = new CancelToken(c => { this._canceler = c })
   }
 
   getCacheKey () {
     if (this.key) return this.key
     return (typeof window !== 'undefined' && typeof btoa !== 'undefined'
       ? window.btoa
-      : x => x)(this.requestConfig.url +
-      this.requestConfig.params +
-      this.requestConfig.data +
-      this.requestConfig.method)
+      : x => x)(this.request.url +
+      this.request.params +
+      this.request.data +
+      this.request.method)
   }
 
   getCache () {
@@ -227,8 +221,8 @@ export default class Resource {
   }
 
   toObj () {
-    const json = {};
-    ['loading', 'status', 'data', 'headers', 'error', 'lastLoaded', 'prefetched'].forEach(key => {
+    const json = {}
+    Object.keys(INITIAL_DATA).forEach(key => {
       json[key] = this[key]
     })
     return json
@@ -236,5 +230,17 @@ export default class Resource {
 
   toString () {
     return JSON.stringify(this.toObj())
+  }
+
+  get params () {
+    return this.request.method === 'get' ? this.request.params : this.request.data
+  }
+
+  get url () {
+    return this.request.url
+  }
+
+  get method () {
+    return this.request.method
   }
 }

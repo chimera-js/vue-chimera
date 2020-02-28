@@ -1,4 +1,3 @@
-import 'vue';
 import Axios from 'axios';
 import pDebounce from 'p-debounce';
 
@@ -91,16 +90,9 @@ function _objectWithoutProperties(source, excluded) {
 }
 
 function isPlainObject(value) {
-  const OBJECT_STRING = '[object Object]';
-  return typeof value === 'object' && Object.prototype.toString(value) === OBJECT_STRING;
+  return typeof value === 'object' && Object.prototype.toString(value) === '[object Object]';
 }
-function mergeExistingKeys(...obj) {
-  let o = Object.assign(...obj);
-  return Object.keys(obj[0]).reduce((carry, item) => {
-    carry[item] = o[item];
-    return carry;
-  }, {});
-}
+const hasKey = (obj, key) => key in (obj || {});
 function createAxios(config) {
   if (config instanceof Axios) {
     return config;
@@ -135,6 +127,14 @@ const EVENT_ERROR = 'error';
 const EVENT_CANCEL = 'cancel';
 const EVENT_LOADING = 'loading';
 const EVENT_TIMEOUT = 'timeout';
+const INITIAL_DATA = {
+  loading: false,
+  status: null,
+  data: null,
+  headers: null,
+  error: null,
+  lastLoaded: null
+};
 class Resource {
   constructor(options, initial) {
     if (typeof options === 'string') options = {
@@ -151,14 +151,14 @@ class Resource {
       key,
       interval
     } = options,
-        requestConfig = _objectWithoutProperties(options, ["autoFetch", "prefetch", "cache", "debounce", "transformer", "axios", "key", "interval"]);
+        request = _objectWithoutProperties(options, ["autoFetch", "prefetch", "cache", "debounce", "transformer", "axios", "key", "interval"]);
 
-    requestConfig.method = (requestConfig.method || 'get').toLowerCase();
+    request.method = (request.method || 'get').toLowerCase();
 
     if (typeof autoFetch === 'string') {
-      this.autoFetch = autoFetch.toLowerCase() === requestConfig.method;
+      this.autoFetch = autoFetch.toLowerCase() === request.method;
     } else {
-      this.autoFetch = Boolean(prefetch);
+      this.autoFetch = Boolean(autoFetch);
     }
 
     this.key = key;
@@ -167,25 +167,20 @@ class Resource {
     this.axios = axios;
     this.fetchDebounced = pDebounce(this.fetch.bind(this), debounce, {
       leading: true
-    });
-    this._interval = interval; // Set Transformers
+    }); // Set Transformers
 
     this.setTransformer(transformer);
 
-    if (requestConfig.data) {
+    if (request.data) {
       console.warn('[Chimera]: Do not use "params" key inside resource options, use data instead');
     }
 
-    if ('params' in options && !isPlainObject(options.params)) {
-      throw new Error('[Chimera]: Parameters is not a plain object');
+    if (request.method !== 'get') {
+      request.data = request.params;
+      delete request.params;
     }
 
-    if (requestConfig.method !== 'get') {
-      requestConfig.data = requestConfig.params;
-      delete requestConfig.params;
-    }
-
-    this.requestConfig = _objectSpread({}, requestConfig, {
+    this.request = _objectSpread({}, request, {
       cancelToken: new CancelToken(c => {
         this._canceler = c;
       })
@@ -199,7 +194,7 @@ class Resource {
       }
     }
 
-    this.setInitial(initial);
+    initial && Object.assign(this, INITIAL_DATA, initial);
   }
 
   setTransformer(transformer) {
@@ -217,17 +212,6 @@ class Resource {
       this.responseTransformer = noopReturn;
       this.errorTransformer = noopReturn;
     }
-  }
-
-  setInitial(data) {
-    Object.assign(this, mergeExistingKeys({
-      loading: false,
-      status: null,
-      data: null,
-      headers: null,
-      error: null,
-      lastLoaded: null
-    }, data || {}));
   }
 
   on(event, handler) {
@@ -258,21 +242,21 @@ class Resource {
       this.emit(EVENT_LOADING); // Merge extra options
 
       let {
-        requestConfig
+        request
       } = this;
 
       if (isPlainObject(extraOptions)) {
-        requestConfig = Object.assign({}, requestConfig, isPlainObject(extraOptions) ? {} : {});
+        request = Object.assign({}, request, isPlainObject(extraOptions) ? {} : {});
       } // Merge extra params
 
 
       if (isPlainObject(extraParams)) {
-        const paramKey = requestConfig.method === 'get' ? 'params' : 'data';
-        requestConfig[paramKey] = Object.assign(requestConfig[paramKey], extraParams);
+        const paramKey = request.method === 'get' ? 'params' : 'data';
+        request[paramKey] = Object.assign(request[paramKey], extraParams);
       } // Finally make request
 
 
-      this.axios.request(requestConfig).then(res => {
+      this.axios.request(request).then(res => {
         this.setByResponse(res);
         this.setCache(res);
         this.emit(EVENT_SUCCESS);
@@ -306,14 +290,14 @@ class Resource {
   cancel(unload) {
     if (unload) this.data = null;
     if (typeof this._canceler === 'function') this._canceler();
-    this.requestConfig.cancelToken = new CancelToken(c => {
+    this.request.cancelToken = new CancelToken(c => {
       this._canceler = c;
     });
   }
 
   getCacheKey() {
     if (this.key) return this.key;
-    return (typeof window !== 'undefined' && typeof btoa !== 'undefined' ? window.btoa : x => x)(this.requestConfig.url + this.requestConfig.params + this.requestConfig.data + this.requestConfig.method);
+    return (typeof window !== 'undefined' && typeof btoa !== 'undefined' ? window.btoa : x => x)(this.request.url + this.request.params + this.request.data + this.request.method);
   }
 
   getCache() {
@@ -358,7 +342,7 @@ class Resource {
 
   toObj() {
     const json = {};
-    ['loading', 'status', 'data', 'headers', 'error', 'lastLoaded', 'prefetched'].forEach(key => {
+    Object.keys(INITIAL_DATA).forEach(key => {
       json[key] = this[key];
     });
     return json;
@@ -366,6 +350,18 @@ class Resource {
 
   toString() {
     return JSON.stringify(this.toObj());
+  }
+
+  get params() {
+    return this.request.method === 'get' ? this.request.params : this.request.data;
+  }
+
+  get url() {
+    return this.request.url;
+  }
+
+  get method() {
+    return this.request.method;
   }
 
 }
@@ -380,37 +376,35 @@ class NullResource extends Resource {
 }
 
 class VueChimera {
-  constructor(vm, resources, _ref) {
-    let options = _extends({}, _ref);
+  constructor(vm, _ref2, _ref) {
+    let resources = _extends({}, _ref2);
+
+    let {
+      deep
+    } = _ref,
+        options = _objectWithoutProperties(_ref, ["deep"]);
 
     this._vm = vm;
     this._watchers = [];
     this._axios = options.axios = createAxios(options.axios);
     this._options = options;
-    this._resources = resources; // this._vm.$on('hook:created', this.init)
-  }
-
-  init() {
-    const resources = this._resources = Object.assign({}, this._resources);
+    this._deep = deep;
+    const watchOption = {
+      immediate: true,
+      deep: this._deep,
+      sync: true
+    };
 
     for (let key in resources) {
       if (key.charAt(0) === '$') continue;
       let r = resources[key];
 
       if (typeof r === 'function') {
-        this._watchers.push(this._vm.$watch(() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), {
-          immediate: true,
-          deep: true
-        }));
+        this._watchers.push([() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), watchOption]);
       } else {
-        resources[key] = this.resourceFrom(r, key);
+        resources[key] = this.resourceFrom(r);
+        resources[key].reload();
       }
-
-      Object.defineProperty(this._vm, key, {
-        get: () => resources[key],
-        configurable: true,
-        enumerable: true
-      });
     }
 
     Object.defineProperty(resources, '$cancelAll', {
@@ -421,35 +415,62 @@ class VueChimera {
     });
     Object.defineProperty(resources, '$loading', {
       get() {
-        return !!Object.values(this).find(Boolean);
+        return !!Object.values(this).find(el => !!el.loading);
       }
 
     });
+    this._resources = resources; // Init computeds
+
+    const vmOptions = this._vm.$options;
+    const computeds = vmOptions.computed = vmOptions.computed || {};
+    Object.keys(resources).forEach(key => {
+      if (hasKey(computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key)) return;
+
+      computeds[key] = () => this._resources[key];
+    });
+  }
+
+  init() {
+    this._watchers = this._watchers.map(w => this._vm.$watch(...w));
   }
 
   updateResource(key, newValue, oldValue) {
     const oldResource = this._resources[key];
-    const newResource = this.resourceFrom(newValue, key); // Keep data
-
-    if (oldValue && oldValue.keepData) {
-      newResource.setInitial(oldResource);
-    }
+    const newResource = this.resourceFrom(newValue, oldValue && oldValue.keepData ? oldResource.toObj() : null);
 
     if (oldValue && oldResource) {
       oldResource.stopInterval();
       newResource.lastLoaded = oldResource.lastLoaded;
     }
 
-    if (newResource.prefetch) newResource.reload();
-    this._resources[key] = newResource;
+    if (newValue.interval) {
+      newResource.startInterval(newValue.interval);
+    }
+
+    if (newResource.autoFetch) newResource.reload();
+
+    this._vm.$set(this._resources, key, newResource);
   }
 
-  resourceFrom(value, key) {
+  resourceFrom(value, initial) {
     if (value == null) return new NullResource();
     if (typeof value === 'string') value = {
       url: value
     };
-    return new Resource(Object.assign(Object.create(this._options), value));
+
+    if (isPlainObject(value.on)) {
+      Object.entries(value.on).forEach(([event, handler]) => {
+        if (typeof handler === 'function') {
+          handler = handler.bind(this._vm);
+        }
+
+        if (typeof handler === 'string') handler = this._vm[handler];
+        value.on[event] = handler;
+      });
+    }
+
+    const baseOptions = Object.create(this._options);
+    return new Resource(Object.assign(baseOptions, value), initial);
   }
 
   cancelAll() {
@@ -522,11 +543,15 @@ var mixin = ((options = {}) => ({
     }
 
     this._chimera = _chimera;
+    Object.defineProperty(this, '$chimera', {
+      get: () => _chimera._resources
+    });
   },
 
   data() {
+    if (!this._chimera) return {};
     return {
-      $chimera: this._chimera ? this._chimera._resources : null
+      $chimera: this._chimera._resources
     };
   },
 
@@ -634,11 +659,107 @@ function NuxtPlugin () {
   };
 }
 
+class MemoryCache {
+  constructor(expiration) {
+    this.expiration = expiration || 1000 * 60;
+    this._store = {};
+  }
+  /**
+     *
+     * @param key         Key for the cache
+     * @param value       Value for cache persistence
+     * @param expiration  Expiration time in milliseconds
+     */
+
+
+  setItem(key, value, expiration) {
+    this._store[key] = {
+      expiration: Date.now() + (expiration || this.expiration),
+      value
+    };
+  }
+  /**
+     * If Cache exists return the Parsed Value, If Not returns {null}
+     *
+     * @param key
+     */
+
+
+  getItem(key) {
+    let item = this._store[key];
+
+    if (item && item.value && Date.now() <= item.expiration) {
+      return item.value;
+    }
+
+    console.log('sss');
+    this.removeItem(key);
+    return null;
+  }
+
+  removeItem(key) {
+    delete this._store[key];
+  }
+
+  keys() {
+    return Object.keys(this._store);
+  }
+
+  all() {
+    return this.keys().reduce((obj, str) => {
+      obj[str] = this._store.getItem(str);
+      return obj;
+    }, {});
+  }
+
+  length() {
+    return this.keys().length;
+  }
+
+  clearCache() {
+    this._store = {};
+  }
+
+}
+
+class StorageCache extends MemoryCache {
+  constructor(key, expiration, sessionStorage = false) {
+    super(expiration);
+    this.key = key;
+    const storage = sessionStorage ? 'sessionStorage' : 'localStorage';
+
+    if (typeof window === 'undefined' || !window[storage]) {
+      throw Error(`StorageCache: ${storage} is not available.`);
+    } else {
+      this.storage = window[storage];
+    }
+
+    try {
+      this._store = JSON.parse(this.storage.getItem(key)) || {};
+    } catch (e) {
+      this.clearCache();
+      this._store = {};
+    }
+  }
+
+  setItem(key, value, expiration) {
+    super.setItem(key, value, expiration);
+    this.storage.setItem(this.key, JSON.stringify(this._store));
+  }
+
+  clearCache() {
+    this.storage.removeItem(this.key);
+  }
+
+}
+
 const plugin = {
   options: {
     axios: null,
     cache: null,
     debounce: 50,
+    deep: true,
+    keepData: true,
     autoFetch: 'get',
     // false, true, '%METHOD%',
     prefetch: null,
@@ -652,16 +773,6 @@ const plugin = {
         this.options[key] = options[key];
       }
     });
-
-    if (!Vue.prototype.hasOwnProperty('$chimera')) {
-      Object.defineProperty(Vue.prototype, '$chimera', {
-        get() {
-          return this._chimera ? this._chimera._resources : null;
-        }
-
-      });
-    }
-
     Vue.mixin(mixin(this.options));
   },
 
@@ -681,4 +792,4 @@ if (GlobalVue) {
 }
 
 export default plugin;
-export { EVENT_CANCEL, EVENT_ERROR, EVENT_LOADING, EVENT_SUCCESS, EVENT_TIMEOUT };
+export { EVENT_CANCEL, EVENT_ERROR, EVENT_LOADING, EVENT_SUCCESS, EVENT_TIMEOUT, MemoryCache, StorageCache };

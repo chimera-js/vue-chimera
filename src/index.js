@@ -7,6 +7,8 @@ const plugin = {
     axios: null,
     cache: null,
     debounce: 50,
+    deep: true,
+    keepData: true,
     autoFetch: 'get', // false, true, '%METHOD%',
     prefetch: null,
     prefetchTimeout: 4000,
@@ -19,14 +21,6 @@ const plugin = {
         this.options[key] = options[key]
       }
     })
-
-    if (!Vue.prototype.hasOwnProperty('$chimera')) {
-      Object.defineProperty(Vue.prototype, '$chimera', {
-        get () {
-          return this._chimera ? this._chimera._resources : null
-        }
-      })
-    }
 
     Vue.mixin(mixin(this.options))
   },
@@ -50,3 +44,5 @@ if (GlobalVue) {
 export default plugin
 
 export * from './Resource'
+export { StorageCache } from './cache/StorageCache'
+export { MemoryCache } from './cache/MemoryCache'
