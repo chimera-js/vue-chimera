@@ -1,5 +1,4 @@
 import mixin from './mixin'
-import NuxtPlugin from './NuxtPlugin'
 
 const plugin = {
 
@@ -23,9 +22,7 @@ const plugin = {
     })
 
     Vue.mixin(mixin(this.options))
-  },
-
-  NuxtPlugin
+  }
 
 }
 

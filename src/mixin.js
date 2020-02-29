@@ -1,4 +1,5 @@
 import VueChimera from './VueChimera'
+import ChimeraSSR from '../ssr/index'
 import { isPlainObject } from './utils'
 
 export default (options = {}) => ({
@@ -22,35 +23,35 @@ export default (options = {}) => ({
     }
 
     // Nuxtjs prefetch
-    const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
-      ? this.$ssrContext.nuxt
-      : (typeof window !== 'undefined' ? window.__NUXT__ : null)
-    if (_chimera && NUXT && NUXT.chimera) {
-      try {
-        if (this.$router) {
-          let matched = this.$router.match(this.$router.currentRoute.fullPath);
-          (matched ? matched.matched : []).forEach((m, i) => {
-            let nuxtChimera = NUXT.chimera[i]
-            if (nuxtChimera) {
-              Object.keys(_chimera.resources).forEach(key => {
-                let localResource = _chimera.resources[key]
-                let ssrResource = nuxtChimera[key]
-                if (localResource && ssrResource && ssrResource._data) {
-                  [
-                    '_data', '_status', '_headers', 'ssrPrefetched',
-                    '_lastLoaded'].forEach(key => {
-                    localResource[key] = ssrResource[key]
-                  })
-                }
-              })
-            }
-          })
-          // if (process.client) {
-          //   delete NUXT.chimera
-          // }
-        }
-      } catch (e) {}
-    }
+    // const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
+    //   ? this.$ssrContext.nuxt
+    //   : (typeof window !== 'undefined' ? window.__NUXT__ : null)
+    // if (_chimera && NUXT && NUXT.chimera) {
+    //   try {
+    //     if (this.$router) {
+    //       let matched = this.$router.match(this.$router.currentRoute.fullPath);
+    //       (matched ? matched.matched : []).forEach((m, i) => {
+    //         let nuxtChimera = NUXT.chimera[i]
+    //         if (nuxtChimera) {
+    //           Object.keys(_chimera.resources).forEach(key => {
+    //             let localResource = _chimera.resources[key]
+    //             let ssrResource = nuxtChimera[key]
+    //             if (localResource && ssrResource && ssrResource._data) {
+    //               [
+    //                 '_data', '_status', '_headers', 'ssrPrefetched',
+    //                 '_lastLoaded'].forEach(key => {
+    //                 localResource[key] = ssrResource[key]
+    //               })
+    //             }
+    //           })
+    //         }
+    //       })
+    //       // if (process.client) {
+    //       //   delete NUXT.chimera
+    //       // }
+    //     }
+    //   } catch (e) {}
+    // }
     this._chimera = _chimera
     Object.defineProperty(this, '$chimera', {
       get: () => _chimera._resources
@@ -67,17 +68,15 @@ export default (options = {}) => ({
   created () {
     if (!this._chimera) return
     this._chimera.init()
-  }
+    this.$isServer && this._chimera.initServer()
+  },
 
-  // mounted () {
-  //   if (this._chimera) {
-  //     this._chimera.updateReactiveResources()
-  //     for (let r in this._chimera.resources) {
-  //       let resource = this._chimera.resources[r]
-  //       if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
-  //         resource.reload()
-  //       }
-  //     }
-  //   }
-  // },
+  serverPrefetch () {
+    if (!this.$_chimeraPromises) return
+    return Promise.all(this.$_chimeraPromises.map(p => p())).then(results => {
+      results.forEach(r => {
+        r && ChimeraSSR.addResource(r)
+      })
+    })
+  }
 })

@@ -121,6 +121,7 @@ function createAxios(config) {
 
   return Axios;
 }
+function noop() {}
 function noopReturn(arg) {
   return arg;
 }
@@ -395,6 +396,7 @@ class VueChimera {
     this._axios = options.axios = createAxios(options.axios);
     this._options = options;
     this._deep = deep;
+    this._server = vm.$isServer;
     const watchOption = {
       immediate: true,
       deep: this._deep,
@@ -409,7 +411,7 @@ class VueChimera {
         this._watchers.push([() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), watchOption]);
       } else {
         resources[key] = this.resourceFrom(r);
-        resources[key].reload();
+        !this._server && resources[key].reload();
       }
     }
 
@@ -440,6 +442,23 @@ class VueChimera {
     this._watchers = this._watchers.map(w => this._vm.$watch(...w));
   }
 
+  initServer() {
+    this._vm.$_chimeraPromises = Object.values(this._resources).map(r => {
+      if (r.prefetch) {
+        if (!r.key) {
+          console.warn('[Chimera]: used prefetch with no key associated with resource!');
+          return noop;
+        }
+
+        return () => {
+          return r.fetch(true).catch(() => null).then(() => r);
+        };
+      }
+
+      return noop;
+    });
+  }
+
   updateResource(key, newValue, oldValue) {
     const oldResource = this._resources[key];
     const newResource = this.resourceFrom(newValue, oldValue && oldValue.keepData ? oldResource.toObj() : null);
@@ -449,11 +468,13 @@ class VueChimera {
       newResource.lastLoaded = oldResource.lastLoaded;
     }
 
-    if (newValue.interval) {
-      newResource.startInterval(newValue.interval);
-    }
+    if (!this._server) {
+      if (newValue.interval) {
+        newResource.startInterval(newValue.interval);
+      }
 
-    if (newResource.autoFetch) newResource.reload();
+      if (newResource.autoFetch) newResource.reload();
+    }
 
     this._vm.$set(this._resources, key, newResource);
   }
@@ -493,6 +514,31 @@ class VueChimera {
 
 }
 
+const results = {};
+
+var addResource = function (r) {
+  results[r.key] = r.toObj();
+};
+
+var getStates = function () {
+  return results;
+};
+
+var serializeStates_1 = function () {
+  return JSON.stringify(results);
+};
+
+var exportStates = function (attachTo, globalName) {
+  return `${attachTo}.${globalName} = ${serializeStates()};`;
+};
+
+var ssr = {
+	addResource: addResource,
+	getStates: getStates,
+	serializeStates: serializeStates_1,
+	exportStates: exportStates
+};
+
 var mixin = ((options = {}) => ({
   beforeCreate() {
     const vmOptions = this.$options;
@@ -518,35 +564,36 @@ var mixin = ((options = {}) => ({
 
       _chimera = new VueChimera(this, resources, _objectSpread({}, options, $options));
     } // Nuxtjs prefetch
+    // const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
+    //   ? this.$ssrContext.nuxt
+    //   : (typeof window !== 'undefined' ? window.__NUXT__ : null)
+    // if (_chimera && NUXT && NUXT.chimera) {
+    //   try {
+    //     if (this.$router) {
+    //       let matched = this.$router.match(this.$router.currentRoute.fullPath);
+    //       (matched ? matched.matched : []).forEach((m, i) => {
+    //         let nuxtChimera = NUXT.chimera[i]
+    //         if (nuxtChimera) {
+    //           Object.keys(_chimera.resources).forEach(key => {
+    //             let localResource = _chimera.resources[key]
+    //             let ssrResource = nuxtChimera[key]
+    //             if (localResource && ssrResource && ssrResource._data) {
+    //               [
+    //                 '_data', '_status', '_headers', 'ssrPrefetched',
+    //                 '_lastLoaded'].forEach(key => {
+    //                 localResource[key] = ssrResource[key]
+    //               })
+    //             }
+    //           })
+    //         }
+    //       })
+    //       // if (process.client) {
+    //       //   delete NUXT.chimera
+    //       // }
+    //     }
+    //   } catch (e) {}
+    // }
 
-
-    const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext ? this.$ssrContext.nuxt : typeof window !== 'undefined' ? window.__NUXT__ : null;
-
-    if (_chimera && NUXT && NUXT.chimera) {
-      try {
-        if (this.$router) {
-          let matched = this.$router.match(this.$router.currentRoute.fullPath);
-          (matched ? matched.matched : []).forEach((m, i) => {
-            let nuxtChimera = NUXT.chimera[i];
-
-            if (nuxtChimera) {
-              Object.keys(_chimera.resources).forEach(key => {
-                let localResource = _chimera.resources[key];
-                let ssrResource = nuxtChimera[key];
-
-                if (localResource && ssrResource && ssrResource._data) {
-                  ['_data', '_status', '_headers', 'ssrPrefetched', '_lastLoaded'].forEach(key => {
-                    localResource[key] = ssrResource[key];
-                  });
-                }
-              });
-            }
-          }); // if (process.client) {
-          //   delete NUXT.chimera
-          // }
-        }
-      } catch (e) {}
-    }
 
     this._chimera = _chimera;
     Object.defineProperty(this, '$chimera', {
@@ -565,105 +612,20 @@ var mixin = ((options = {}) => ({
     if (!this._chimera) return;
 
     this._chimera.init();
-  } // mounted () {
-  //   if (this._chimera) {
-  //     this._chimera.updateReactiveResources()
-  //     for (let r in this._chimera.resources) {
-  //       let resource = this._chimera.resources[r]
-  //       if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
-  //         resource.reload()
-  //       }
-  //     }
-  //   }
-  // },
 
+    this.$isServer && this._chimera.initServer();
+  },
 
-}));
-
-function NuxtPlugin () {
-  this.options = this.options || {};
-  const baseOptions = this.options;
-  return function ({
-    beforeNuxtRender,
-    isDev,
-    $axios
-  }) {
-    if (!beforeNuxtRender) {
-      return;
-    }
-
-    const cancelTokens = [];
-
-    async function prefetchAsyncData({
-      Components,
-      nuxtState
-    }) {
-      nuxtState.chimera = nuxtState.chimera || {};
-
-      for (let i = 0, len = Components.length; i < len; i++) {
-        let component = Components[i];
-        let chimera = component.options ? component.options.chimera : null;
-
-        if (typeof chimera === 'function') {
-          // Append @Nuxtjs/axios to component (maybe needed by constructor)
-          if ($axios && !component.$axios) component.$axios = $axios;
-          chimera = chimera.bind(component)();
-        }
-
-        if (!chimera) {
-          continue;
-        }
-
-        const nuxtChimera = {};
-
-        const {
-          $options
-        } = chimera,
-              resources = _objectWithoutProperties(chimera, ["$options"]);
-
-        const options = Object.assign({}, baseOptions, $options);
-        if (!options.axios) options.axios = $axios;
-
-        for (let key in resources) {
-          let resource = resources[key];
-
-          if (resource && typeof resource !== 'function') {
-            resource = resource && resource._data ? resource : Resource.from(resource, options);
-            cancelTokens.push(resource.cancel.bind(resource));
-            if (!resource.prefetch || !resource.ssrPrefetch) continue;
-
-            try {
-              isDev && console.log('  Prefetching: ' + resource.requestConfig.url); // eslint-disable-line no-console
-
-              let response = await resource.execute();
-              resource._data = response.data;
-            } catch (err) {
-              isDev && console.error(err.message); // eslint-disable-line no-console
-            }
-
-            resource.ssrPrefetched = true;
-            resources[key] = nuxtChimera[key] = resource;
-          }
-        }
-
-        if (Object.keys(nuxtChimera).length) {
-          nuxtState.chimera[i] = nuxtChimera;
-        }
-      }
-    }
-
-    beforeNuxtRender((...args) => {
-      return new Promise((resolve, reject) => {
-        prefetchAsyncData(...args).then(resolve).catch(reject);
-        setTimeout(reject, baseOptions.ssrPrefetchTimeout, new Error('  SSR Prefetch Timeout.'));
-      }).catch(err => {
-        for (let cancel of cancelTokens) if (typeof cancel === 'function') cancel();
-
-        isDev && console.error(err.message); // eslint-disable-line no-console
+  serverPrefetch() {
+    if (!this.$_chimeraPromises) return;
+    return Promise.all(this.$_chimeraPromises.map(p => p())).then(results => {
+      results.forEach(r => {
+        r && ssr.addResource(r);
       });
     });
-  };
-}
+  }
+
+}));
 
 class MemoryCache {
   constructor(expiration) {
@@ -780,11 +742,10 @@ const plugin = {
       }
     });
     Vue.mixin(mixin(this.options));
-  },
+  }
 
-  NuxtPlugin // Auto-install
+}; // Auto-install
 
-};
 let GlobalVue = null;
 
 if (typeof window !== 'undefined') {

@@ -1,8 +1,7 @@
 import Resource from './Resource'
 import NullResource from './NullResource'
-import { createAxios, hasKey, isPlainObject } from './utils'
+import { createAxios, hasKey, isPlainObject, noop } from './utils'
 
-// unregister events
 export default class VueChimera {
   constructor (vm, { ...resources }, { deep, ...options }) {
     this._vm = vm
@@ -11,6 +10,7 @@ export default class VueChimera {
     this._axios = options.axios = createAxios(options.axios)
     this._options = options
     this._deep = deep
+    this._server = vm.$isServer
     const watchOption = {
       immediate: true,
       deep: this._deep,
@@ -29,7 +29,7 @@ export default class VueChimera {
         ])
       } else {
         resources[key] = this.resourceFrom(r)
-        resources[key].reload()
+        !this._server && resources[key].reload()
       }
     }
 
@@ -51,6 +51,21 @@ export default class VueChimera {
     this._watchers = this._watchers.map(w => this._vm.$watch(...w))
   }
 
+  initServer () {
+    this._vm.$_chimeraPromises = Object.values(this._resources).map(r => {
+      if (r.prefetch) {
+        if (!r.key) {
+          console.warn('[Chimera]: used prefetch with no key associated with resource!')
+          return noop
+        }
+        return () => {
+          return r.fetch(true).catch(() => null).then(() => r)
+        }
+      }
+      return noop
+    })
+  }
+
   updateResource (key, newValue, oldValue) {
     const oldResource = this._resources[key]
     const newResource = this.resourceFrom(newValue, oldValue && oldValue.keepData ? oldResource.toObj() : null)
@@ -60,11 +75,13 @@ export default class VueChimera {
       newResource.lastLoaded = oldResource.lastLoaded
     }
 
-    if (newValue.interval) {
-      newResource.startInterval(newValue.interval)
-    }
+    if (!this._server) {
+      if (newValue.interval) {
+        newResource.startInterval(newValue.interval)
+      }
 
-    if (newResource.autoFetch) newResource.reload()
+      if (newResource.autoFetch) newResource.reload()
+    }
     this._vm.$set(this._resources, key, newResource)
   }
 
