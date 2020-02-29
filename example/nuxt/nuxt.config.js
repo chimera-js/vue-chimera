@@ -28,7 +28,7 @@ module.exports = {
     //     if (isDev && isClient) {
     //         config.module.rules.push({
     //             enforce: 'pre',
-    //             test: /\.(js|vue)$/,
+    //             typescript: /\.(js|vue)$/,
     //             loader: 'eslint-loader',
     //             exclude: /(node_modules)/
     //         });
