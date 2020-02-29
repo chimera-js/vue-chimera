@@ -1,77 +1,72 @@
 <template>
-    <section class="container">
-        <ul>
-            <li v-if="blogPost.data">
-                <strong>NonePrefetch:</strong> {{ blogPost.data[0].title }} ({{ prefetched(blogPost) }})
-            </li>
-            <li v-if="blogPostPrefetch.data">
-                <strong>Prefetch:</strong> {{ blogPostPrefetch.data[2].title }} ({{ prefetched(blogPostPrefetch) }})
-            </li>
-            <li>
-                <nuxt-link to="page">NextPage</nuxt-link>
-                <a href="#" @click="i++">increment</a>
-            </li>
-        </ul>
-    </section>
+  <div class="container">
+    <div>
+      <logo />
+      <h1 class="title">
+        nuxt
+      </h1>
+      <h2 class="subtitle">
+        Vue Chimera nuxt example
+      </h2>
+      <div class="links">
+        <a
+          href="https://nuxtjs.org/"
+          target="_blank"
+          class="button--green"
+        >
+          Documentation
+        </a>
+        <a
+          href="https://github.com/nuxt/nuxt.js"
+          target="_blank"
+          class="button--grey"
+        >
+          GitHub
+        </a>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import AppLogo from '~/components/AppLogo.vue'
+import Logo from '~/components/Logo.vue'
 
 export default {
   components: {
-    AppLogo
-  },
-  data() {
-      return {
-          i: 0
-      }
-  },
-  chimera: {
-
-    $options: {
-    },
-
-    blogPostPrefetch: {
-      url: '/posts',
-      ssrPrefetch: true
-    },
-    blogPost: {
-      url: '/posts?i=1',
-      ssrPrefetch: false,
-      // interval: 3000
-    },
-
-    blogPostReactive() {
-        return {
-            url: '/posts?i=' + this.i,
-            interval: 3000
-        }
-    }
-  },
-
-  mounted() {
-    window.app = this
-  },
-
-  methods: {
-    prefetched(resource) {
-      return resource.ssrPrefetched ? 'SSR Prefetch' : '!'
-    }
+    Logo
   }
 }
 </script>
 
 <style>
-    .container {
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+.container {
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
 
-    ul {
-        line-height: 3em;
-    }
+.title {
+  font-family: 'Quicksand', 'Source Sans Pro', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  display: block;
+  font-weight: 300;
+  font-size: 100px;
+  color: #35495e;
+  letter-spacing: 1px;
+}
+
+.subtitle {
+  font-weight: 300;
+  font-size: 42px;
+  color: #526488;
+  word-spacing: 5px;
+  padding-bottom: 15px;
+}
+
+.links {
+  padding-top: 15px;
+}
 </style>
-
