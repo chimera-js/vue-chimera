@@ -6,6 +6,7 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var Axios = _interopDefault(require('axios'));
 var pDebounce = _interopDefault(require('p-debounce'));
+var __vue_normalize__ = _interopDefault(require('vue-runtime-helpers/dist/normalize-component.mjs'));
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -121,18 +122,39 @@ function createAxios(config) {
 
   return Axios;
 }
+function getServerContext(contextString) {
+  try {
+    let context = window;
+    const keys = contextString.split('.');
+    keys.forEach(key => {
+      context = context[key];
+    });
+    return context;
+  } catch (e) {}
+
+  return null;
+}
 function noopReturn(arg) {
   return arg;
 }
 
+const SUCCESS = 'success';
+const ERROR = 'error';
+const CANCEL = 'cancel';
+const LOADING = 'loading';
+const TIMEOUT = 'timeout';
+
+var events = /*#__PURE__*/Object.freeze({
+  SUCCESS: SUCCESS,
+  ERROR: ERROR,
+  CANCEL: CANCEL,
+  LOADING: LOADING,
+  TIMEOUT: TIMEOUT
+});
+
 const {
   CancelToken
 } = Axios;
-const EVENT_SUCCESS = 'success';
-const EVENT_ERROR = 'error';
-const EVENT_CANCEL = 'cancel';
-const EVENT_LOADING = 'loading';
-const EVENT_TIMEOUT = 'timeout';
 const INITIAL_DATA = {
   loading: false,
   status: null,
@@ -245,7 +267,7 @@ class Resource {
       }
 
       this.loading = true;
-      this.emit(EVENT_LOADING); // Merge extra options
+      this.emit(LOADING); // Merge extra options
 
       let {
         request
@@ -265,17 +287,17 @@ class Resource {
       this.axios.request(request).then(res => {
         this.setByResponse(res);
         this.setCache(res);
-        this.emit(EVENT_SUCCESS);
+        this.emit(SUCCESS);
         resolve(res);
       }).catch(err => {
         this.setByResponse(err.response);
 
         if (Axios.isCancel(err)) {
-          this.emit(EVENT_CANCEL);
+          this.emit(CANCEL);
         } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-          this.emit(EVENT_TIMEOUT);
+          this.emit(TIMEOUT);
         } else {
-          this.emit(EVENT_ERROR);
+          this.emit(ERROR);
         }
 
         reject(err);
@@ -398,7 +420,7 @@ class VueChimera {
     this._axios = options.axios = createAxios(options.axios);
     this._options = options;
     this._deep = deep;
-    this._ssrContext = ssrContext;
+    this._ssrContext = getServerContext(ssrContext);
     this._server = vm.$isServer;
     const watchOption = {
       immediate: true,
@@ -473,7 +495,6 @@ class VueChimera {
         newResource.startInterval(newValue.interval);
       }
 
-      console.log(newResource.prefetch);
       if (shouldAutoFetch(newResource)) newResource.reload();
     }
 
@@ -497,36 +518,22 @@ class VueChimera {
       });
     }
 
-    if (!this._server && !initial && value.key && this._ssrContext) {
-      initial = this.getContext()[value.key];
+    const baseOptions = Object.create(this._options);
+    const r = new Resource(Object.assign(baseOptions, value), initial);
+
+    if (!this._server && !initial && r.key && r.prefetch && this._ssrContext) {
+      initial = this._ssrContext[value.key];
       if (initial) initial.prefetched = true;
+      Object.assign(r, initial);
     }
 
-    const baseOptions = Object.create(this._options);
-    return new Resource(Object.assign(baseOptions, value), initial);
+    return r;
   }
 
   cancelAll() {
     Object.values(this._resources).forEach(r => {
       r.cancel();
     });
-  }
-
-  getContext() {
-    if (typeof this._ssrContext === 'string') {
-      try {
-        let context = window;
-
-        const keys = this._ssrContext.split('.');
-
-        keys.forEach(key => {
-          context = context[key];
-        });
-        this._ssrContext = context;
-      } catch (e) {}
-    }
-
-    return this._ssrContext || {};
   }
 
   destroy() {
@@ -595,6 +602,103 @@ var mixin = ((options = {}) => ({
   }
 
 }));
+
+var script = {
+  inheritAttrs: false,
+  props: {
+    options: {
+      type: [Object, String],
+      required: true
+    },
+    tag: {
+      type: String,
+      default: null
+    }
+  },
+
+  data() {
+    return {
+      resource: this.getResource()
+    };
+  },
+
+  beforeCreate() {
+    this._ssrContext = getServerContext(this.$chimeraOptions.ssrContext);
+  },
+
+  mounted() {
+    if (this.resource.autoFetch) {
+      this.resource.reload();
+    }
+  },
+
+  render(h) {
+    let result = this.$scopedSlots.default(this.resource);
+
+    if (Array.isArray(result)) {
+      result = result.concat(this.$slots.default);
+    } else {
+      result = [result].concat(this.$slots.default);
+    }
+
+    return this.tag ? h(this.tag, result) : result[0];
+  },
+
+  methods: {
+    getResource() {
+      let value = this.options;
+      if (value == null) return new NullResource();
+      if (typeof value === 'string') value = {
+        url: value
+      };
+
+      if (!this.$chimeraOptions.axios) {
+        this.$chimeraOptions.axios = createAxios();
+      }
+
+      const resource = new Resource(_objectSpread({}, this.$chimeraOptions, value));
+      Object.values(events).forEach(ev => {
+        resource.on(ev, () => this.$emit(ev, resource));
+      });
+      resource.on('success', () => {
+        this.$nextTick(this.$forceUpdate);
+      });
+
+      if (!this._server && resource.key && resource.prefetch && this._ssrContext) {
+        const initial = this._ssrContext[value.key];
+        if (initial) initial.prefetched = true;
+        Object.assign(resource, initial);
+      }
+
+      return resource;
+    }
+
+  }
+};
+
+/* script */
+const __vue_script__ = script;
+/* template */
+
+/* style */
+
+const __vue_inject_styles__ = undefined;
+/* scoped */
+
+const __vue_scope_id__ = undefined;
+/* module identifier */
+
+const __vue_module_identifier__ = undefined;
+/* functional template */
+
+const __vue_is_functional_template__ = undefined;
+/* style inject */
+
+/* style inject SSR */
+
+/* style inject shadow dom */
+
+const __vue_component__ = __vue_normalize__({}, __vue_inject_styles__, __vue_script__, __vue_scope_id__, __vue_is_functional_template__, __vue_module_identifier__, false, undefined, undefined, undefined);
 
 class MemoryCache {
   constructor(expiration) {
@@ -712,6 +816,8 @@ const plugin = {
       }
     });
     Vue.mixin(mixin(this.options));
+    Vue.component('chimera-resource', __vue_component__);
+    Vue.prototype.$chimeraOptions = this.options;
   }
 
 }; // Auto-install
@@ -728,11 +834,11 @@ if (GlobalVue) {
   GlobalVue.use(plugin, plugin.options);
 }
 
-exports.EVENT_CANCEL = EVENT_CANCEL;
-exports.EVENT_ERROR = EVENT_ERROR;
-exports.EVENT_LOADING = EVENT_LOADING;
-exports.EVENT_SUCCESS = EVENT_SUCCESS;
-exports.EVENT_TIMEOUT = EVENT_TIMEOUT;
+exports.CANCEL = CANCEL;
+exports.ERROR = ERROR;
+exports.LOADING = LOADING;
 exports.MemoryCache = MemoryCache;
+exports.SUCCESS = SUCCESS;
 exports.StorageCache = StorageCache;
+exports.TIMEOUT = TIMEOUT;
 exports.default = plugin;

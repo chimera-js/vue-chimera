@@ -11,4 +11,7 @@ module.exports = {
         format: ['cjs','es','umd','umd-min'],
     },
     externals: ['axios', 'vue'],
+    plugins: {
+        vue: true,
+    }
 }

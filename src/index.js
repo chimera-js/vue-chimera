@@ -1,4 +1,5 @@
 import mixin from './mixin'
+import ChimeraResource from './components/ChimeraResource.vue'
 
 const plugin = {
 
@@ -23,6 +24,8 @@ const plugin = {
     })
 
     Vue.mixin(mixin(this.options))
+    Vue.component('chimera-resource', ChimeraResource)
+    Vue.prototype.$chimeraOptions = this.options
   }
 
 }
@@ -41,6 +44,6 @@ if (GlobalVue) {
 
 export default plugin
 
-export * from './Resource'
+export * from './events'
 export { StorageCache } from './cache/StorageCache'
 export { MemoryCache } from './cache/MemoryCache'

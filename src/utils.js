@@ -42,6 +42,18 @@ export function createAxios (config) {
   return Axios
 }
 
+export function getServerContext (contextString) {
+  try {
+    let context = window
+    const keys = contextString.split('.')
+    keys.forEach(key => {
+      context = context[key]
+    })
+    return context
+  } catch (e) {}
+  return null
+}
+
 export function noop () {}
 
 export function noopReturn (arg) { return arg }

@@ -1,13 +1,8 @@
 import Axios from 'axios'
 import { isPlainObject, noopReturn } from './utils'
 import pDebounce from 'p-debounce'
+import * as events from './events'
 const { CancelToken } = Axios
-
-export const EVENT_SUCCESS = 'success'
-export const EVENT_ERROR = 'error'
-export const EVENT_CANCEL = 'cancel'
-export const EVENT_LOADING = 'loading'
-export const EVENT_TIMEOUT = 'timeout'
 
 const INITIAL_DATA = {
   loading: false,
@@ -109,7 +104,6 @@ export default class Resource {
 
   fetch (force, extraParams, extraOptions) {
     return new Promise((resolve, reject) => {
-
       if (this.cache && !force) {
         let cacheValue = this.getCache()
         if (cacheValue) {
@@ -119,7 +113,7 @@ export default class Resource {
       }
 
       this.loading = true
-      this.emit(EVENT_LOADING)
+      this.emit(events.LOADING)
 
       // Merge extra options
       let { request } = this
@@ -136,16 +130,16 @@ export default class Resource {
       this.axios.request(request).then(res => {
         this.setByResponse(res)
         this.setCache(res)
-        this.emit(EVENT_SUCCESS)
+        this.emit(events.SUCCESS)
         resolve(res)
       }).catch(err => {
         this.setByResponse(err.response)
         if (Axios.isCancel(err)) {
-          this.emit(EVENT_CANCEL)
+          this.emit(events.CANCEL)
         } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-          this.emit(EVENT_TIMEOUT)
+          this.emit(events.TIMEOUT)
         } else {
-          this.emit(EVENT_ERROR)
+          this.emit(events.ERROR)
         }
 
         reject(err)

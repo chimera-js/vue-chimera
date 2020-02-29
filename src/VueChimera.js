@@ -1,6 +1,6 @@
 import Resource from './Resource'
 import NullResource from './NullResource'
-import { createAxios, hasKey, isPlainObject } from './utils'
+import { createAxios, hasKey, isPlainObject, getServerContext } from './utils'
 
 const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override')
 
@@ -12,7 +12,7 @@ export default class VueChimera {
     this._axios = options.axios = createAxios(options.axios)
     this._options = options
     this._deep = deep
-    this._ssrContext = ssrContext
+    this._ssrContext = getServerContext(ssrContext)
     this._server = vm.$isServer
     const watchOption = {
       immediate: true,
@@ -81,7 +81,6 @@ export default class VueChimera {
         newResource.startInterval(newValue.interval)
       }
 
-      console.log(newResource.prefetch)
       if (shouldAutoFetch(newResource)) newResource.reload()
     }
     this._vm.$set(this._resources, key, newResource)
@@ -101,34 +100,21 @@ export default class VueChimera {
       })
     }
 
-    if (!this._server && !initial && value.key && this._ssrContext) {
-      initial = this.getContext()[value.key]
-      if (initial) initial.prefetched = true
-    }
-
     const baseOptions = Object.create(this._options)
-    return new Resource(Object.assign(baseOptions, value), initial)
+    const r = new Resource(Object.assign(baseOptions, value), initial)
+
+    if (!this._server && !initial && r.key && r.prefetch && this._ssrContext) {
+      initial = this._ssrContext[value.key]
+      if (initial) initial.prefetched = true
+      Object.assign(r, initial)
+    }
+    return r
   }
 
   cancelAll () {
     Object.values(this._resources).forEach(r => {
       r.cancel()
     })
-  }
-
-  getContext () {
-    if (typeof this._ssrContext === 'string') {
-      try {
-        let context = window
-        const keys = this._ssrContext.split('.')
-        keys.forEach(key => {
-          context = context[key]
-        })
-        this._ssrContext = context
-      } catch (e) {
-      }
-    }
-    return this._ssrContext || {}
   }
 
   destroy () {
