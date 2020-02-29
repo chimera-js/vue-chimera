@@ -115,7 +115,6 @@ function createAxios(config) {
 
   return Axios;
 }
-function noop() {}
 function noopReturn(arg) {
   return arg;
 }
@@ -163,7 +162,7 @@ class Resource {
     }
 
     this.key = key;
-    this.prefetch = typeof prefetch === 'boolean' ? prefetch : this.autoFetch;
+    this.prefetch = prefetch != null ? prefetch : this.autoFetch;
     this.cache = cache;
     this.axios = axios;
     this.fetchDebounced = pDebounce(this.fetch.bind(this), debounce, {
@@ -376,20 +375,24 @@ class NullResource extends Resource {
 
 }
 
+const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override');
+
 class VueChimera {
   constructor(vm, _ref2, _ref) {
     let resources = _extends({}, _ref2);
 
     let {
-      deep
+      deep,
+      ssrContext
     } = _ref,
-        options = _objectWithoutProperties(_ref, ["deep"]);
+        options = _objectWithoutProperties(_ref, ["deep", "ssrContext"]);
 
     this._vm = vm;
     this._watchers = [];
     this._axios = options.axios = createAxios(options.axios);
     this._options = options;
     this._deep = deep;
+    this._ssrContext = ssrContext;
     this._server = vm.$isServer;
     const watchOption = {
       immediate: true,
@@ -404,8 +407,8 @@ class VueChimera {
       if (typeof r === 'function') {
         this._watchers.push([() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), watchOption]);
       } else {
-        resources[key] = this.resourceFrom(r);
-        !this._server && resources[key].reload();
+        r = resources[key] = this.resourceFrom(r);
+        !this._server && shouldAutoFetch(r) && r.reload();
       }
     }
 
@@ -437,19 +440,16 @@ class VueChimera {
   }
 
   initServer() {
-    this._vm.$_chimeraPromises = Object.values(this._resources).map(r => {
+    this._vm.$_chimeraPromises = [];
+    Object.values(this._resources).forEach(r => {
       if (r.prefetch) {
         if (!r.key) {
           console.warn('[Chimera]: used prefetch with no key associated with resource!');
-          return noop;
+          return;
         }
 
-        return () => {
-          return r.fetch(true).catch(() => null).then(() => r);
-        };
+        this._vm.$_chimeraPromises.push(r.fetch(true).catch(() => null).then(() => r));
       }
-
-      return noop;
     });
   }
 
@@ -467,7 +467,8 @@ class VueChimera {
         newResource.startInterval(newValue.interval);
       }
 
-      if (newResource.autoFetch) newResource.reload();
+      console.log(newResource.prefetch);
+      if (shouldAutoFetch(newResource)) newResource.reload();
     }
 
     this._vm.$set(this._resources, key, newResource);
@@ -490,6 +491,11 @@ class VueChimera {
       });
     }
 
+    if (!this._server && !initial && value.key && this._ssrContext) {
+      initial = this.getContext()[value.key];
+      if (initial) initial.prefetched = true;
+    }
+
     const baseOptions = Object.create(this._options);
     return new Resource(Object.assign(baseOptions, value), initial);
   }
@@ -500,6 +506,23 @@ class VueChimera {
     });
   }
 
+  getContext() {
+    if (typeof this._ssrContext === 'string') {
+      try {
+        let context = window;
+
+        const keys = this._ssrContext.split('.');
+
+        keys.forEach(key => {
+          context = context[key];
+        });
+        this._ssrContext = context;
+      } catch (e) {}
+    }
+
+    return this._ssrContext || {};
+  }
+
   destroy() {
     const vm = this._vm;
     this.cancelAll();
@@ -508,37 +531,10 @@ class VueChimera {
 
 }
 
-const results = {};
-
-var addResource = function (r) {
-  results[r.key] = r.toObj();
-};
-
-var getStates = function () {
-  return results;
-};
-
-var serializeStates_1 = function () {
-  return JSON.stringify(results);
-};
-
-var exportStates = function (attachTo, globalName) {
-  return `${attachTo}.${globalName} = ${serializeStates()};`;
-};
-
-var ssr = {
-	addResource: addResource,
-	getStates: getStates,
-	serializeStates: serializeStates_1,
-	exportStates: exportStates
-};
-
 var mixin = ((options = {}) => ({
   beforeCreate() {
     const vmOptions = this.$options;
-
-    let _chimera; // Stop if instance doesn't have chimera or already initialized
-
+    let chimera; // Stop if instance doesn't have chimera or already initialized
 
     if (!vmOptions.chimera || vmOptions._chimera) return;
 
@@ -548,7 +544,7 @@ var mixin = ((options = {}) => ({
     }
 
     if (vmOptions.chimera instanceof VueChimera) {
-      _chimera = vmOptions.chimera;
+      chimera = vmOptions.chimera;
     } else if (isPlainObject(vmOptions.chimera)) {
       const _vmOptions$chimera = vmOptions.chimera,
             {
@@ -556,42 +552,12 @@ var mixin = ((options = {}) => ({
       } = _vmOptions$chimera,
             resources = _objectWithoutProperties(_vmOptions$chimera, ["$options"]);
 
-      _chimera = new VueChimera(this, resources, _objectSpread({}, options, $options));
-    } // Nuxtjs prefetch
-    // const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext
-    //   ? this.$ssrContext.nuxt
-    //   : (typeof window !== 'undefined' ? window.__NUXT__ : null)
-    // if (_chimera && NUXT && NUXT.chimera) {
-    //   try {
-    //     if (this.$router) {
-    //       let matched = this.$router.match(this.$router.currentRoute.fullPath);
-    //       (matched ? matched.matched : []).forEach((m, i) => {
-    //         let nuxtChimera = NUXT.chimera[i]
-    //         if (nuxtChimera) {
-    //           Object.keys(_chimera.resources).forEach(key => {
-    //             let localResource = _chimera.resources[key]
-    //             let ssrResource = nuxtChimera[key]
-    //             if (localResource && ssrResource && ssrResource._data) {
-    //               [
-    //                 '_data', '_status', '_headers', 'ssrPrefetched',
-    //                 '_lastLoaded'].forEach(key => {
-    //                 localResource[key] = ssrResource[key]
-    //               })
-    //             }
-    //           })
-    //         }
-    //       })
-    //       // if (process.client) {
-    //       //   delete NUXT.chimera
-    //       // }
-    //     }
-    //   } catch (e) {}
-    // }
+      chimera = new VueChimera(this, resources, _objectSpread({}, options, $options));
+    }
 
-
-    this._chimera = _chimera;
+    this._chimera = chimera;
     Object.defineProperty(this, '$chimera', {
-      get: () => _chimera._resources
+      get: () => chimera._resources
     });
   },
 
@@ -610,11 +576,14 @@ var mixin = ((options = {}) => ({
     this.$isServer && this._chimera.initServer();
   },
 
-  serverPrefetch() {
+  serverPrefetch(...args) {
     if (!this.$_chimeraPromises) return;
-    return Promise.all(this.$_chimeraPromises.map(p => p())).then(results => {
+
+    const ChimeraSSR = require('../ssr/index');
+
+    return Promise.all(this.$_chimeraPromises).then(results => {
       results.forEach(r => {
-        r && ssr.addResource(r);
+        r && ChimeraSSR.addResource(r);
       });
     });
   }
@@ -724,9 +693,10 @@ const plugin = {
     keepData: true,
     autoFetch: 'get',
     // false, true, '%METHOD%',
-    prefetch: null,
+    prefetch: false,
     prefetchTimeout: 4000,
-    transformer: null
+    transformer: null,
+    ssrContext: null
   },
 
   install(Vue, options = {}) {

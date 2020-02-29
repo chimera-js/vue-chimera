@@ -43,7 +43,7 @@ export default class Resource {
     }
 
     this.key = key
-    this.prefetch = typeof prefetch === 'boolean' ? prefetch : this.autoFetch
+    this.prefetch = prefetch != null ? prefetch : this.autoFetch
     this.cache = cache
     this.axios = axios
     this.fetchDebounced = pDebounce(this.fetch.bind(this), debounce, { leading: true })

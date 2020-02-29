@@ -9,9 +9,10 @@ const plugin = {
     deep: true,
     keepData: true,
     autoFetch: 'get', // false, true, '%METHOD%',
-    prefetch: null,
+    prefetch: false,
     prefetchTimeout: 4000,
-    transformer: null
+    transformer: null,
+    ssrContext: null
   },
 
   install (Vue, options = {}) {

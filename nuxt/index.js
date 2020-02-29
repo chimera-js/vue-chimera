@@ -2,7 +2,10 @@ const { resolve } = require('path')
 
 module.exports = function nuxtChimeraModule (moduleOptions) {
 
-  const options = Object.assign({}, this.options.chimera, moduleOptions)
+  const options = Object.assign({
+    ssrContext: '__NUXT__.chimera',
+    prefetch: true,
+  }, this.options.chimera, moduleOptions)
 
   this.addPlugin({
     src: resolve(__dirname, 'plugin.js'),

@@ -1,15 +1,18 @@
 import Resource from './Resource'
 import NullResource from './NullResource'
-import { createAxios, hasKey, isPlainObject, noop } from './utils'
+import { createAxios, hasKey, isPlainObject } from './utils'
+
+const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override')
 
 export default class VueChimera {
-  constructor (vm, { ...resources }, { deep, ...options }) {
+  constructor (vm, { ...resources }, { deep, ssrContext, ...options }) {
     this._vm = vm
     this._watchers = []
 
     this._axios = options.axios = createAxios(options.axios)
     this._options = options
     this._deep = deep
+    this._ssrContext = ssrContext
     this._server = vm.$isServer
     const watchOption = {
       immediate: true,
@@ -28,8 +31,8 @@ export default class VueChimera {
           watchOption
         ])
       } else {
-        resources[key] = this.resourceFrom(r)
-        !this._server && resources[key].reload()
+        r = resources[key] = this.resourceFrom(r)
+        !this._server && shouldAutoFetch(r) && r.reload()
       }
     }
 
@@ -52,17 +55,15 @@ export default class VueChimera {
   }
 
   initServer () {
-    this._vm.$_chimeraPromises = Object.values(this._resources).map(r => {
+    this._vm.$_chimeraPromises = []
+    Object.values(this._resources).forEach(r => {
       if (r.prefetch) {
         if (!r.key) {
           console.warn('[Chimera]: used prefetch with no key associated with resource!')
-          return noop
+          return
         }
-        return () => {
-          return r.fetch(true).catch(() => null).then(() => r)
-        }
+        this._vm.$_chimeraPromises.push(r.fetch(true).catch(() => null).then(() => r))
       }
-      return noop
     })
   }
 
@@ -80,7 +81,8 @@ export default class VueChimera {
         newResource.startInterval(newValue.interval)
       }
 
-      if (newResource.autoFetch) newResource.reload()
+      console.log(newResource.prefetch)
+      if (shouldAutoFetch(newResource)) newResource.reload()
     }
     this._vm.$set(this._resources, key, newResource)
   }
@@ -99,6 +101,11 @@ export default class VueChimera {
       })
     }
 
+    if (!this._server && !initial && value.key && this._ssrContext) {
+      initial = this.getContext()[value.key]
+      if (initial) initial.prefetched = true
+    }
+
     const baseOptions = Object.create(this._options)
     return new Resource(Object.assign(baseOptions, value), initial)
   }
@@ -107,6 +114,21 @@ export default class VueChimera {
     Object.values(this._resources).forEach(r => {
       r.cancel()
     })
+  }
+
+  getContext () {
+    if (typeof this._ssrContext === 'string') {
+      try {
+        let context = window
+        const keys = this._ssrContext.split('.')
+        keys.forEach(key => {
+          context = context[key]
+        })
+        this._ssrContext = context
+      } catch (e) {
+      }
+    }
+    return this._ssrContext || {}
   }
 
   destroy () {
