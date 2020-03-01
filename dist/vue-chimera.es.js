@@ -90,17 +90,26 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
+const SUCCESS = 'success';
+const ERROR = 'error';
+const CANCEL = 'cancel';
+const LOADING = 'loading';
+const TIMEOUT = 'timeout';
+
+var events = /*#__PURE__*/Object.freeze({
+  SUCCESS: SUCCESS,
+  ERROR: ERROR,
+  CANCEL: CANCEL,
+  LOADING: LOADING,
+  TIMEOUT: TIMEOUT
+});
+
 function isPlainObject(value) {
-  return typeof value === 'object' && Object.prototype.toString(value) === '[object Object]';
+  return typeof value === 'object' && value && Object.prototype.toString(value) === '[object Object]';
 }
 const hasKey = (obj, key) => key in (obj || {});
 function createAxios(config) {
   if (config instanceof Axios) {
-    return config;
-  } // Support nuxt axios
-
-
-  if (config && typeof config.$request === 'function') {
     return config;
   }
 
@@ -131,26 +140,15 @@ function getServerContext(contextString) {
 function noopReturn(arg) {
   return arg;
 }
-
-const SUCCESS = 'success';
-const ERROR = 'error';
-const CANCEL = 'cancel';
-const LOADING = 'loading';
-const TIMEOUT = 'timeout';
-
-var events = /*#__PURE__*/Object.freeze({
-  SUCCESS: SUCCESS,
-  ERROR: ERROR,
-  CANCEL: CANCEL,
-  LOADING: LOADING,
-  TIMEOUT: TIMEOUT
-});
+function warn(arg, ...args) {
+  // eslint-disable-next-line no-console
+  console.warn('[Chimera]: ' + arg, ...args);
+}
 
 const {
   CancelToken
 } = Axios;
 const INITIAL_DATA = {
-  loading: false,
   status: null,
   data: null,
   headers: null,
@@ -163,9 +161,15 @@ class Resource {
       url: options
     };
 
+    if (!options) {
+      warn('Invalid options', options);
+      throw new Error('[Chimera]: invalid options');
+    }
+
     let {
       autoFetch,
       prefetch,
+      prefetchTimeout,
       cache,
       debounce,
       transformer,
@@ -173,7 +177,7 @@ class Resource {
       key,
       interval
     } = options,
-        request = _objectWithoutProperties(options, ["autoFetch", "prefetch", "cache", "debounce", "transformer", "axios", "key", "interval"]);
+        request = _objectWithoutProperties(options, ["autoFetch", "prefetch", "prefetchTimeout", "cache", "debounce", "transformer", "axios", "key", "interval"]);
 
     request.method = (request.method || 'get').toLowerCase();
 
@@ -185,16 +189,18 @@ class Resource {
 
     this.key = key;
     this.prefetch = prefetch != null ? prefetch : this.autoFetch;
+    this.prefetchTimeout = prefetchTimeout;
     this.cache = cache;
     this.axios = axios;
-    this.fetchDebounced = pDebounce(this.fetch.bind(this), debounce, {
+    this.fetchDebounced = debounce !== false ? pDebounce(this.fetch.bind(this), debounce || 50, {
       leading: true
-    }); // Set Transformers
+    }) : this.fetch; // Set Transformers
 
     this.setTransformer(transformer);
+    /* istanbul ignore if */
 
     if (request.data) {
-      console.warn('[Chimera]: Do not use "params" key inside resource options, use data instead');
+      warn('Do not use "params" key inside resource options, use data instead');
     }
 
     if (request.method !== 'get') {
@@ -208,7 +214,8 @@ class Resource {
       })
     });
     this._listeners = {};
-    this.prefetched = false; // Set Events
+    this.prefetched = false;
+    this.loading = false; // Set Events
 
     if (isPlainObject(options.on)) {
       for (let key in options.on) {
@@ -216,14 +223,15 @@ class Resource {
       }
     }
 
-    initial && Object.assign(this, INITIAL_DATA, initial);
+    Object.assign(this, INITIAL_DATA, initial || {});
+    interval && this.startInterval(interval);
   }
 
   setTransformer(transformer) {
     if (typeof transformer === 'function') {
       this.responseTransformer = transformer;
       this.errorTransformer = transformer;
-    } else if (isPlainObject('object')) {
+    } else if (isPlainObject(transformer)) {
       const {
         response,
         error
@@ -249,7 +257,7 @@ class Resource {
     });
   }
 
-  fetch(force, extraParams, extraOptions) {
+  fetch(force, extraOptions) {
     return new Promise((resolve, reject) => {
       if (this.cache && !force) {
         let cacheValue = this.getCache();
@@ -261,42 +269,42 @@ class Resource {
       }
 
       this.loading = true;
-      this.emit(LOADING); // Merge extra options
-
+      this.emit(LOADING);
       let {
         request
       } = this;
 
       if (isPlainObject(extraOptions)) {
-        request = Object.assign({}, request, isPlainObject(extraOptions) ? {} : {});
-      } // Merge extra params
+        // Merge extra options
+        if (extraOptions.params) {
+          const key = request.method === 'get' ? 'params' : 'data';
+          extraOptions[key] = Object.assign({}, request[key], extraOptions.params);
+        }
 
-
-      if (isPlainObject(extraParams)) {
-        const paramKey = request.method === 'get' ? 'params' : 'data';
-        request[paramKey] = Object.assign(request[paramKey], extraParams);
+        request = Object.assign({}, request, extraOptions);
       } // Finally make request
 
 
       this.axios.request(request).then(res => {
+        this.loading = false;
         this.setByResponse(res);
         this.setCache(res);
         this.emit(SUCCESS);
         resolve(res);
       }).catch(err => {
+        this.loading = false;
         this.setByResponse(err.response);
 
         if (Axios.isCancel(err)) {
           this.emit(CANCEL);
         } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
           this.emit(TIMEOUT);
+          this.emit(ERROR);
         } else {
           this.emit(ERROR);
         }
 
         reject(err);
-      }).finally(() => {
-        this.loading = false;
       });
     });
   }
@@ -305,12 +313,11 @@ class Resource {
     return this.fetchDebounced(force);
   }
 
-  send(params, options) {
-    return this.fetchDebounced(true, params, options);
+  send(extraOptions) {
+    return this.fetchDebounced(true, extraOptions);
   }
 
-  cancel(unload) {
-    if (unload) this.data = null;
+  cancel() {
     if (typeof this._canceler === 'function') this._canceler();
     this.request.cancelToken = new CancelToken(c => {
       this._canceler = c;
@@ -345,18 +352,19 @@ class Resource {
   }
 
   startInterval(ms) {
+    /* istanbul ignore if */
     if (typeof ms !== 'number') throw new Error('[Chimera]: interval should be number');
+    /* istanbul ignore if */
+
     if (typeof process !== 'undefined' && process.server) return;
     this._interval = ms;
     this.stopInterval();
     this._interval_id = setInterval(() => this.reload(true), this._interval);
-    this.looping = true;
   }
 
   stopInterval() {
     if (this._interval_id) {
       clearInterval(this._interval_id);
-      this.looping = false;
       this._interval_id = null;
       this._interval = false;
     }
@@ -386,9 +394,17 @@ class Resource {
     return this.request.method;
   }
 
+  get looping() {
+    return !!this._interval;
+  }
+
 }
 
 class NullResource extends Resource {
+  constructor() {
+    super({});
+  }
+
   fetch(force) {
     return Promise.reject(new Error('Null Resource'));
   }
@@ -423,19 +439,26 @@ class VueChimera {
     };
 
     for (let key in resources) {
-      if (key.charAt(0) === '$') continue;
+      if (key.charAt(0) === '$') {
+        delete resources[key];
+        continue;
+      }
+
       let r = resources[key];
 
       if (typeof r === 'function') {
         this._watchers.push([() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), watchOption]);
       } else {
         r = resources[key] = this.resourceFrom(r);
-        !this._server && shouldAutoFetch(r) && r.reload();
+
+        if (!this._server) {
+          shouldAutoFetch(r) && r.reload();
+        }
       }
     }
 
     Object.defineProperty(resources, '$cancelAll', {
-      value: this.cancelAll.bind(this)
+      value: () => this.cancelAll()
     });
     Object.defineProperty(resources, '$axios', {
       get: () => this._axios
@@ -466,11 +489,13 @@ class VueChimera {
     Object.values(this._resources).forEach(r => {
       if (r.prefetch) {
         if (!r.key) {
-          console.warn('[Chimera]: used prefetch with no key associated with resource!');
+          warn('used prefetch with no key associated with resource!');
           return;
         }
 
-        this._vm.$_chimeraPromises.push(r.fetch(true).catch(() => null).then(() => r));
+        this._vm.$_chimeraPromises.push(r.fetch(true, {
+          timeout: r.prefetchTimeout
+        }).then(() => r).catch(() => null));
       }
     });
   }
@@ -485,10 +510,6 @@ class VueChimera {
     }
 
     if (!this._server) {
-      if (newValue.interval) {
-        newResource.startInterval(newValue.interval);
-      }
-
       if (shouldAutoFetch(newResource)) newResource.reload();
     }
 
@@ -533,6 +554,9 @@ class VueChimera {
   destroy() {
     const vm = this._vm;
     this.cancelAll();
+    Object.values(this._resources).forEach(r => {
+      r.stopInterval();
+    });
     delete vm._chimera;
   }
 
@@ -543,16 +567,18 @@ var mixin = ((options = {}) => ({
     const vmOptions = this.$options;
     let chimera; // Stop if instance doesn't have chimera or already initialized
 
+    /* istanbul ignore if */
+
     if (!vmOptions.chimera || vmOptions._chimera) return;
 
     if (typeof vmOptions.chimera === 'function') {
       // Initialize with function
       vmOptions.chimera = vmOptions.chimera.call(this);
     }
+    /* istanbul ignore else */
 
-    if (vmOptions.chimera instanceof VueChimera) {
-      chimera = vmOptions.chimera;
-    } else if (isPlainObject(vmOptions.chimera)) {
+
+    if (isPlainObject(vmOptions.chimera)) {
       const _vmOptions$chimera = vmOptions.chimera,
             {
         $options
@@ -560,15 +586,21 @@ var mixin = ((options = {}) => ({
             resources = _objectWithoutProperties(_vmOptions$chimera, ["$options"]);
 
       chimera = new VueChimera(this, resources, _objectSpread({}, options, $options));
+    } else {
+      throw new Error('[Chimera]: chimera options should be an object or a function that returns object');
     }
 
     this._chimera = chimera;
-    Object.defineProperty(this, '$chimera', {
-      get: () => chimera._resources
-    });
+
+    if (!Object.prototype.hasOwnProperty.call(this, '$chimera')) {
+      Object.defineProperty(this, '$chimera', {
+        get: () => chimera._resources
+      });
+    }
   },
 
   data() {
+    /* istanbul ignore if */
     if (!this._chimera) return {};
     return {
       $chimera: this._chimera._resources
@@ -576,6 +608,7 @@ var mixin = ((options = {}) => ({
   },
 
   created() {
+    /* istanbul ignore if */
     if (!this._chimera) return;
 
     this._chimera.init();
@@ -583,7 +616,15 @@ var mixin = ((options = {}) => ({
     this.$isServer && this._chimera.initServer();
   },
 
+  beforeDestroy() {
+    /* istanbul ignore if */
+    if (!this._chimera) return;
+
+    this._chimera.destroy();
+  },
+
   serverPrefetch(...args) {
+    /* istanbul ignore if */
     if (!this.$_chimeraPromises) return;
 
     const ChimeraSSR = require('../ssr/index');
@@ -727,7 +768,6 @@ class MemoryCache {
       return item.value;
     }
 
-    console.log('sss');
     this.removeItem(key);
     return null;
   }
@@ -742,7 +782,7 @@ class MemoryCache {
 
   all() {
     return this.keys().reduce((obj, str) => {
-      obj[str] = this._store.getItem(str);
+      obj[str] = this._store[str];
       return obj;
     }, {});
   }
@@ -751,7 +791,7 @@ class MemoryCache {
     return this.keys().length;
   }
 
-  clearCache() {
+  clear() {
     this._store = {};
   }
 
@@ -762,6 +802,7 @@ class StorageCache extends MemoryCache {
     super(expiration);
     this.key = key;
     const storage = sessionStorage ? 'sessionStorage' : 'localStorage';
+    /* istanbul ignore if */
 
     if (typeof window === 'undefined' || !window[storage]) {
       throw Error(`StorageCache: ${storage} is not available.`);
@@ -772,7 +813,7 @@ class StorageCache extends MemoryCache {
     try {
       this._store = JSON.parse(this.storage.getItem(key)) || {};
     } catch (e) {
-      this.clearCache();
+      this.clear();
       this._store = {};
     }
   }
@@ -782,7 +823,7 @@ class StorageCache extends MemoryCache {
     this.storage.setItem(this.key, JSON.stringify(this._store));
   }
 
-  clearCache() {
+  clear() {
     this.storage.removeItem(this.key);
   }
 

@@ -29,8 +29,6 @@ export class MemoryCache {
       return item.value
     }
 
-    console.log('sss')
-
     this.removeItem(key)
     return null
   }
@@ -45,7 +43,7 @@ export class MemoryCache {
 
   all () {
     return this.keys().reduce((obj, str) => {
-      obj[str] = this._store.getItem(str)
+      obj[str] = this._store[str]
       return obj
     }, {})
   }
@@ -54,7 +52,7 @@ export class MemoryCache {
     return this.keys().length
   }
 
-  clearCache () {
+  clear () {
     this._store = {}
   }
 }

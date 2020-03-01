@@ -6,6 +6,7 @@ export class StorageCache extends MemoryCache {
     this.key = key
 
     const storage = sessionStorage ? 'sessionStorage' : 'localStorage'
+    /* istanbul ignore if */
     if (typeof window === 'undefined' || !window[storage]) {
       throw Error(`StorageCache: ${storage} is not available.`)
     } else {
@@ -15,7 +16,7 @@ export class StorageCache extends MemoryCache {
     try {
       this._store = JSON.parse(this.storage.getItem(key)) || {}
     } catch (e) {
-      this.clearCache()
+      this.clear()
       this._store = {}
     }
   }
@@ -25,7 +26,7 @@ export class StorageCache extends MemoryCache {
     this.storage.setItem(this.key, JSON.stringify(this._store))
   }
 
-  clearCache () {
+  clear () {
     this.storage.removeItem(this.key)
   }
 }

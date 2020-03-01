@@ -1,6 +1,6 @@
 import Resource from './Resource'
 import NullResource from './NullResource'
-import { createAxios, hasKey, isPlainObject, getServerContext } from './utils'
+import { createAxios, hasKey, isPlainObject, getServerContext, warn } from './utils'
 
 const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override')
 
@@ -21,7 +21,10 @@ export default class VueChimera {
     }
 
     for (let key in resources) {
-      if (key.charAt(0) === '$') continue
+      if (key.charAt(0) === '$') {
+        delete resources[key]
+        continue
+      }
 
       let r = resources[key]
       if (typeof r === 'function') {
@@ -32,11 +35,13 @@ export default class VueChimera {
         ])
       } else {
         r = resources[key] = this.resourceFrom(r)
-        !this._server && shouldAutoFetch(r) && r.reload()
+        if (!this._server) {
+          shouldAutoFetch(r) && r.reload()
+        }
       }
     }
 
-    Object.defineProperty(resources, '$cancelAll', { value: this.cancelAll.bind(this) })
+    Object.defineProperty(resources, '$cancelAll', { value: () => this.cancelAll() })
     Object.defineProperty(resources, '$axios', { get: () => this._axios })
     Object.defineProperty(resources, '$loading', { get () { return !!Object.values(this).find(el => !!el.loading) } })
     this._resources = resources
@@ -59,10 +64,10 @@ export default class VueChimera {
     Object.values(this._resources).forEach(r => {
       if (r.prefetch) {
         if (!r.key) {
-          console.warn('[Chimera]: used prefetch with no key associated with resource!')
+          warn('used prefetch with no key associated with resource!')
           return
         }
-        this._vm.$_chimeraPromises.push(r.fetch(true).catch(() => null).then(() => r))
+        this._vm.$_chimeraPromises.push(r.fetch(true, { timeout: r.prefetchTimeout }).then(() => r).catch(() => null))
       }
     })
   }
@@ -77,10 +82,6 @@ export default class VueChimera {
     }
 
     if (!this._server) {
-      if (newValue.interval) {
-        newResource.startInterval(newValue.interval)
-      }
-
       if (shouldAutoFetch(newResource)) newResource.reload()
     }
     this._vm.$set(this._resources, key, newResource)
@@ -121,6 +122,9 @@ export default class VueChimera {
     const vm = this._vm
 
     this.cancelAll()
+    Object.values(this._resources).forEach(r => {
+      r.stopInterval()
+    })
     delete vm._chimera
   }
 }
