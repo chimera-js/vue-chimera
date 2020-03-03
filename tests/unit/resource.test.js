@@ -281,10 +281,10 @@ describe('test-misc', function () {
     expect(resource.method).toEqual(resource.request.method)
   });
   it('should correctly create axios', function () {
-    let axios = createAxios(client)
-    expect(axios).toBe(client)
+    const baseURL = 'http://test'
+    let axios = createAxios({ baseURL })
+    expect(axios.defaults.baseURL).toBe(baseURL)
 
-    axios = createAxios()
-    expect(axios)
+    expect(createAxios(() => axios)).toBe(axios)
   });
 })

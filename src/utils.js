@@ -7,16 +7,12 @@ export function isPlainObject (value) {
 export const hasKey = (obj, key) => key in (obj || {})
 
 export function createAxios (config) {
-  if (config instanceof Axios) {
-    return config
+  if (typeof config === 'function') {
+    if (typeof config.request === 'function') return config
+    return config()
   }
   if (isPlainObject(config)) {
     return Axios.create(config)
-  }
-  if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config
-    let axios = config()
-    if (axios instanceof Axios) return axios
   }
   return Axios
 }

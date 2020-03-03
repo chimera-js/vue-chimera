@@ -4,7 +4,7 @@ import Resource from "../../src/Resource";
 import sinon from 'sinon'
 import Axios from 'axios'
 
-Vue.use(VueChimera)
+Vue.use(VueChimera, { axios: Axios })
 Vue.config.devtools = false
 Vue.config.productionTip = false
 

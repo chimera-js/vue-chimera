@@ -1,5 +1,5 @@
 module.exports = {
-    testRegex: 'tests/unit/.*\\.test.js$',
+    testRegex: 'tests/.*\\.test.js$',
     moduleFileExtensions: ["js", "json", "json"],
     transform: {
         '^.+\\.js$': 'babel-jest',
@@ -11,6 +11,6 @@ module.exports = {
     setupFiles: ['<rootDir>/tests/unit/index.js'],
     collectCoverage: true,
     collectCoverageFrom: [
-        'src/**/*.{js,jsx}'
+        'src/**/*.{js,vue}'
     ]
 }
