@@ -1,6 +1,6 @@
 <script>
-import NullResource from "../NullResource";
-import Resource from "../Resource";
+import NullEndpoint from "../NullEndpoint";
+import Endpoint from "../Endpoint";
 import * as events from "../events"
 import { getServerContext, createAxios } from "../utils";
 
@@ -21,7 +21,7 @@ export default {
 
     data () {
         return {
-            resource: this.getResource()
+            endpoint: this.getEndpoint()
         }
     },
 
@@ -30,13 +30,13 @@ export default {
     },
 
     mounted() {
-        if (this.resource.autoFetch) {
-            this.resource.reload()
+        if (this.endpoint.autoFetch) {
+            this.endpoint.reload()
         }
     },
 
     render (h) {
-        let result = this.$scopedSlots.default(this.resource)
+        let result = this.$scopedSlots.default(this.endpoint)
         if (Array.isArray(result)) {
             result = result.concat(this.$slots.default)
         } else {
@@ -46,35 +46,35 @@ export default {
     },
 
     methods: {
-        getResource () {
+        getEndpoint () {
             let value = this.options
-            if (value == null) return new NullResource()
+            if (value == null) return new NullEndpoint()
             if (typeof value === 'string') value = { url: value }
 
             if (!this.$chimeraOptions.axios) {
                 this.$chimeraOptions.axios = createAxios()
             }
 
-            const resource = new Resource({
+            const endpoint = new Endpoint({
                 ...this.$chimeraOptions,
                 ...value,
             })
 
             Object.values(events).forEach(ev => {
-                resource.on(ev, () => this.$emit(ev, resource))
+                endpoint.on(ev, () => this.$emit(ev, endpoint))
             })
 
-            resource.on('success', () => {
+            endpoint.on('success', () => {
                 this.$nextTick(this.$forceUpdate)
             })
 
-            if (!this._server && resource.key && resource.prefetch && this._ssrContext) {
+            if (!this._server && endpoint.key && endpoint.prefetch && this._ssrContext) {
                 const initial = this._ssrContext[value.key]
                 if (initial) initial.prefetched = true
-                Object.assign(resource, initial)
+                Object.assign(endpoint, initial)
             }
 
-            return resource
+            return endpoint
         }
     }
 

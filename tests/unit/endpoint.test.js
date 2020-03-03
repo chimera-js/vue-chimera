@@ -1,12 +1,12 @@
 import sinon from 'sinon'
-import Resource from '../../src/Resource'
-import NullResource from '../../src/NullResource'
+import Endpoint from '../../src/Endpoint'
+import NullEndpoint from '../../src/NullEndpoint'
 import * as events from '../../src/events'
 import axios from 'axios'
 import {createAxios, isPlainObject} from "../../src/utils";
 
 let server
-let resource
+let endpoint
 let client
 
 beforeAll(() => {
@@ -19,7 +19,7 @@ afterAll(() => {
 })
 
 beforeEach(() => {
-  resource = new Resource({
+  endpoint = new Endpoint({
     url: '/users',
     autoFetch: false,
     axios: client
@@ -27,16 +27,16 @@ beforeEach(() => {
 })
 
 describe('test-instantiation', function () {
-  it('should instantiate Resource from string', function () {
-    let r = new Resource('/users')
-    expect(r).toBeInstanceOf(Resource)
+  it('should instantiate Endpoint from string', function () {
+    let r = new Endpoint('/users')
+    expect(r).toBeInstanceOf(Endpoint)
     expect(r.request.method.toLowerCase()).toBe('get')
     expect(r.request.url).toBe('/users')
   })
 
-  it('should instantiate Resource from object', function () {
+  it('should instantiate Endpoint from object', function () {
     let tr = (v) => v
-    let r = new Resource({
+    let r = new Endpoint({
       url: '/u',
       prefetch: false,
       method: 'POST',
@@ -46,7 +46,7 @@ describe('test-instantiation', function () {
         error: tr
       }
     })
-    expect(r).toBeInstanceOf(Resource)
+    expect(r).toBeInstanceOf(Endpoint)
     expect(r.request.method.toLowerCase()).toBe('post')
     expect(r.request.url).toBe('/u')
     expect(r.responseTransformer).toBe(tr)
@@ -54,17 +54,17 @@ describe('test-instantiation', function () {
     expect(r.fetch === r.fetchDebounced).toBeTruthy()
   })
 
-  it('should be null resource', function () {
-    expect(() => new Resource(null)).toThrow()
+  it('should be null endpoint', function () {
+    expect(() => new Endpoint(null)).toThrow()
 
-    let r = new NullResource()
+    let r = new NullEndpoint()
 
     expect(r.fetch()).rejects.toBeInstanceOf(Error)
   });
 
   it('should have initial data', function () {
     const data = {}
-    let r = new Resource('/users', { data })
+    let r = new Endpoint('/users', { data })
     expect(data === r.data).toBeTruthy()
   });
 })
@@ -80,21 +80,21 @@ describe('test-execution', function () {
       JSON.stringify(data)
     ])
 
-    expect(resource.loading).toBeFalsy()
+    expect(endpoint.loading).toBeFalsy()
 
-    resource.fetch().then(res => {
-      expect(resource.status).toBe(200)
-      expect(resource.data).toEqual(data)
-      expect(resource.headers).toEqual(headers)
-      expect(resource.loading).toBeFalsy()
-      expect(resource.lastLoaded).toBeInstanceOf(Date)
+    endpoint.fetch().then(res => {
+      expect(endpoint.status).toBe(200)
+      expect(endpoint.data).toEqual(data)
+      expect(endpoint.headers).toEqual(headers)
+      expect(endpoint.loading).toBeFalsy()
+      expect(endpoint.lastLoaded).toBeInstanceOf(Date)
       done()
     }).catch(err => {
-      expect(resource.loading).toBeFalsy()
+      expect(endpoint.loading).toBeFalsy()
       done(err)
     })
 
-    expect(resource.loading).toBeTruthy()
+    expect(endpoint.loading).toBeTruthy()
   })
 
   it('should receive status 501', function (done) {
@@ -104,27 +104,27 @@ describe('test-execution', function () {
       JSON.stringify(data)
     ])
 
-    expect(resource.loading).toBeFalsy()
-    resource.send().then(done).catch(err => {
-      expect(resource.loading).toBeFalsy()
-      expect(resource.status).toBe(501)
-      expect(resource.error).toEqual(data)
+    expect(endpoint.loading).toBeFalsy()
+    endpoint.send().then(done).catch(err => {
+      expect(endpoint.loading).toBeFalsy()
+      expect(endpoint.status).toBe(501)
+      expect(endpoint.error).toEqual(data)
       done()
     })
 
-    expect(resource.loading).toBeTruthy()
+    expect(endpoint.loading).toBeTruthy()
   })
 
   it('should send with extra', async function () {
-    resource.axios = {
+    endpoint.axios = {
       request: (o) => Promise.resolve(o)
     }
-    resource.request.params = {
+    endpoint.request.params = {
       a: 1,
       b: 2,
     }
 
-    const options = await resource.send({ params: { b: 3 }, url: 'test' })
+    const options = await endpoint.send({ params: { b: 3 }, url: 'test' })
 
     expect(options.url).toBe('test')
     expect(options.params).toHaveProperty('a', 1)
@@ -137,11 +137,11 @@ describe('test-transformers', function () {
   let tr = res => res.map(val => val.id)
 
   it('should work with single function', function () {
-    let resource = new Resource({
+    let endpoint = new Endpoint({
       transformer: tr
     })
-    expect(resource.responseTransformer === resource.errorTransformer).toBeTruthy()
-    expect(resource.responseTransformer === tr).toBeTruthy()
+    expect(endpoint.responseTransformer === endpoint.errorTransformer).toBeTruthy()
+    expect(endpoint.responseTransformer === tr).toBeTruthy()
   })
 
   it('should transform response', function (done) {
@@ -151,10 +151,10 @@ describe('test-transformers', function () {
       JSON.stringify(data)
     ])
 
-    resource.setTransformer({response: tr})
+    endpoint.setTransformer({response: tr})
 
-    resource.fetch().then(res => {
-      expect(resource.data).toEqual(tr(data))
+    endpoint.fetch().then(res => {
+      expect(endpoint.data).toEqual(tr(data))
       done()
     }).catch(Promise.reject)
   })
@@ -166,12 +166,12 @@ describe('test-transformers', function () {
       JSON.stringify(data)
     ])
 
-    resource.setTransformer({error: tr})
+    endpoint.setTransformer({error: tr})
 
-    resource.fetch()
+    endpoint.fetch()
       .then(done)
       .catch(err => {
-        expect(resource.error).toEqual(tr(data))
+        expect(endpoint.error).toEqual(tr(data))
         done()
       })
   })
@@ -185,9 +185,9 @@ describe('test-events', function () {
       JSON.stringify({})
     ])
 
-    resource.fetch()
+    endpoint.fetch()
 
-    resource.on(events.SUCCESS, () => {
+    endpoint.on(events.SUCCESS, () => {
       done()
     })
   })
@@ -199,9 +199,9 @@ describe('test-events', function () {
       JSON.stringify({})
     ])
 
-    resource.fetch()
+    endpoint.fetch()
 
-    resource.on(events.ERROR, () => {
+    endpoint.on(events.ERROR, () => {
       done()
     })
   })
@@ -213,11 +213,11 @@ describe('test-events', function () {
       JSON.stringify({})
     ])
 
-    resource.on(events.LOADING, () => {
+    endpoint.on(events.LOADING, () => {
       done()
     })
 
-    resource.fetch()
+    endpoint.fetch()
   })
 
   it('should broadcast cancel event', function (done) {
@@ -227,7 +227,7 @@ describe('test-events', function () {
       JSON.stringify({})
     ])
 
-    resource = new Resource({
+    endpoint = new Endpoint({
       url: '/users',
       autoFetch: false,
       on: {
@@ -238,8 +238,8 @@ describe('test-events', function () {
       axios: createAxios()
     })
 
-    resource.fetch()
-    resource.cancel()
+    endpoint.fetch()
+    endpoint.cancel()
   })
 })
 
@@ -252,33 +252,33 @@ describe('test-cancellation', function () {
     ])
 
     const cancelSpy = jest.fn()
-    resource.on(events.CANCEL, cancelSpy)
-    expect(resource.loading).toBeFalsy()
-    resource.fetch().then(() => {
+    endpoint.on(events.CANCEL, cancelSpy)
+    expect(endpoint.loading).toBeFalsy()
+    endpoint.fetch().then(() => {
       done()
       throw new Error('Not cancelled')
     }).catch((err) => {
       expect(err.__CANCEL__).toBeTruthy()
-      expect(resource.loading).toBeFalsy()
-      expect(resource.data).toBeNull()
+      expect(endpoint.loading).toBeFalsy()
+      expect(endpoint.data).toBeNull()
       expect(cancelSpy).toBeCalled()
       done()
     })
-    expect(resource.loading).toBeTruthy()
-    resource.cancel()
+    expect(endpoint.loading).toBeTruthy()
+    endpoint.cancel()
   })
 })
 
 describe('test-misc', function () {
   it('should serialize', function () {
-    const obj = resource.toObj()
+    const obj = endpoint.toObj()
     expect(isPlainObject(obj)).toBeTruthy()
-    expect(resource.toString()).toEqual(JSON.stringify(obj))
+    expect(endpoint.toString()).toEqual(JSON.stringify(obj))
   });
   it('should match getters', function () {
-    expect(resource.params).toEqual(resource.request.params)
-    expect(resource.url).toEqual(resource.request.url)
-    expect(resource.method).toEqual(resource.request.method)
+    expect(endpoint.params).toEqual(endpoint.request.params)
+    expect(endpoint.url).toEqual(endpoint.request.url)
+    expect(endpoint.method).toEqual(endpoint.request.method)
   });
   it('should correctly create axios', function () {
     const baseURL = 'http://test'

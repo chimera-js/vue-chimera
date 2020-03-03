@@ -1,5 +1,5 @@
 import mixin from './mixin'
-import ChimeraResource from './components/ChimeraResource.vue'
+import ChimeraEndpoint from './components/ChimeraEndpoint.vue'
 
 const plugin = {
 
@@ -24,7 +24,7 @@ const plugin = {
     })
 
     Vue.mixin(mixin(this.options))
-    Vue.component('chimera-resource', ChimeraResource)
+    Vue.component('chimera-endpoint', ChimeraEndpoint)
     Vue.prototype.$chimeraOptions = this.options
   }
 

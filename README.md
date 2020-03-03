@@ -18,9 +18,9 @@ Vue-Chimera is based on [axios](https://github.com/axios/axios) http client libr
 Overview of features: 
 - Reactive endpoints and requests based on vue instance data
 - Loading flags
-- Get time when the resource was latestly loaded
+- Get time when the endpoint was latestly loaded
 - Set interval time to refresh data on an endpoint
-- Simple robust resource definition
+- Simple robust endpoint definition
 - Nuxtjs compatible with Server side prefetching
 - Simple cancelation on requests
 - Cancel all pending requests on vue instance destroy
@@ -62,17 +62,17 @@ Vue.use(VueChimera)
 
 If you use old browser style just add `vue.min.js` and `dist/vue-chimera.js` script tag to your HTML file and everything would be fine to go on.
 
-#### Defining Resources
+#### Defining endpoints
 To use Vue Chimera in your vue instance you should add `chimera` property to root of your vue component instance:
 
 ```javascript
 let app = new Vue({
   
-  // Chimera property contains all of chimera restful queries/resources and options
+  // Chimera property contains all of chimera restful endpoints and options
   chimera: {
     
-    // Here you can define your restful resources and api endpoints
-    mySampleResource: '/users'
+    // Here you can define your restful endpoints and api endpoints
+    mySampleEndpoint: '/users'
   },
   
   data() {
@@ -82,12 +82,12 @@ let app = new Vue({
 })
 ```
 
-Vue Chimera automatically converts your `resources` to [Resource](https://github.com/chimera-js/vue-chimera/blob/master/src/Resource.js) Object
-Your resources can be:
+Vue Chimera automatically converts keys to [Endpoint](https://github.com/chimera-js/vue-chimera/blob/master/src/Endpoint.js) Object
+Your endpoints can be:
 * A simple **string** for simple GET requests
-* An **Object** for complex resources like: POST, PATCH, with Parameters, with Headers, Response/Error transformer, Event listeners
-* An instance of **Resource**
-* A **Function** for reactive resources [Reactive-Resources](#reactive-resources)
+* An **Object** for complex endpoints like: POST, PATCH, with Parameters, with Headers, Response/Error transformer, Event listeners
+* An instance of **Endpoint**
+* A **Function** for reactive endpoints [Reactive-Endpoints](#reactive-endpoints)
 
 ```javascript
 
@@ -109,11 +109,11 @@ var app = new Vue({
         axios: axios.create(),
       },
       
-      // Define resources inside chimera
+      // Define endpoints inside chimera
       users: '/users',
         
       time: {'url': '/time',
-        // With interval option set to 5000, resource will be refreshed every 5000 miliseconds
+        // With interval option set to 5000, endpoint will be refreshed every 5000 miliseconds
         'interval': 5000
       },
         
@@ -142,19 +142,19 @@ var app = new Vue({
 
 ```
 
-Now it's time to use our resources in our vue template or inside vue methods.
+Now it's time to use our endpoints in our vue template or inside vue methods.
 
-#### Use Resources in template
+#### Use Endpoints in template
 
-`chimera` instance can be accessed in templates with `$chimera` (Dollar sign prepended) or you can get resources by simply type it's name, It had been injected in computed properties by the plugin.
-`data` is the final json result of our restful resource
-`loading` is a boolean flag, identifies the resource is loading.
-You can read other resource property and methods [here](#resource-properties-and-methods).
+`chimera` instance can be accessed in templates with `$chimera` (Dollar sign prepended) or you can get endpoints by simply type it's name, It had been injected in computed properties by the plugin.
+`data` is the final json result of our restful endpoint
+`loading` is a boolean flag, identifies the endpoint is loading.
+You can read other endpoint property and methods [here](#endpoint-properties-and-methods).
 
 ```html
 <template>
   <div>
-    <!-- `users` is Resource object defined in chimera (same as: `$chimera.users`) -->
+    <!-- `users` is Endpoint object defined in chimera (same as: `$chimera.users`) -->
     <ul v-if="users.data && !users.loading">
       <li v-for="user in users.data">
         {{ user.name }}
@@ -165,7 +165,7 @@ You can read other resource property and methods [here](#resource-properties-and
 </template>
 ```
 
-#### Use Resources in script
+#### Use Endpoints in script
 
 You can simply access `chimera` instance with `$chimera`
 
@@ -176,7 +176,7 @@ let app = new Vue({
     
     sendUser() {
       
-      // Execute function on resources, sends the request and returns a Promise
+      // Execute function on endpoints, sends the request and returns a Promise
       this.$chimera.sendUser.execute().then(res => {
           
           // You can do other things after request success here.
@@ -192,20 +192,20 @@ let app = new Vue({
 })
 ```
 
-#### Resource properties and methods
+#### Endpoint properties and methods
 
 | Property | Type  | Default Value | Description
 | -------- | :-----: | :-------------: | -----------
-| data     | Object/ Array |  null | The resource response object or string returned from server when request is successfull
-| loading  | Boolean | false       | Indentifies the resource is in loading state 
+| data     | Object/ Array |  null | The endpoint response object or string returned from server when request is successfull
+| loading  | Boolean | false       | Indentifies the endpoint is in loading state 
 | error    | Object/string  | null | Error json object or string returned from server when request failed
-| lastLoaded | Date         | null | The date/time from last time resource successfully loaded (null if not loaded yet)
-| status    | number        | null | Resource response status
-| headers    | Object        | null | Resource response/error headers
+| lastLoaded | Date         | null | The date/time from last time endpoint successfully loaded (null if not loaded yet)
+| status    | number        | null | Endpoint response status
+| headers    | Object        | null | Endpoint response/error headers
 
 |   Method   | Return type | Description
 | ---------- | ----------- | -----------
-| reload(force)    | Promise   | Fetches the resource from server. `force`: True for cache busting
+| reload(force)    | Promise   | Fetches the endpoint from server. `force`: True for cache busting
 | execute(force)  | Promise   | Same as Reload
 | send(extraParams)  | Promise   | Sends request with extra data
 | on(event, handler)|           | Sets an event listener. [Events](#events)
@@ -214,9 +214,9 @@ let app = new Vue({
 | stopInterval()         | void       | Manually stops interval
 
 
-#### Reactive Resources
-You can also set a **function** to a resource that will return **String**, **Object**, **instance of Resource** same as before,
-to let your resources be reactive and change.
+#### Reactive Endpoints
+You can also set a **function** to a endpoint that will return **String**, **Object**, **instance of Endpoint** same as before,
+to let your endpoints be reactive and change.
 ```javascript
 let app = new Vue({
 
@@ -246,7 +246,7 @@ let app = new Vue({
 })
 ```
 
-_Note that `prefetch` evaluates to false, your data will be reactive and change but won't be fetched until you call the `reload` function of the resource_
+_Note that `prefetch` evaluates to false, your data will be reactive and change but won't be fetched until you call the `reload` function of the endpoint_
 
 #### Chimera instance properties
 ```javascript
@@ -268,7 +268,7 @@ _Note that `prefetch` evaluates to false, your data will be reactive and change 
 ```
 
 #### Transformers
-Transformers is used to change the response to another format. It would be called before the request response (error or success) is mapped to the `data` attribute of Resource object.
+Transformers is used to change the response to another format. It would be called before the request response (error or success) is mapped to the `data` attribute of Endpoint object.
 
 ```javascript
 new Vue({
@@ -306,7 +306,7 @@ new Vue({
       users: {
         url: '/users',
         on: {
-          'cancel': (resource) => {
+          'cancel': (endpoint) => {
               // Calls when a request interrupted and cancelled
           }
         }
@@ -339,10 +339,10 @@ module.exports = {
   ],
   
   chimera: {
-    // Server side prefetch will only be available for resources that has `prefetch` and `ssrPrefetch`
+    // Server side prefetch will only be available for endpoints that has `prefetch` and `ssrPrefetch`
     prefetch: 'get',
     
-    // Enables server side prefetch on resources
+    // Enables server side prefetch on endpoints
     // true: fetched on server
     // false: fetched on client
     // 'override': fetched on server and client (overrided by client)
@@ -354,13 +354,13 @@ module.exports = {
 }
 ```
 
-You can also disable SSR for some heavy resources
+You can also disable SSR for some heavy endpoints
 ```javascript
 ...
     chimera: {
-      myResource: {
+      myEndpoint: {
         url: '/api/v1/example',
-        ssrPrefetch: false // Prefetch disabled on a specific resource
+        ssrPrefetch: false // Prefetch disabled on a specific endpoint
       }
     }
 ...

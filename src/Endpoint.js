@@ -12,7 +12,7 @@ const INITIAL_DATA = {
   lastLoaded: null
 }
 
-export default class Resource {
+export default class Endpoint {
   constructor (options, initial) {
     if (typeof options === 'string') options = { url: options }
 
@@ -56,7 +56,7 @@ export default class Resource {
 
     /* istanbul ignore if */
     if (request.data) {
-      warn('Do not use "params" key inside resource options, use data instead')
+      warn('Do not use "params" key inside endoint options, use data instead')
     }
 
     if (request.method !== 'get') {

@@ -37,7 +37,7 @@ export default {
 }
 ```
 
-Chimera properties will be automatically converted to [Resource](https://github.com/chimera-js/vue-chimera/blob/master/src/Resource.js) object
+Chimera properties will be automatically converted to [Endpoint](https://github.com/chimera-js/vue-chimera/blob/master/src/Resource.js) object
 
 Your resources can be anything with
 [axios configuration](https://github.com/axios/axios#request-config)
@@ -45,7 +45,7 @@ with additional keys for resources
 format:
 * A simple **string** for simple GET requests
 * An **Object** for complex resources like: POST, PATCH, with Parameters, with Headers, Response/Error transformer, Event listeners
-* An instance of **Resource** (manually instantiate resource object)
+* An instance of **Endpoint** (manually instantiate resource object)
 * A **Function** for reactive resources [Reactive-Resources](#reactive-resources) (explained later)
 
 ## Fetch resources
@@ -71,7 +71,7 @@ You can read other resource property and methods [here](#resource-properties-and
 ```html
 <template>
   <div>
-    <!-- `users` is Resource object (same as: `$chimera.users`) -->
+    <!-- `users` is Endpoint object (same as: `$chimera.users`) -->
     <ul v-if="users.data && !users.loading">
       <li v-for="user in users.data">
         {{ user.name }}

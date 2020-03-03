@@ -1,8 +1,8 @@
 import Vue from 'vue'
 import VueChimera from "../../src/VueChimera";
-import NullResource from "../../src/NullResource";
+import Endpoint from "../../src/Endpoint";
+import NullEndpoint from "../../src/Endpoint";
 import * as events from '../../src/events'
-import Resource from "../../src/Resource";
 
 global.window = {
   __STATE__: {
@@ -13,9 +13,9 @@ global.window = {
 Vue.config.devtools = false
 Vue.config.productionTip = false
 
-const chimeraFactory = function (resources, vm, options) {
+const chimeraFactory = function (endpoints, vm, options) {
   vm = vm || new Vue()
-  return new VueChimera(vm, resources, {
+  return new VueChimera(vm, endpoints, {
     deep: true,
     ssrContext: '__STATE__.chimera',
     ...options
@@ -35,25 +35,25 @@ const axiosMock = () => {
 
 describe('test-vue-chimera', function () {
 
-  it('should instantiate null resource', function () {
-    const { _resources } = chimeraFactory({
+  it('should instantiate null endpoint', function () {
+    const { endpoints } = chimeraFactory({
       n: null,
     })
 
-    expect(_resources.n).toBeInstanceOf(NullResource)
+    expect(endpoints.n).toBeInstanceOf(NullEndpoint)
   });
 
   it('should bind vm to listeners', function () {
-    let self, resource
+    let self, endpoint
     const spy = jest.fn()
     const chimera = chimeraFactory({
       test: {
         url: '/test',
         autoFetch: false,
         on: {
-          test (r) {
+          test (newEndpoint) {
             self = this
-            resource = r
+            endpoint = newEndpoint
           },
           event: 'spy'
         }
@@ -64,23 +64,23 @@ describe('test-vue-chimera', function () {
       }
     }))
 
-    chimera._resources.test.emit('test')
-    chimera._resources.test.emit('event')
+    chimera.endpoints.test.emit('test')
+    chimera.endpoints.test.emit('event')
     expect(self).toBe(chimera._vm)
-    expect(resource).toBe(chimera._resources.test)
+    expect(endpoint).toBe(chimera.endpoints.test)
     expect(spy).toBeCalled()
   });
 
-  it('should cancel all resources', function () {
+  it('should cancel all endpoints', function () {
     const chimera = chimeraFactory({
       test: '/1',
       test2: '/2',
     })
 
-    const spy = jest.spyOn(Resource.prototype, 'cancel')
+    const spy = jest.spyOn(Endpoint.prototype, 'cancel')
 
     chimera.cancelAll()
-    chimera._resources.$cancelAll()
+    chimera.endpoints.$cancelAll()
     expect(spy).toBeCalledTimes(4)
   });
 
@@ -93,16 +93,16 @@ describe('test-vue-chimera', function () {
       axios: axiosMock()
     })
 
-    const p = chimera._resources.test.reload()
-    expect(chimera._resources.$loading).toBeTruthy()
+    const p = chimera.endpoints.test.reload()
+    expect(chimera.endpoints.$loading).toBeTruthy()
     await p
-    expect(chimera._resources.$loading).toBeFalsy()
+    expect(chimera.endpoints.$loading).toBeFalsy()
   });
 
   it('should start interval', async function () {
     jest.useFakeTimers()
-    const startSpy = jest.spyOn(Resource.prototype, 'startInterval')
-    const stopSpy = jest.spyOn(Resource.prototype, 'stopInterval')
+    const startSpy = jest.spyOn(Endpoint.prototype, 'startInterval')
+    const stopSpy = jest.spyOn(Endpoint.prototype, 'stopInterval')
     const chimera = chimeraFactory({
       test: {
         url: 'interval',
@@ -111,12 +111,12 @@ describe('test-vue-chimera', function () {
       }
     })
 
-    const resources = chimera._resources
+    const endpoints = chimera.endpoints
 
     expect(startSpy).toBeCalledTimes(1)
-    expect(resources.test.looping).toBeTruthy()
+    expect(endpoints.test.looping).toBeTruthy()
 
-    chimera._resources.test.stopInterval()
+    chimera.endpoints.test.stopInterval()
     expect(stopSpy).toBeCalled()
 
   });

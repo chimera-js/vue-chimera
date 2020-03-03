@@ -1,6 +1,6 @@
 const results = {}
 
-exports.addResource = function (r) {
+exports.addEndpoint = function (r) {
     results[r.key] = r.toObj()
 }
 

@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueChimera from '../../src/index.js'
-import Resource from "../../src/Resource";
+import Endpoint from "../../src/Endpoint";
 import sinon from 'sinon'
 import Axios from 'axios'
 
@@ -20,7 +20,7 @@ describe('vue-test-reactivity', function () {
   })
 
   describe('test-chimera-reactivity', function () {
-    it('should react to chimera resource changes', async function () {
+    it('should react to chimera endpoint changes', async function () {
       let app = new Vue({
         chimera: {
           users: '/users'
@@ -55,7 +55,7 @@ describe('vue-test-reactivity', function () {
     })
   })
 
-  describe('test-reactive-resources', function () {
+  describe('test-reactive-endpoints', function () {
     it('should react to changes', async function () {
       const watcher = jest.fn()
       let app = new Vue({
@@ -84,7 +84,7 @@ describe('vue-test-reactivity', function () {
           }
         }
       })
-      const fetchSpy = jest.spyOn(Resource.prototype, 'fetch')
+      const fetchSpy = jest.spyOn(Endpoint.prototype, 'fetch')
       expect(app._chimera._deep).toBe(false)
       expect(app.users.url).toBe('/users/1')
       expect(app.users.params).toEqual({ page: 2 })
@@ -130,7 +130,7 @@ describe('vue-test-reactivity', function () {
         }
       })
       expect(app._chimera.constructor.name).toBe( 'VueChimera')
-      expect(app.$chimera.users.constructor.name).toBe('Resource')
+      expect(app.$chimera.users.constructor.name).toBe('Endpoint')
 
       expect(app.$chimera.$axios === axios).toBeTruthy()
       expect(app.$chimera.$users).toBeUndefined()

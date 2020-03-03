@@ -16,8 +16,8 @@ export default (options = {}) => ({
     }
     /* istanbul ignore else */
     if (isPlainObject(vmOptions.chimera)) {
-      const { $options, ...resources } = vmOptions.chimera
-      chimera = new VueChimera(this, resources, { ...options, ...$options })
+      const { $options, ...endpoints } = vmOptions.chimera
+      chimera = new VueChimera(this, endpoints, { ...options, ...$options })
     } else {
       throw new Error('[Chimera]: chimera options should be an object or a function that returns object')
     }
@@ -25,7 +25,7 @@ export default (options = {}) => ({
     this._chimera = chimera
     if (!Object.prototype.hasOwnProperty.call(this, '$chimera')) {
       Object.defineProperty(this, '$chimera', {
-        get: () => chimera._resources
+        get: () => chimera.endpoints
       })
     }
   },
@@ -34,7 +34,7 @@ export default (options = {}) => ({
     /* istanbul ignore if */
     if (!this._chimera) return {}
     return {
-      $chimera: this._chimera._resources
+      $chimera: this._chimera.endpoints
     }
   },
 
@@ -56,8 +56,8 @@ export default (options = {}) => ({
     if (!this.$_chimeraPromises) return
     const ChimeraSSR = require('../ssr/index')
     return Promise.all(this.$_chimeraPromises).then(results => {
-      results.forEach(r => {
-        r && ChimeraSSR.addResource(r)
+      results.forEach(endpoint => {
+        endpoint && ChimeraSSR.addEndpoint(endpoint)
       })
     })
   }

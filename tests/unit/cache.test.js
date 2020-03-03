@@ -1,4 +1,4 @@
-import Resource from '../../src/Resource'
+import Endpoint from '../../src/Endpoint'
 import { MemoryCache } from '../../src/cache/MemoryCache'
 import { StorageCache } from '../../src/cache/StorageCache'
 
@@ -13,11 +13,11 @@ beforeEach(() => {
   axiosMock.request = axiosMock
 })
 
-describe('test-resource-cache', function () {
+describe('test-endpoint-cache', function () {
 
   it('should use cache', async function () {
     const memoryCache = new MemoryCache(1000)
-    const resource = new Resource({
+    const endpoint = new Endpoint({
       url: '/users',
       key: 'users',
       autoFetch: false,
@@ -29,23 +29,23 @@ describe('test-resource-cache', function () {
     const getSpy = jest.spyOn(memoryCache, 'getItem')
     const removeSpy = jest.spyOn(memoryCache, 'removeItem')
 
-    await resource.fetch()
+    await endpoint.fetch()
     expect(axiosMock).toBeCalled()
-    expect(setSpy).toBeCalledWith(resource.getCacheKey(), axiosResponse)
-    expect(resource.data).toEqual(axiosResponse.data)
+    expect(setSpy).toBeCalledWith(endpoint.getCacheKey(), axiosResponse)
+    expect(endpoint.data).toEqual(axiosResponse.data)
 
-    await resource.fetch()
+    await endpoint.fetch()
     expect(axiosMock).toBeCalledTimes(1)
     expect(getSpy).toReturnWith(axiosResponse)
 
-    resource.deleteCache()
+    endpoint.deleteCache()
     expect(removeSpy).toBeCalled()
-    await resource.fetch()
+    await endpoint.fetch()
     expect(axiosMock).toBeCalledTimes(2)
 
-    expect(memoryCache.keys()).toEqual([resource.getCacheKey()])
+    expect(memoryCache.keys()).toEqual([endpoint.getCacheKey()])
     expect(memoryCache.length()).toEqual(1)
-    expect(memoryCache.all()[resource.getCacheKey()]).toHaveProperty('value', axiosResponse)
+    expect(memoryCache.all()[endpoint.getCacheKey()]).toHaveProperty('value', axiosResponse)
 
     memoryCache.clear()
     expect(memoryCache.all()).toEqual({})
@@ -59,7 +59,7 @@ describe('test-storage-cache', function () {
   })
   it('should work', async function () {
     const storageCache = new StorageCache('key')
-    const resource = new Resource({
+    const endpoint = new Endpoint({
       url: '/users',
       key: 'users',
       autoFetch: false,
@@ -67,23 +67,23 @@ describe('test-storage-cache', function () {
       cache: storageCache
     })
 
-    await resource.fetch()
+    await endpoint.fetch()
     expect(axiosMock).toBeCalledTimes(1)
-    expect(resource.data).toEqual(axiosResponse.data)
+    expect(endpoint.data).toEqual(axiosResponse.data)
 
-    await resource.fetch()
+    await endpoint.fetch()
     expect(axiosMock).toBeCalledTimes(1)
 
-    const newResource = new Resource({
+    const newEndpoint = new Endpoint({
       url: '/users',
       key: 'users',
       autoFetch: false,
       axios: axiosMock,
       cache: new StorageCache('key')
     })
-    await newResource.fetch()
+    await newEndpoint.fetch()
     expect(axiosMock).toBeCalledTimes(1)
-    expect(resource.data).toEqual(axiosResponse.data)
+    expect(endpoint.data).toEqual(axiosResponse.data)
   });
 
   it('should not raise error', function () {

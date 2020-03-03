@@ -1,11 +1,11 @@
-import Resource from './Resource'
-import NullResource from './NullResource'
+import Endpoint from './Endpoint'
+import NullEndpoint from './NullEndpoint'
 import { createAxios, hasKey, isPlainObject, getServerContext, warn } from './utils'
 
 const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override')
 
 export default class VueChimera {
-  constructor (vm, { ...resources }, { deep, ssrContext, ...options }) {
+  constructor (vm, { ...endpoints }, { deep, ssrContext, ...options }) {
     this._vm = vm
     this._watchers = []
 
@@ -20,38 +20,38 @@ export default class VueChimera {
       sync: true
     }
 
-    for (let key in resources) {
+    for (let key in endpoints) {
       if (key.charAt(0) === '$') {
-        delete resources[key]
+        delete endpoints[key]
         continue
       }
 
-      let r = resources[key]
+      let r = endpoints[key]
       if (typeof r === 'function') {
         this._watchers.push([
           () => r.call(this._vm),
-          (t, f) => this.updateResource(key, t, f),
+          (t, f) => this.updateEndpoint(key, t, f),
           watchOption
         ])
       } else {
-        r = resources[key] = this.resourceFrom(r)
+        r = endpoints[key] = this.endpointFrom(r)
         if (!this._server) {
           shouldAutoFetch(r) && r.reload()
         }
       }
     }
 
-    Object.defineProperty(resources, '$cancelAll', { value: () => this.cancelAll() })
-    Object.defineProperty(resources, '$axios', { get: () => this._axios })
-    Object.defineProperty(resources, '$loading', { get () { return !!Object.values(this).find(el => !!el.loading) } })
-    this._resources = resources
+    Object.defineProperty(endpoints, '$cancelAll', { value: () => this.cancelAll() })
+    Object.defineProperty(endpoints, '$axios', { get: () => this._axios })
+    Object.defineProperty(endpoints, '$loading', { get () { return !!Object.values(this).find(el => !!el.loading) } })
+    this.endpoints = endpoints
 
     // Init computeds
     const vmOptions = this._vm.$options
     const computeds = vmOptions.computed = vmOptions.computed || {}
-    Object.keys(resources).forEach(key => {
+    Object.keys(endpoints).forEach(key => {
       if (hasKey(computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key)) return
-      computeds[key] = () => this._resources[key]
+      computeds[key] = () => this.endpoints[key]
     })
   }
 
@@ -61,10 +61,10 @@ export default class VueChimera {
 
   initServer () {
     this._vm.$_chimeraPromises = []
-    Object.values(this._resources).forEach(r => {
+    Object.values(this.endpoints).forEach(r => {
       if (r.prefetch) {
         if (!r.key) {
-          warn('used prefetch with no key associated with resource!')
+          warn('used prefetch with no key associated with endpoint!')
           return
         }
         this._vm.$_chimeraPromises.push(r.fetch(true, { timeout: r.prefetchTimeout }).then(() => r).catch(() => null))
@@ -72,23 +72,23 @@ export default class VueChimera {
     })
   }
 
-  updateResource (key, newValue, oldValue) {
-    const oldResource = this._resources[key]
-    const newResource = this.resourceFrom(newValue, oldValue && oldValue.keepData ? oldResource.toObj() : null)
+  updateEndpoint (key, newValue, oldValue) {
+    const oldEndpoint = this.endpoints[key]
+    const newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.toObj() : null)
 
-    if (oldValue && oldResource) {
-      oldResource.stopInterval()
-      newResource.lastLoaded = oldResource.lastLoaded
+    if (oldValue && oldEndpoint) {
+      oldEndpoint.stopInterval()
+      newEndpoint.lastLoaded = oldEndpoint.lastLoaded
     }
 
     if (!this._server) {
-      if (shouldAutoFetch(newResource)) newResource.reload()
+      if (shouldAutoFetch(newEndpoint)) newEndpoint.reload()
     }
-    this._vm.$set(this._resources, key, newResource)
+    this._vm.$set(this.endpoints, key, newEndpoint)
   }
 
-  resourceFrom (value, initial) {
-    if (value == null) return new NullResource()
+  endpointFrom (value, initial) {
+    if (value == null) return new NullEndpoint()
     if (typeof value === 'string') value = { url: value }
 
     if (isPlainObject(value.on)) {
@@ -102,7 +102,7 @@ export default class VueChimera {
     }
 
     const baseOptions = Object.create(this._options)
-    const r = new Resource(Object.assign(baseOptions, value), initial)
+    const r = new Endpoint(Object.assign(baseOptions, value), initial)
 
     if (!this._server && !initial && r.key && r.prefetch && this._ssrContext) {
       initial = this._ssrContext[value.key]
@@ -113,7 +113,7 @@ export default class VueChimera {
   }
 
   cancelAll () {
-    Object.values(this._resources).forEach(r => {
+    Object.values(this.endpoints).forEach(r => {
       r.cancel()
     })
   }
@@ -122,7 +122,7 @@ export default class VueChimera {
     const vm = this._vm
 
     this.cancelAll()
-    Object.values(this._resources).forEach(r => {
+    Object.values(this.endpoints).forEach(r => {
       r.stopInterval()
     })
     delete vm._chimera
