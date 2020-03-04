@@ -5,6 +5,7 @@ const plugin = {
 
   options: {
     axios: null,
+    baseURL: null,
     cache: null,
     debounce: 50,
     deep: true,

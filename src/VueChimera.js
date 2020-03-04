@@ -9,6 +9,9 @@ export default class VueChimera {
     this._vm = vm
     this._watchers = []
 
+    if (typeof options.axios === 'function') {
+      options.axios = options.axios.bind(this._vm)
+    }
     this._axios = options.axios = createAxios(options.axios)
     this._options = options
     this._deep = deep

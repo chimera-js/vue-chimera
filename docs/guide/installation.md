@@ -31,9 +31,21 @@ to modules in `nuxt.config.js`
 module.exports = {
     modules: [
         'vue-chimera/nuxt'
-    ]
+    ],
+    chimera: {
+       axios: axios.create(),
+
+       // Integrate with @nuxt/axios
+       axios () {
+          return this.$axios
+       }
+    }
 }
 ```
+
+If your using
+[@nuxt/axios](https://axios.nuxtjs.org/)
+look sample above.
 
 ## Using Script tag (CDN)
 ```html

@@ -1,9 +1,9 @@
 ---
 home: true
 heroImage: /favicon.png
-tagline: 🦁 Connect websites to REST apis easy!
+tagline: Connect websites to REST apis easy!
 actionText: Get Started →
-actionLink: /guide/getting-started
+actionLink: /guide/installation
 features:
 
 - title: Declarative REST resources

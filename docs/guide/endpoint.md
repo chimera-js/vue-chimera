@@ -59,8 +59,11 @@ endpoints can have these options
 
 | Properties | Type   | Default value | Description |
 | ---------- | -----  | ------------- | ----------- |
-| [Axios config keys] |  |           | [axios configuration](https://github.com/axios/axios#request-config) 
 | key        | String | null          | Unique key that identifies an endpoint, used for caching and server side fetching purpose. <br>_We recommend to always set it on every endpoint_ |      |
+| url*       | String |               | Endpoint url
+| method*    | String |  GET          | Endpoint method: (POST/GET)
+| headers*   | Object |  {}           | Request headers
+| params*    | Object |  {}           | Request parameters (Query string for GET / Body Data for POST/PATCH/DELETE)
 | auto  | Boolean/String | 'get' | A boolean flag that indicates endpoint should be fetched on instantiation or reactive changes. <br> If it's a string, fetches endpoints with same request method |
 | transformer | Function/Object | null | Transform response or error results to something else |
 | interval   | Number  | undefined | A number in miliseconds to auto refresh an api
@@ -71,10 +74,29 @@ endpoints can have these options
 | prefetch   | Boolean | Equals to `auto` if not set | A boolean flag that indicates endpoint should be fetched on server. [More Info](/guide/ssr) |
 | prefetchTimeout   | Number | 4000 | A number in milliseconds that indicates how much should wait for server to fetch endpoints |
 
+\* options is the same axios configuration. Any other 
+[axios configuration](https://github.com/axios/axios#request-config) 
+can also be set.
+
+_Note_ : All the endpoint options can have some defaults, like `baseURL` or `headers`.
+To set global defaults we can use plugin options or set `$options` on a 
+[Chimera instance](/guide/chimera)
+
 ## Sending request to endpoints
 Component endpoints can be accessed via `$chimera` property injected to vue instance,
 and also for simplicity if there is no props or data conflicting endpoint name, 
 endpoints can directly accessed via it's name.
+
+```javascript
+export default {
+    chimera: {
+       posts: '/posts'
+    },
+    mounted () {
+        this.$chimera.posts === this.posts // True
+    }
+}
+```
 
 Endpoints are automatically loaded on component create
 if method is GET, but can be overrided with 

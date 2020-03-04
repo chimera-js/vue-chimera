@@ -109,18 +109,13 @@ function isPlainObject(value) {
 }
 const hasKey = (obj, key) => key in (obj || {});
 function createAxios(config) {
-  if (config instanceof Axios) {
-    return config;
+  if (typeof config === 'function') {
+    if (typeof config.request === 'function') return config;
+    return config();
   }
 
   if (isPlainObject(config)) {
     return Axios.create(config);
-  }
-
-  if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config;
-    let axios = config();
-    if (axios instanceof Axios) return axios;
   }
 
   return Axios;
@@ -155,10 +150,11 @@ const INITIAL_DATA = {
   error: null,
   lastLoaded: null
 };
-class Resource {
+class Endpoint {
   constructor(options, initial) {
     if (typeof options === 'string') options = {
-      url: options
+      url: options,
+      key: options
     };
 
     if (!options) {
@@ -167,7 +163,7 @@ class Resource {
     }
 
     let {
-      autoFetch,
+      auto,
       prefetch,
       prefetchTimeout,
       cache,
@@ -175,23 +171,26 @@ class Resource {
       transformer,
       axios,
       key,
-      interval
+      interval,
+      keepData,
+      baseURL
     } = options,
-        request = _objectWithoutProperties(options, ["autoFetch", "prefetch", "prefetchTimeout", "cache", "debounce", "transformer", "axios", "key", "interval"]);
+        request = _objectWithoutProperties(options, ["auto", "prefetch", "prefetchTimeout", "cache", "debounce", "transformer", "axios", "key", "interval", "keepData", "baseURL"]);
 
-    request.method = (request.method || 'get').toLowerCase();
+    request.method = (request.method || 'get').toLowerCase(); // Handle type on auto
 
-    if (typeof autoFetch === 'string') {
-      this.autoFetch = autoFetch.toLowerCase() === request.method;
+    if (typeof auto === 'string') {
+      this.auto = auto.toLowerCase() === request.method;
     } else {
-      this.autoFetch = Boolean(autoFetch);
+      this.auto = Boolean(auto);
     }
 
     this.key = key;
-    this.prefetch = prefetch != null ? prefetch : this.autoFetch;
+    this.prefetch = prefetch != null ? prefetch : this.auto;
     this.prefetchTimeout = prefetchTimeout;
     this.cache = cache;
     this.axios = axios;
+    this.keepData = keepData;
     this.fetchDebounced = debounce !== false ? pDebounce(this.fetch.bind(this), debounce || 50, {
       leading: true
     }) : this.fetch; // Set Transformers
@@ -200,7 +199,7 @@ class Resource {
     /* istanbul ignore if */
 
     if (request.data) {
-      warn('Do not use "params" key inside resource options, use data instead');
+      warn('Do not use "params" key inside endoint options, use data instead');
     }
 
     if (request.method !== 'get') {
@@ -213,6 +212,7 @@ class Resource {
         this._canceler = c;
       })
     });
+    if (baseURL) this.request.baseURL = baseURL;
     this._listeners = {};
     this.prefetched = false;
     this.loading = false; // Set Events
@@ -313,8 +313,10 @@ class Resource {
     return this.fetchDebounced(force);
   }
 
-  send(extraOptions) {
-    return this.fetchDebounced(true, extraOptions);
+  send(params) {
+    return this.fetchDebounced(true, {
+      params
+    });
   }
 
   cancel() {
@@ -400,24 +402,24 @@ class Resource {
 
 }
 
-class NullResource extends Resource {
+class NullEndpoint extends Endpoint {
   constructor() {
     super({});
   }
 
   fetch(force) {
-    return Promise.reject(new Error('Null Resource'));
+    return Promise.reject(new Error('[Chimera]: Fetching null endpoint'));
   }
 
   cancel() {}
 
 }
 
-const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override');
+const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override');
 
 class VueChimera {
   constructor(vm, _ref2, _ref) {
-    let resources = _extends({}, _ref2);
+    let endpoints = _extends({}, _ref2);
 
     let {
       deep,
@@ -427,6 +429,11 @@ class VueChimera {
 
     this._vm = vm;
     this._watchers = [];
+
+    if (typeof options.axios === 'function') {
+      options.axios = options.axios.bind(this._vm);
+    }
+
     this._axios = options.axios = createAxios(options.axios);
     this._options = options;
     this._deep = deep;
@@ -438,18 +445,18 @@ class VueChimera {
       sync: true
     };
 
-    for (let key in resources) {
+    for (let key in endpoints) {
       if (key.charAt(0) === '$') {
-        delete resources[key];
+        delete endpoints[key];
         continue;
       }
 
-      let r = resources[key];
+      let r = endpoints[key];
 
       if (typeof r === 'function') {
-        this._watchers.push([() => r.call(this._vm), (t, f) => this.updateResource(key, t, f), watchOption]);
+        this._watchers.push([() => r.call(this._vm), (t, f) => this.updateEndpoint(key, t, f), watchOption]);
       } else {
-        r = resources[key] = this.resourceFrom(r);
+        r = endpoints[key] = this.endpointFrom(r);
 
         if (!this._server) {
           shouldAutoFetch(r) && r.reload();
@@ -457,26 +464,26 @@ class VueChimera {
       }
     }
 
-    Object.defineProperty(resources, '$cancelAll', {
+    Object.defineProperty(endpoints, '$cancelAll', {
       value: () => this.cancelAll()
     });
-    Object.defineProperty(resources, '$axios', {
+    Object.defineProperty(endpoints, '$axios', {
       get: () => this._axios
     });
-    Object.defineProperty(resources, '$loading', {
+    Object.defineProperty(endpoints, '$loading', {
       get() {
         return !!Object.values(this).find(el => !!el.loading);
       }
 
     });
-    this._resources = resources; // Init computeds
+    this.endpoints = endpoints; // Init computeds
 
     const vmOptions = this._vm.$options;
     const computeds = vmOptions.computed = vmOptions.computed || {};
-    Object.keys(resources).forEach(key => {
+    Object.keys(endpoints).forEach(key => {
       if (hasKey(computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key)) return;
 
-      computeds[key] = () => this._resources[key];
+      computeds[key] = () => this.endpoints[key];
     });
   }
 
@@ -486,10 +493,10 @@ class VueChimera {
 
   initServer() {
     this._vm.$_chimeraPromises = [];
-    Object.values(this._resources).forEach(r => {
+    Object.values(this.endpoints).forEach(r => {
       if (r.prefetch) {
         if (!r.key) {
-          warn('used prefetch with no key associated with resource!');
+          warn('used prefetch with no key associated with endpoint!');
           return;
         }
 
@@ -500,24 +507,24 @@ class VueChimera {
     });
   }
 
-  updateResource(key, newValue, oldValue) {
-    const oldResource = this._resources[key];
-    const newResource = this.resourceFrom(newValue, oldValue && oldValue.keepData ? oldResource.toObj() : null);
+  updateEndpoint(key, newValue, oldValue) {
+    const oldEndpoint = this.endpoints[key];
+    const newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.toObj() : null);
 
-    if (oldValue && oldResource) {
-      oldResource.stopInterval();
-      newResource.lastLoaded = oldResource.lastLoaded;
+    if (oldValue && oldEndpoint) {
+      oldEndpoint.stopInterval();
+      newEndpoint.lastLoaded = oldEndpoint.lastLoaded;
     }
 
     if (!this._server) {
-      if (shouldAutoFetch(newResource)) newResource.reload();
+      if (shouldAutoFetch(newEndpoint)) newEndpoint.reload();
     }
 
-    this._vm.$set(this._resources, key, newResource);
+    this._vm.$set(this.endpoints, key, newEndpoint);
   }
 
-  resourceFrom(value, initial) {
-    if (value == null) return new NullResource();
+  endpointFrom(value, initial) {
+    if (value == null) return new NullEndpoint();
     if (typeof value === 'string') value = {
       url: value
     };
@@ -534,7 +541,7 @@ class VueChimera {
     }
 
     const baseOptions = Object.create(this._options);
-    const r = new Resource(Object.assign(baseOptions, value), initial);
+    const r = new Endpoint(Object.assign(baseOptions, value), initial);
 
     if (!this._server && !initial && r.key && r.prefetch && this._ssrContext) {
       initial = this._ssrContext[value.key];
@@ -546,7 +553,7 @@ class VueChimera {
   }
 
   cancelAll() {
-    Object.values(this._resources).forEach(r => {
+    Object.values(this.endpoints).forEach(r => {
       r.cancel();
     });
   }
@@ -554,7 +561,7 @@ class VueChimera {
   destroy() {
     const vm = this._vm;
     this.cancelAll();
-    Object.values(this._resources).forEach(r => {
+    Object.values(this.endpoints).forEach(r => {
       r.stopInterval();
     });
     delete vm._chimera;
@@ -583,9 +590,9 @@ var mixin = ((options = {}) => ({
             {
         $options
       } = _vmOptions$chimera,
-            resources = _objectWithoutProperties(_vmOptions$chimera, ["$options"]);
+            endpoints = _objectWithoutProperties(_vmOptions$chimera, ["$options"]);
 
-      chimera = new VueChimera(this, resources, _objectSpread({}, options, $options));
+      chimera = new VueChimera(this, endpoints, _objectSpread({}, options, $options));
     } else {
       throw new Error('[Chimera]: chimera options should be an object or a function that returns object');
     }
@@ -594,7 +601,7 @@ var mixin = ((options = {}) => ({
 
     if (!Object.prototype.hasOwnProperty.call(this, '$chimera')) {
       Object.defineProperty(this, '$chimera', {
-        get: () => chimera._resources
+        get: () => chimera.endpoints
       });
     }
   },
@@ -603,7 +610,7 @@ var mixin = ((options = {}) => ({
     /* istanbul ignore if */
     if (!this._chimera) return {};
     return {
-      $chimera: this._chimera._resources
+      $chimera: this._chimera.endpoints
     };
   },
 
@@ -630,8 +637,8 @@ var mixin = ((options = {}) => ({
     const ChimeraSSR = require('../ssr/index');
 
     return Promise.all(this.$_chimeraPromises).then(results => {
-      results.forEach(r => {
-        r && ChimeraSSR.addResource(r);
+      results.forEach(endpoint => {
+        endpoint && ChimeraSSR.addEndpoint(endpoint);
       });
     });
   }
@@ -653,7 +660,7 @@ var script = {
 
   data() {
     return {
-      resource: this.getResource()
+      endpoint: this.getEndpoint()
     };
   },
 
@@ -662,13 +669,13 @@ var script = {
   },
 
   mounted() {
-    if (this.resource.autoFetch) {
-      this.resource.reload();
+    if (this.endpoint.auto) {
+      this.endpoint.reload();
     }
   },
 
   render(h) {
-    let result = this.$scopedSlots.default(this.resource);
+    let result = this.$scopedSlots.default(this.endpoint);
 
     if (Array.isArray(result)) {
       result = result.concat(this.$slots.default);
@@ -680,9 +687,9 @@ var script = {
   },
 
   methods: {
-    getResource() {
+    getEndpoint() {
       let value = this.options;
-      if (value == null) return new NullResource();
+      if (value == null) return new NullEndpoint();
       if (typeof value === 'string') value = {
         url: value
       };
@@ -691,21 +698,21 @@ var script = {
         this.$chimeraOptions.axios = createAxios();
       }
 
-      const resource = new Resource(_objectSpread({}, this.$chimeraOptions, value));
+      const endpoint = new Endpoint(_objectSpread({}, this.$chimeraOptions, value));
       Object.values(events).forEach(ev => {
-        resource.on(ev, () => this.$emit(ev, resource));
+        endpoint.on(ev, () => this.$emit(ev, endpoint));
       });
-      resource.on('success', () => {
+      endpoint.on('success', () => {
         this.$nextTick(this.$forceUpdate);
       });
 
-      if (!this._server && resource.key && resource.prefetch && this._ssrContext) {
+      if (!this._server && endpoint.key && endpoint.prefetch && this._ssrContext) {
         const initial = this._ssrContext[value.key];
         if (initial) initial.prefetched = true;
-        Object.assign(resource, initial);
+        Object.assign(endpoint, initial);
       }
 
-      return resource;
+      return endpoint;
     }
 
   }
@@ -832,13 +839,14 @@ class StorageCache extends MemoryCache {
 const plugin = {
   options: {
     axios: null,
+    baseURL: null,
     cache: null,
     debounce: 50,
     deep: true,
     keepData: true,
-    autoFetch: 'get',
+    auto: 'get',
     // false, true, '%METHOD%',
-    prefetch: false,
+    prefetch: null,
     prefetchTimeout: 4000,
     transformer: null,
     ssrContext: null
@@ -851,19 +859,24 @@ const plugin = {
       }
     });
     Vue.mixin(mixin(this.options));
-    Vue.component('chimera-resource', __vue_component__);
+    Vue.component('chimera-endpoint', __vue_component__);
     Vue.prototype.$chimeraOptions = this.options;
   }
 
 }; // Auto-install
 
 let GlobalVue = null;
+/* istanbul ignore if */
+
+/* istanbul ignore else */
 
 if (typeof window !== 'undefined') {
   GlobalVue = window.Vue;
 } else if (typeof global !== 'undefined') {
   GlobalVue = global.Vue;
 }
+/* istanbul ignore if */
+
 
 if (GlobalVue) {
   GlobalVue.use(plugin, plugin.options);
