@@ -9,8 +9,8 @@ const plugin = {
     debounce: 50,
     deep: true,
     keepData: true,
-    autoFetch: 'get', // false, true, '%METHOD%',
-    prefetch: false,
+    auto: 'get', // false, true, '%METHOD%',
+    prefetch: null,
     prefetchTimeout: 4000,
     transformer: null,
     ssrContext: null

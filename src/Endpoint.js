@@ -14,7 +14,7 @@ const INITIAL_DATA = {
 
 export default class Endpoint {
   constructor (options, initial) {
-    if (typeof options === 'string') options = { url: options }
+    if (typeof options === 'string') options = { url: options, key: options }
 
     if (!options) {
       warn('Invalid options', options)
@@ -22,7 +22,7 @@ export default class Endpoint {
     }
 
     let {
-      autoFetch,
+      auto,
       prefetch,
       prefetchTimeout,
       cache,
@@ -31,22 +31,26 @@ export default class Endpoint {
       axios,
       key,
       interval,
+      keepData,
+      baseURL,
       ...request
     } = options
 
     request.method = (request.method || 'get').toLowerCase()
 
-    if (typeof autoFetch === 'string') {
-      this.autoFetch = autoFetch.toLowerCase() === request.method
+    // Handle type on auto
+    if (typeof auto === 'string') {
+      this.auto = auto.toLowerCase() === request.method
     } else {
-      this.autoFetch = Boolean(autoFetch)
+      this.auto = Boolean(auto)
     }
 
     this.key = key
-    this.prefetch = prefetch != null ? prefetch : this.autoFetch
+    this.prefetch = prefetch != null ? prefetch : this.auto
     this.prefetchTimeout = prefetchTimeout
     this.cache = cache
     this.axios = axios
+    this.keepData = keepData
     this.fetchDebounced = debounce !== false
       ? pDebounce(this.fetch.bind(this), debounce || 50, { leading: true })
       : this.fetch
@@ -70,6 +74,7 @@ export default class Endpoint {
         this._canceler = c
       })
     }
+    if (baseURL) this.request.baseURL = baseURL
 
     this._listeners = {}
     this.prefetched = false
@@ -165,8 +170,8 @@ export default class Endpoint {
     return this.fetchDebounced(force)
   }
 
-  send (extraOptions) {
-    return this.fetchDebounced(true, extraOptions)
+  send (params) {
+    return this.fetchDebounced(true, { params })
   }
 
   cancel () {

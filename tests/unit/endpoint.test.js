@@ -21,7 +21,7 @@ afterAll(() => {
 beforeEach(() => {
   endpoint = new Endpoint({
     url: '/users',
-    autoFetch: false,
+    auto: false,
     axios: client
   })
 })
@@ -229,7 +229,7 @@ describe('test-events', function () {
 
     endpoint = new Endpoint({
       url: '/users',
-      autoFetch: false,
+      auto: false,
       on: {
         [events.CANCEL]() {
           done()

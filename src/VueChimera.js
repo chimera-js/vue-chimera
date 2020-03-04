@@ -2,7 +2,7 @@ import Endpoint from './Endpoint'
 import NullEndpoint from './NullEndpoint'
 import { createAxios, hasKey, isPlainObject, getServerContext, warn } from './utils'
 
-const shouldAutoFetch = r => r.autoFetch && (!r.prefetched || r.prefetch === 'override')
+const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')
 
 export default class VueChimera {
   constructor (vm, { ...endpoints }, { deep, ssrContext, ...options }) {

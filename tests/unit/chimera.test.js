@@ -2,7 +2,6 @@ import Vue from 'vue'
 import VueChimera from "../../src/VueChimera";
 import Endpoint from "../../src/Endpoint";
 import NullEndpoint from "../../src/Endpoint";
-import * as events from '../../src/events'
 
 global.window = {
   __STATE__: {
@@ -49,7 +48,7 @@ describe('test-vue-chimera', function () {
     const chimera = chimeraFactory({
       test: {
         url: '/test',
-        autoFetch: false,
+        auto: false,
         on: {
           test (newEndpoint) {
             self = this

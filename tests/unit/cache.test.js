@@ -13,14 +13,14 @@ beforeEach(() => {
   axiosMock.request = axiosMock
 })
 
-describe('test-endpoint-cache', function () {
+describe('test-memory-cache', function () {
 
   it('should use cache', async function () {
     const memoryCache = new MemoryCache(1000)
     const endpoint = new Endpoint({
       url: '/users',
       key: 'users',
-      autoFetch: false,
+      auto: false,
       axios: axiosMock,
       cache: memoryCache
     })
@@ -62,7 +62,7 @@ describe('test-storage-cache', function () {
     const endpoint = new Endpoint({
       url: '/users',
       key: 'users',
-      autoFetch: false,
+      auto: false,
       axios: axiosMock,
       cache: storageCache
     })
@@ -77,7 +77,7 @@ describe('test-storage-cache', function () {
     const newEndpoint = new Endpoint({
       url: '/users',
       key: 'users',
-      autoFetch: false,
+      auto: false,
       axios: axiosMock,
       cache: new StorageCache('key')
     })

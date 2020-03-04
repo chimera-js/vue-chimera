@@ -32,11 +32,13 @@ module.exports = {
     sidebar: {
       '/guide/': [
         {
-          title: 'Getting Started',
+          title: 'Introduction',
           collapsable: false,
           children: [
+            'installation',
             'getting-started',
-            'basic-usage'
+            'endpoint',
+            'chimera',
           ],
         },
         {

@@ -1,41 +1,51 @@
-# Installation
+# Getting Started
 
-vue-chimera is available on npm
+With vue chimera we can easily bind rest apis to our vue components.
 
-## Using npm/yarn
+After installation, every component can use these features through `chimera` special option.
 
-```bash
-$ npm install --save vue-chimera
-# or
-$ yarn add vue-chimera
-```
+### Basic example
+We are going to show list of posts on this api:
+[https://jsonplaceholder.typicode.com/posts](https://jsonplaceholder.typicode.com/posts)
 
-
-Then install plugin into Vue:
-
-```javascript
-import Vue from 'vue'
-import VueChimera from "vue-chimera"
-
-Vue.use(VueChimera)
-``` 
-
-## Using Nuxt.js
-
-Simply after adding installing `vue-chimera` package, add `vue-chimera/nuxt`
-to modules in `nuxt.config.js`
-```javascript
-// nuxt.config.js
-module.exports = {
-    modules: [
-        'vue-chimera/nuxt'
-    ]
-}
-```
-
-## Using Script tag (CDN)
 ```html
-<script src="https://unpkg.com/vue-chimera@latest/dist/vue-chimera.min.js"></script>
+<template>
+    <div>
+        <!-- We can access our through posts as we named it -->
+        <!-- `posts.loading` is a loading flag that indicates endpoint is loading -->
+        <span v-if="posts.loading">Loading...</span>
+
+        <!-- Final json response can be accessed through `posts.data` -->
+        <ul v-if="posts.data">
+            <li v-for="post in posts.data">{{ posts.title }}</li>
+        </ul>
+
+        <!-- If an error occess during API call, json response stored in `posts.error`  -->
+        <span v-if="posts.error">{{ posts.error.message }}</span>
+    </div>
+</template>
+
+<script>
+// sample-component.vue
+export default {
+    chimera: {
+        // For simple GET requests we can easily just put the url in here
+        posts: 'https://jsonplaceholder.typicode.com/posts'
+    }
+}
+</script>
 ```
-If you use old browser style and `Vue` is publicly exposed as global variable
-just add `dist/vue-chimera.min.js` script tag to your HTML file and everything would be fine to go on.
+
+Simple as that. No promise handling, loading and error indicators so far.
+
+
+### Next sections
+You might now ask, what if there are more complicated API calls, 
+like variable parameters or url, POST calls, paginations, response headers and...
+
+Vue chimera comes with solution to most rest api concerns.
+ 
+We introduce more awesome features in next sections.
+
+Thanks for reading.
+

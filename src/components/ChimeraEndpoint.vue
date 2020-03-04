@@ -30,7 +30,7 @@ export default {
     },
 
     mounted() {
-        if (this.endpoint.autoFetch) {
+        if (this.endpoint.auto) {
             this.endpoint.reload()
         }
     },

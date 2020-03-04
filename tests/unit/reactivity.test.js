@@ -67,7 +67,7 @@ describe('vue-test-reactivity', function () {
             return {
               url: '/users/' + this.id,
               params: this.params,
-              autoFetch: this.autoFetch
+              auto: this.auto
             }
           }
         },
@@ -77,7 +77,7 @@ describe('vue-test-reactivity', function () {
         data () {
           return {
             id: 1,
-            autoFetch: false,
+            auto: false,
             params: {
               page: 2
             }
@@ -106,7 +106,7 @@ describe('vue-test-reactivity', function () {
       expect(watcher).toBeCalledTimes(2)
 
       expect(fetchSpy).not.toBeCalled()
-      app.autoFetch = true
+      app.auto = true
       await app.$nextTick()
       expect(watcher).toBeCalledTimes(3)
       expect(fetchSpy).toBeCalled()
@@ -122,7 +122,7 @@ describe('vue-test-reactivity', function () {
           return {
             $options: {
               axios,
-              autoFetch: false
+              auto: false
             },
             $users: '/users',
             users: '/users'
@@ -141,7 +141,7 @@ describe('vue-test-reactivity', function () {
         chimera() {
           return {
             $options: {
-              autoFetch: false
+              auto: false
             },
             $users: '/users',
             users: '/users'

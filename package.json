@@ -6,7 +6,7 @@
   "module": "dist/vue-chimera.es.js",
   "scripts": {
     "build": "bili",
-    "lint": "eslint src --ext .js",
+    "lint": "eslint . --ext .js,.vue",
     "test": "yarn test:unit",
     "test:unit": "jest",
     "docs:dev": "vuepress dev docs",
