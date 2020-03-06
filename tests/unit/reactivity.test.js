@@ -29,7 +29,7 @@ describe('vue-test-reactivity', function () {
       const watchers = [jest.fn()]
       app.$watch('users', watchers[0], { deep: true })
 
-      let watcherKeys = Object.keys(app.users.toObj()).concat(['loading'])
+      let watcherKeys = Object.keys(app.users.response).concat(['loading'])
       watcherKeys.forEach(key => {
         if (key === 'error') return;
         watchers.push(jest.fn())
@@ -116,12 +116,10 @@ describe('vue-test-reactivity', function () {
   describe('test-function-init', function() {
 
     it('should initialized with a function', function () {
-      const axios = Axios.create()
       const app = new Vue({
         chimera() {
           return {
             $options: {
-              axios,
               auto: false
             },
             $users: '/users',
@@ -132,8 +130,8 @@ describe('vue-test-reactivity', function () {
       expect(app._chimera.constructor.name).toBe( 'VueChimera')
       expect(app.$chimera.users.constructor.name).toBe('Endpoint')
 
-      expect(app.$chimera.$axios === axios).toBeTruthy()
       expect(app.$chimera.$users).toBeUndefined()
+      expect(app.users.auto).toBeFalsy()
     })
 
     it('should destroy', async function () {

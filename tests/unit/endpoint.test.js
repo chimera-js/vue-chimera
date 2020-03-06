@@ -3,7 +3,7 @@ import Endpoint from '../../src/Endpoint'
 import NullEndpoint from '../../src/NullEndpoint'
 import * as events from '../../src/events'
 import axios from 'axios'
-import {createAxios, isPlainObject} from "../../src/utils";
+import { isPlainObject } from "../../src/utils";
 
 let server
 let endpoint
@@ -116,19 +116,20 @@ describe('test-execution', function () {
   })
 
   it('should send with extra', async function () {
-    endpoint.axios = {
+    endpoint.http = {
       request: (o) => Promise.resolve(o)
     }
-    endpoint.request.params = {
+    endpoint.params = {
       a: 1,
       b: 2,
     }
 
-    const options = await endpoint.send({ params: { b: 3 }, url: 'test' })
+    const options = await endpoint.send({ b: 3 })
 
-    expect(options.url).toBe('test')
-    expect(options.params).toHaveProperty('a', 1)
-    expect(options.params).toHaveProperty('b', 3)
+    expect(options.params).toEqual({
+      a: 1,
+      b: 3
+    })
   });
 })
 
@@ -235,7 +236,6 @@ describe('test-events', function () {
           done()
         }
       },
-      axios: createAxios()
     })
 
     endpoint.fetch()
@@ -271,20 +271,7 @@ describe('test-cancellation', function () {
 
 describe('test-misc', function () {
   it('should serialize', function () {
-    const obj = endpoint.toObj()
-    expect(isPlainObject(obj)).toBeTruthy()
-    expect(endpoint.toString()).toEqual(JSON.stringify(obj))
-  });
-  it('should match getters', function () {
-    expect(endpoint.params).toEqual(endpoint.request.params)
-    expect(endpoint.url).toEqual(endpoint.request.url)
-    expect(endpoint.method).toEqual(endpoint.request.method)
-  });
-  it('should correctly create axios', function () {
-    const baseURL = 'http://test'
-    let axios = createAxios({ baseURL })
-    expect(axios.defaults.baseURL).toBe(baseURL)
-
-    expect(createAxios(() => axios)).toBe(axios)
+    expect(isPlainObject(endpoint.response)).toBeTruthy()
+    expect(endpoint.toString()).toEqual(JSON.stringify(endpoint.response))
   });
 })

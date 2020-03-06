@@ -1,6 +1,6 @@
 import Endpoint from './Endpoint'
 import NullEndpoint from './NullEndpoint'
-import { createAxios, hasKey, isPlainObject, getServerContext, warn } from './utils'
+import { hasKey, isPlainObject, getServerContext, warn } from './utils'
 
 const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')
 
@@ -9,11 +9,9 @@ export default class VueChimera {
     this._vm = vm
     this._watchers = []
 
-    if (typeof options.axios === 'function') {
-      options.axios = options.axios.bind(this._vm)
-    }
-    this._axios = options.axios = createAxios(options.axios)
-    this._options = options
+    this.LocalEndpoint = class extends Endpoint {}
+    Object.assign(this.LocalEndpoint.prototype, options)
+
     this._deep = deep
     this._ssrContext = getServerContext(ssrContext)
     this._server = vm.$isServer
@@ -45,7 +43,6 @@ export default class VueChimera {
     }
 
     Object.defineProperty(endpoints, '$cancelAll', { value: () => this.cancelAll() })
-    Object.defineProperty(endpoints, '$axios', { get: () => this._axios })
     Object.defineProperty(endpoints, '$loading', { get () { return !!Object.values(this).find(el => !!el.loading) } })
     this.endpoints = endpoints
 
@@ -64,13 +61,13 @@ export default class VueChimera {
 
   initServer () {
     this._vm.$_chimeraPromises = []
-    Object.values(this.endpoints).forEach(r => {
-      if (r.prefetch) {
-        if (!r.key) {
+    Object.values(this.endpoints).forEach(endpoint => {
+      if (endpoint.prefetch) {
+        if (!endpoint.key) {
           warn('used prefetch with no key associated with endpoint!')
           return
         }
-        this._vm.$_chimeraPromises.push(r.fetch(true, { timeout: r.prefetchTimeout }).then(() => r).catch(() => null))
+        this._vm.$_chimeraPromises.push(endpoint.fetch(true, { timeout: endpoint.prefetchTimeout }).then(() => endpoint).catch(() => null))
       }
     })
   }
@@ -104,15 +101,14 @@ export default class VueChimera {
       })
     }
 
-    const baseOptions = Object.create(this._options)
-    const r = new Endpoint(Object.assign(baseOptions, value), initial)
+    const endpoint = new this.LocalEndpoint(value, initial)
 
-    if (!this._server && !initial && r.key && r.prefetch && this._ssrContext) {
+    if (!this._server && !initial && endpoint.key && endpoint.prefetch && this._ssrContext) {
       initial = this._ssrContext[value.key]
       if (initial) initial.prefetched = true
-      Object.assign(r, initial)
+      Object.assign(endpoint, initial)
     }
-    return r
+    return endpoint
   }
 
   cancelAll () {

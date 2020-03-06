@@ -1,21 +1,16 @@
-import Axios from 'axios'
-
 export function isPlainObject (value) {
   return typeof value === 'object' && value && Object.prototype.toString(value) === '[object Object]'
 }
 
-export const hasKey = (obj, key) => key in (obj || {})
-
-export function createAxios (config) {
-  if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config
-    return config()
-  }
-  if (isPlainObject(config)) {
-    return Axios.create(config)
-  }
-  return Axios
+export function mergeExistingKeys (...obj) {
+  let o = Object.assign({}, ...obj)
+  return Object.keys(obj[0]).reduce((carry, item) => {
+    carry[item] = o[item]
+    return carry
+  }, {})
 }
+
+export const hasKey = (obj, key) => key in (obj || {})
 
 export function getServerContext (contextString) {
   try {

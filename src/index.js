@@ -1,10 +1,11 @@
 import mixin from './mixin'
 import ChimeraEndpoint from './components/ChimeraEndpoint.vue'
+import Endpoint from './Endpoint'
+import { mergeExistingKeys } from './utils'
 
 const plugin = {
 
   options: {
-    axios: null,
     baseURL: null,
     cache: null,
     debounce: 50,
@@ -18,15 +19,14 @@ const plugin = {
   },
 
   install (Vue, options = {}) {
-    Object.keys(options).forEach(key => {
-      if (key in this.options) {
-        this.options[key] = options[key]
-      }
-    })
+    options = mergeExistingKeys(this.options, options)
 
-    Vue.mixin(mixin(this.options))
+    Vue.mixin(mixin(options))
     Vue.component('chimera-endpoint', ChimeraEndpoint)
-    Vue.prototype.$chimeraOptions = this.options
+    Vue.prototype.$chimeraOptions = options
+
+    const { deep, ssrContext, ...endpointOptions } = options
+    Object.assign(Endpoint.prototype, endpointOptions)
   }
 
 }

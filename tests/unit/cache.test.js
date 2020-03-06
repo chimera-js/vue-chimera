@@ -21,10 +21,10 @@ describe('test-memory-cache', function () {
       url: '/users',
       key: 'users',
       auto: false,
-      axios: axiosMock,
       cache: memoryCache
     })
 
+    endpoint.http = axiosMock
     const setSpy = jest.spyOn(memoryCache, 'setItem')
     const getSpy = jest.spyOn(memoryCache, 'getItem')
     const removeSpy = jest.spyOn(memoryCache, 'removeItem')
@@ -63,9 +63,10 @@ describe('test-storage-cache', function () {
       url: '/users',
       key: 'users',
       auto: false,
-      axios: axiosMock,
       cache: storageCache
     })
+
+    endpoint.http = axiosMock
 
     await endpoint.fetch()
     expect(axiosMock).toBeCalledTimes(1)

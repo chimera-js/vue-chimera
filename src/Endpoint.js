@@ -1,10 +1,9 @@
-import Axios from 'axios'
 import pDebounce from 'p-debounce'
 import * as events from './events'
-import { isPlainObject, noopReturn, warn } from './utils'
-const { CancelToken } = Axios
+import { isPlainObject, mergeExistingKeys, noopReturn, warn } from './utils'
+import axiosAdapter from './http/axiosAdapter'
 
-const INITIAL_DATA = {
+const INITIAL_RESPONSE = {
   status: null,
   data: null,
   headers: null,
@@ -12,45 +11,34 @@ const INITIAL_DATA = {
   lastLoaded: null
 }
 
-export default class Endpoint {
-  constructor (options, initial) {
-    if (typeof options === 'string') options = { url: options, key: options }
+const INITIAL_REQUEST = {
+  url: null,
+  baseURL: null,
+  method: 'get',
+  params: null,
+  timeout: 0,
+  headers: null
+}
 
-    if (!options) {
-      warn('Invalid options', options)
+export default class Endpoint {
+  constructor (opts, initial) {
+    if (typeof opts === 'string') opts = { url: opts, key: opts }
+
+    if (!opts) {
+      warn('Invalid options', opts)
       throw new Error('[Chimera]: invalid options')
     }
 
     let {
-      auto,
-      prefetch,
-      prefetchTimeout,
-      cache,
       debounce,
       transformer,
-      axios,
-      key,
       interval,
-      keepData,
-      baseURL,
-      ...request
-    } = options
+      on: listeners,
+      ...options
+    } = opts
 
-    request.method = (request.method || 'get').toLowerCase()
+    options.method = (options.method || 'get').toLowerCase()
 
-    // Handle type on auto
-    if (typeof auto === 'string') {
-      this.auto = auto.toLowerCase() === request.method
-    } else {
-      this.auto = Boolean(auto)
-    }
-
-    this.key = key
-    this.prefetch = prefetch != null ? prefetch : this.auto
-    this.prefetchTimeout = prefetchTimeout
-    this.cache = cache
-    this.axios = axios
-    this.keepData = keepData
     this.fetchDebounced = debounce !== false
       ? pDebounce(this.fetch.bind(this), debounce || 50, { leading: true })
       : this.fetch
@@ -58,36 +46,30 @@ export default class Endpoint {
     // Set Transformers
     this.setTransformer(transformer)
 
-    /* istanbul ignore if */
-    if (request.data) {
-      warn('Do not use "params" key inside endoint options, use data instead')
-    }
-
-    if (request.method !== 'get') {
-      request.data = request.params
-      delete request.params
-    }
-
-    this.request = {
-      ...request,
-      cancelToken: new CancelToken(c => {
-        this._canceler = c
-      })
-    }
-    if (baseURL) this.request.baseURL = baseURL
-
-    this._listeners = {}
     this.prefetched = false
     this.loading = false
 
     // Set Events
-    if (isPlainObject(options.on)) {
-      for (let key in options.on) {
-        this.on(key, options.on[key])
+    this.listeners = {}
+    if (isPlainObject(listeners)) {
+      for (const key in listeners) {
+        this.on(key, listeners[key])
       }
     }
 
-    Object.assign(this, INITIAL_DATA, initial || {})
+    Object.assign(this, options)
+
+    // Handle type on auto
+    if (typeof this.auto === 'string') {
+      this.auto = this.auto.toLowerCase() === this.method
+    } else {
+      this.auto = Boolean(this.auto)
+    }
+    this.prefetch = this.prefetch != null ? this.prefetch : this.auto
+
+    Object.assign(this, INITIAL_RESPONSE, initial || {})
+
+    this.http = axiosAdapter
 
     interval && this.startInterval(interval)
   }
@@ -107,14 +89,14 @@ export default class Endpoint {
   }
 
   on (event, handler) {
-    let listeners = this._listeners[event] || []
+    let listeners = this.listeners[event] || []
     listeners.push(handler)
-    this._listeners[event] = listeners
+    this.listeners[event] = listeners
     return this
   }
 
   emit (event) {
-    (this._listeners[event] || []).forEach(handler => {
+    (this.listeners[event] || []).forEach(handler => {
       handler(this, event)
     })
   }
@@ -124,7 +106,7 @@ export default class Endpoint {
       if (this.cache && !force) {
         let cacheValue = this.getCache()
         if (cacheValue) {
-          this.setByResponse(cacheValue)
+          this.setResponse(cacheValue)
           return resolve(cacheValue)
         }
       }
@@ -136,28 +118,27 @@ export default class Endpoint {
       if (isPlainObject(extraOptions)) {
         // Merge extra options
         if (extraOptions.params) {
-          const key = request.method === 'get' ? 'params' : 'data'
-          extraOptions[key] = Object.assign({}, request[key], extraOptions.params)
+          extraOptions.params = Object.assign({}, request.params, extraOptions.params)
         }
         request = Object.assign({}, request, extraOptions)
       }
 
       // Finally make request
-      this.axios.request(request).then(res => {
+      this.http.request(request, this).then(res => {
         this.loading = false
-        this.setByResponse(res)
+        this.setResponse(res)
         this.setCache(res)
         this.emit(events.SUCCESS)
         resolve(res)
       }).catch(err => {
         this.loading = false
-        this.setByResponse(err.response)
-        if (Axios.isCancel(err)) {
+        this.setResponse(err.response)
+        if (this.http.isCancelError(err)) {
           this.emit(events.CANCEL)
-        } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-          this.emit(events.TIMEOUT)
-          this.emit(events.ERROR)
         } else {
+          if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
+            this.emit(events.TIMEOUT)
+          }
           this.emit(events.ERROR)
         }
 
@@ -175,18 +156,14 @@ export default class Endpoint {
   }
 
   cancel () {
-    if (typeof this._canceler === 'function') this._canceler()
-    this.request.cancelToken = new CancelToken(c => { this._canceler = c })
+    this.http.cancel(this)
   }
 
   getCacheKey () {
     if (this.key) return this.key
     return (typeof window !== 'undefined' && typeof btoa !== 'undefined'
       ? window.btoa
-      : x => x)(this.request.url +
-      this.request.params +
-      this.request.data +
-      this.request.method)
+      : x => x)(Object.values(this.request).join(':'))
   }
 
   getCache () {
@@ -201,7 +178,7 @@ export default class Endpoint {
     this.cache && this.cache.removeItem(this.getCacheKey())
   }
 
-  setByResponse (res) {
+  setResponse (res) {
     res = res || {}
     const isSuccessful = String(res.status).charAt(0) === '2'
     this.status = res.status
@@ -230,31 +207,23 @@ export default class Endpoint {
     }
   }
 
-  toObj () {
-    const json = {}
-    Object.keys(INITIAL_DATA).forEach(key => {
-      json[key] = this[key]
+  get looping () {
+    return !!this._interval
+  }
+
+  get request () {
+    return mergeExistingKeys(INITIAL_REQUEST, this, {
+      baseURL: this.baseURL,
+      timeout: this.timeout,
+      headers: this.headers
     })
-    return json
+  }
+
+  get response () {
+    return mergeExistingKeys(INITIAL_RESPONSE, this)
   }
 
   toString () {
-    return JSON.stringify(this.toObj())
-  }
-
-  get params () {
-    return this.request.method === 'get' ? this.request.params : this.request.data
-  }
-
-  get url () {
-    return this.request.url
-  }
-
-  get method () {
-    return this.request.method
-  }
-
-  get looping () {
-    return !!this._interval
+    return JSON.stringify(this.response)
   }
 }

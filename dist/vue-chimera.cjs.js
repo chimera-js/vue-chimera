@@ -4,8 +4,9 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var Axios = _interopDefault(require('axios'));
 var pDebounce = _interopDefault(require('p-debounce'));
+var Axios = require('axios');
+var Axios__default = _interopDefault(Axios);
 var __vue_normalize__ = _interopDefault(require('vue-runtime-helpers/dist/normalize-component.mjs'));
 
 function _defineProperty(obj, key, value) {
@@ -113,19 +114,14 @@ var events = /*#__PURE__*/Object.freeze({
 function isPlainObject(value) {
   return typeof value === 'object' && value && Object.prototype.toString(value) === '[object Object]';
 }
-const hasKey = (obj, key) => key in (obj || {});
-function createAxios(config) {
-  if (typeof config === 'function') {
-    if (typeof config.request === 'function') return config;
-    return config();
-  }
-
-  if (isPlainObject(config)) {
-    return Axios.create(config);
-  }
-
-  return Axios;
+function mergeExistingKeys(...obj) {
+  let o = Object.assign({}, ...obj);
+  return Object.keys(obj[0]).reduce((carry, item) => {
+    carry[item] = o[item];
+    return carry;
+  }, {});
 }
+const hasKey = (obj, key) => key in (obj || {});
 function getServerContext(contextString) {
   try {
     let context = window;
@@ -146,90 +142,103 @@ function warn(arg, ...args) {
   console.warn('[Chimera]: ' + arg, ...args);
 }
 
-const {
-  CancelToken
-} = Axios;
-const INITIAL_DATA = {
+function createAxios(config) {
+  if (typeof config === 'function') {
+    if (typeof config.request === 'function') return config;
+    return config();
+  }
+
+  if (isPlainObject(config)) {
+    return Axios__default.create(config);
+  }
+
+  return Axios__default;
+}
+
+var axiosAdapter = {
+  request(request, endpoint) {
+    const axios = endpoint.axios ? createAxios(endpoint.axios) : Axios__default;
+    return axios.request(_objectSpread({}, request, {
+      cancelToken: new Axios.CancelToken(c => {
+        endpoint._canceler = c;
+      })
+    }));
+  },
+
+  cancel(endpoint) {
+    if (typeof endpoint._canceler === 'function') endpoint._canceler();
+    endpoint._canceler = null;
+  },
+
+  isCancelError(err) {
+    return Axios__default.isCancel(err);
+  }
+
+};
+
+const INITIAL_RESPONSE = {
   status: null,
   data: null,
   headers: null,
   error: null,
   lastLoaded: null
 };
+const INITIAL_REQUEST = {
+  url: null,
+  baseURL: null,
+  method: 'get',
+  params: null,
+  timeout: 0,
+  headers: null
+};
 class Endpoint {
-  constructor(options, initial) {
-    if (typeof options === 'string') options = {
-      url: options,
-      key: options
+  constructor(opts, initial) {
+    if (typeof opts === 'string') opts = {
+      url: opts,
+      key: opts
     };
 
-    if (!options) {
-      warn('Invalid options', options);
+    if (!opts) {
+      warn('Invalid options', opts);
       throw new Error('[Chimera]: invalid options');
     }
 
     let {
-      auto,
-      prefetch,
-      prefetchTimeout,
-      cache,
       debounce,
       transformer,
-      axios,
-      key,
       interval,
-      keepData,
-      baseURL
-    } = options,
-        request = _objectWithoutProperties(options, ["auto", "prefetch", "prefetchTimeout", "cache", "debounce", "transformer", "axios", "key", "interval", "keepData", "baseURL"]);
+      on: listeners
+    } = opts,
+        options = _objectWithoutProperties(opts, ["debounce", "transformer", "interval", "on"]);
 
-    request.method = (request.method || 'get').toLowerCase(); // Handle type on auto
-
-    if (typeof auto === 'string') {
-      this.auto = auto.toLowerCase() === request.method;
-    } else {
-      this.auto = Boolean(auto);
-    }
-
-    this.key = key;
-    this.prefetch = prefetch != null ? prefetch : this.auto;
-    this.prefetchTimeout = prefetchTimeout;
-    this.cache = cache;
-    this.axios = axios;
-    this.keepData = keepData;
+    options.method = (options.method || 'get').toLowerCase();
     this.fetchDebounced = debounce !== false ? pDebounce(this.fetch.bind(this), debounce || 50, {
       leading: true
     }) : this.fetch; // Set Transformers
 
     this.setTransformer(transformer);
-    /* istanbul ignore if */
-
-    if (request.data) {
-      warn('Do not use "params" key inside endoint options, use data instead');
-    }
-
-    if (request.method !== 'get') {
-      request.data = request.params;
-      delete request.params;
-    }
-
-    this.request = _objectSpread({}, request, {
-      cancelToken: new CancelToken(c => {
-        this._canceler = c;
-      })
-    });
-    if (baseURL) this.request.baseURL = baseURL;
-    this._listeners = {};
     this.prefetched = false;
     this.loading = false; // Set Events
 
-    if (isPlainObject(options.on)) {
-      for (let key in options.on) {
-        this.on(key, options.on[key]);
+    this.listeners = {};
+
+    if (isPlainObject(listeners)) {
+      for (const key in listeners) {
+        this.on(key, listeners[key]);
       }
     }
 
-    Object.assign(this, INITIAL_DATA, initial || {});
+    Object.assign(this, options); // Handle type on auto
+
+    if (typeof this.auto === 'string') {
+      this.auto = this.auto.toLowerCase() === this.method;
+    } else {
+      this.auto = Boolean(this.auto);
+    }
+
+    this.prefetch = this.prefetch != null ? this.prefetch : this.auto;
+    Object.assign(this, INITIAL_RESPONSE, initial || {});
+    this.http = axiosAdapter;
     interval && this.startInterval(interval);
   }
 
@@ -251,14 +260,14 @@ class Endpoint {
   }
 
   on(event, handler) {
-    let listeners = this._listeners[event] || [];
+    let listeners = this.listeners[event] || [];
     listeners.push(handler);
-    this._listeners[event] = listeners;
+    this.listeners[event] = listeners;
     return this;
   }
 
   emit(event) {
-    (this._listeners[event] || []).forEach(handler => {
+    (this.listeners[event] || []).forEach(handler => {
       handler(this, event);
     });
   }
@@ -269,7 +278,7 @@ class Endpoint {
         let cacheValue = this.getCache();
 
         if (cacheValue) {
-          this.setByResponse(cacheValue);
+          this.setResponse(cacheValue);
           return resolve(cacheValue);
         }
       }
@@ -283,30 +292,30 @@ class Endpoint {
       if (isPlainObject(extraOptions)) {
         // Merge extra options
         if (extraOptions.params) {
-          const key = request.method === 'get' ? 'params' : 'data';
-          extraOptions[key] = Object.assign({}, request[key], extraOptions.params);
+          extraOptions.params = Object.assign({}, request.params, extraOptions.params);
         }
 
         request = Object.assign({}, request, extraOptions);
       } // Finally make request
 
 
-      this.axios.request(request).then(res => {
+      this.http.request(request, this).then(res => {
         this.loading = false;
-        this.setByResponse(res);
+        this.setResponse(res);
         this.setCache(res);
         this.emit(SUCCESS);
         resolve(res);
       }).catch(err => {
         this.loading = false;
-        this.setByResponse(err.response);
+        this.setResponse(err.response);
 
-        if (Axios.isCancel(err)) {
+        if (this.http.isCancelError(err)) {
           this.emit(CANCEL);
-        } else if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-          this.emit(TIMEOUT);
-          this.emit(ERROR);
         } else {
+          if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
+            this.emit(TIMEOUT);
+          }
+
           this.emit(ERROR);
         }
 
@@ -326,15 +335,12 @@ class Endpoint {
   }
 
   cancel() {
-    if (typeof this._canceler === 'function') this._canceler();
-    this.request.cancelToken = new CancelToken(c => {
-      this._canceler = c;
-    });
+    this.http.cancel(this);
   }
 
   getCacheKey() {
     if (this.key) return this.key;
-    return (typeof window !== 'undefined' && typeof btoa !== 'undefined' ? window.btoa : x => x)(this.request.url + this.request.params + this.request.data + this.request.method);
+    return (typeof window !== 'undefined' && typeof btoa !== 'undefined' ? window.btoa : x => x)(Object.values(this.request).join(':'));
   }
 
   getCache() {
@@ -349,7 +355,7 @@ class Endpoint {
     this.cache && this.cache.removeItem(this.getCacheKey());
   }
 
-  setByResponse(res) {
+  setResponse(res) {
     res = res || {};
     const isSuccessful = String(res.status).charAt(0) === '2';
     this.status = res.status;
@@ -378,32 +384,24 @@ class Endpoint {
     }
   }
 
-  toObj() {
-    const json = {};
-    Object.keys(INITIAL_DATA).forEach(key => {
-      json[key] = this[key];
+  get looping() {
+    return !!this._interval;
+  }
+
+  get request() {
+    return mergeExistingKeys(INITIAL_REQUEST, this, {
+      baseURL: this.baseURL,
+      timeout: this.timeout,
+      headers: this.headers
     });
-    return json;
+  }
+
+  get response() {
+    return mergeExistingKeys(INITIAL_RESPONSE, this);
   }
 
   toString() {
-    return JSON.stringify(this.toObj());
-  }
-
-  get params() {
-    return this.request.method === 'get' ? this.request.params : this.request.data;
-  }
-
-  get url() {
-    return this.request.url;
-  }
-
-  get method() {
-    return this.request.method;
-  }
-
-  get looping() {
-    return !!this._interval;
+    return JSON.stringify(this.response);
   }
 
 }
@@ -435,13 +433,8 @@ class VueChimera {
 
     this._vm = vm;
     this._watchers = [];
-
-    if (typeof options.axios === 'function') {
-      options.axios = options.axios.bind(this._vm);
-    }
-
-    this._axios = options.axios = createAxios(options.axios);
-    this._options = options;
+    this.LocalEndpoint = class extends Endpoint {};
+    Object.assign(this.LocalEndpoint.prototype, options);
     this._deep = deep;
     this._ssrContext = getServerContext(ssrContext);
     this._server = vm.$isServer;
@@ -473,9 +466,6 @@ class VueChimera {
     Object.defineProperty(endpoints, '$cancelAll', {
       value: () => this.cancelAll()
     });
-    Object.defineProperty(endpoints, '$axios', {
-      get: () => this._axios
-    });
     Object.defineProperty(endpoints, '$loading', {
       get() {
         return !!Object.values(this).find(el => !!el.loading);
@@ -499,16 +489,16 @@ class VueChimera {
 
   initServer() {
     this._vm.$_chimeraPromises = [];
-    Object.values(this.endpoints).forEach(r => {
-      if (r.prefetch) {
-        if (!r.key) {
+    Object.values(this.endpoints).forEach(endpoint => {
+      if (endpoint.prefetch) {
+        if (!endpoint.key) {
           warn('used prefetch with no key associated with endpoint!');
           return;
         }
 
-        this._vm.$_chimeraPromises.push(r.fetch(true, {
-          timeout: r.prefetchTimeout
-        }).then(() => r).catch(() => null));
+        this._vm.$_chimeraPromises.push(endpoint.fetch(true, {
+          timeout: endpoint.prefetchTimeout
+        }).then(() => endpoint).catch(() => null));
       }
     });
   }
@@ -546,16 +536,15 @@ class VueChimera {
       });
     }
 
-    const baseOptions = Object.create(this._options);
-    const r = new Endpoint(Object.assign(baseOptions, value), initial);
+    const endpoint = new this.LocalEndpoint(value, initial);
 
-    if (!this._server && !initial && r.key && r.prefetch && this._ssrContext) {
+    if (!this._server && !initial && endpoint.key && endpoint.prefetch && this._ssrContext) {
       initial = this._ssrContext[value.key];
       if (initial) initial.prefetched = true;
-      Object.assign(r, initial);
+      Object.assign(endpoint, initial);
     }
 
-    return r;
+    return endpoint;
   }
 
   cancelAll() {
@@ -674,12 +663,6 @@ var script = {
     this._ssrContext = getServerContext(this.$chimeraOptions.ssrContext);
   },
 
-  mounted() {
-    if (this.endpoint.auto) {
-      this.endpoint.reload();
-    }
-  },
-
   render(h) {
     let result = this.$scopedSlots.default(this.endpoint);
 
@@ -692,6 +675,22 @@ var script = {
     return this.tag ? h(this.tag, result) : result[0];
   },
 
+  created() {
+    const ep = this.endpoint;
+
+    if (this.$isServer && ep.key) {
+      this.$_chimeraPromises = [ep.fetch(true).then(() => ep).catch(() => null)];
+    }
+  },
+
+  mounted() {
+    const ep = this.endpoint;
+
+    if (ep.auto && (!ep.data || ep.prefetch === 'override')) {
+      ep.reload();
+    }
+  },
+
   methods: {
     getEndpoint() {
       let value = this.options;
@@ -699,21 +698,13 @@ var script = {
       if (typeof value === 'string') value = {
         url: value
       };
-
-      if (!this.$chimeraOptions.axios) {
-        this.$chimeraOptions.axios = createAxios();
-      }
-
       const endpoint = new Endpoint(_objectSpread({}, this.$chimeraOptions, value));
       Object.values(events).forEach(ev => {
         endpoint.on(ev, () => this.$emit(ev, endpoint));
       });
-      endpoint.on('success', () => {
-        this.$nextTick(this.$forceUpdate);
-      });
 
       if (!this._server && endpoint.key && endpoint.prefetch && this._ssrContext) {
-        const initial = this._ssrContext[value.key];
+        const initial = this._ssrContext[endpoint.key];
         if (initial) initial.prefetched = true;
         Object.assign(endpoint, initial);
       }
@@ -844,7 +835,6 @@ class StorageCache extends MemoryCache {
 
 const plugin = {
   options: {
-    axios: null,
     baseURL: null,
     cache: null,
     debounce: 50,
@@ -859,14 +849,14 @@ const plugin = {
   },
 
   install(Vue, options = {}) {
-    Object.keys(options).forEach(key => {
-      if (key in this.options) {
-        this.options[key] = options[key];
-      }
-    });
-    Vue.mixin(mixin(this.options));
+    options = mergeExistingKeys(this.options, options);
+    Vue.mixin(mixin(options));
     Vue.component('chimera-endpoint', __vue_component__);
-    Vue.prototype.$chimeraOptions = this.options;
+    Vue.prototype.$chimeraOptions = options;
+
+    const endpointOptions = _objectWithoutProperties(options, ["deep", "ssrContext"]);
+
+    Object.assign(Endpoint.prototype, endpointOptions);
   }
 
 }; // Auto-install
