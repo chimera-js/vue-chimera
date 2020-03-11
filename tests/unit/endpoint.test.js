@@ -3,7 +3,7 @@ import Endpoint from '../../src/Endpoint'
 import NullEndpoint from '../../src/NullEndpoint'
 import * as events from '../../src/events'
 import axios from 'axios'
-import { isPlainObject } from "../../src/utils";
+import { isPlainObject } from '../../src/utils'
 
 let server
 let endpoint
@@ -60,18 +60,18 @@ describe('test-instantiation', function () {
     let r = new NullEndpoint()
 
     expect(r.fetch()).rejects.toBeInstanceOf(Error)
-  });
+  })
 
   it('should have initial data', function () {
     const data = {}
     let r = new Endpoint('/users', { data })
     expect(data === r.data).toBeTruthy()
-  });
+  })
 })
 
 describe('test-execution', function () {
-  let data = [{id: 1, name: 'User 1'}, {id: 2, name: 'User 2'}]
-  let headers = {'content-type': 'application/json', 'x-my-custom-header': 'my-custom-value'}
+  let data = [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }]
+  let headers = { 'content-type': 'application/json', 'x-my-custom-header': 'my-custom-value' }
 
   it('should recieve status 200', function (done) {
     server.respondWith('GET', '/users', [
@@ -100,7 +100,7 @@ describe('test-execution', function () {
   it('should receive status 501', function (done) {
     server.respondWith('GET', '/users', [
       501,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify(data)
     ])
 
@@ -121,7 +121,7 @@ describe('test-execution', function () {
     }
     endpoint.params = {
       a: 1,
-      b: 2,
+      b: 2
     }
 
     const options = await endpoint.send({ b: 3 })
@@ -130,11 +130,11 @@ describe('test-execution', function () {
       a: 1,
       b: 3
     })
-  });
+  })
 })
 
 describe('test-transformers', function () {
-  let data = [{id: 1, name: 'User 1'}, {id: 2, name: 'User 2'}]
+  let data = [{ id: 1, name: 'User 1' }, { id: 2, name: 'User 2' }]
   let tr = res => res.map(val => val.id)
 
   it('should work with single function', function () {
@@ -148,11 +148,11 @@ describe('test-transformers', function () {
   it('should transform response', function (done) {
     server.respondWith('GET', '/users', [
       200,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify(data)
     ])
 
-    endpoint.setTransformer({response: tr})
+    endpoint.setTransformer({ response: tr })
 
     endpoint.fetch().then(res => {
       expect(endpoint.data).toEqual(tr(data))
@@ -163,11 +163,11 @@ describe('test-transformers', function () {
   it('should transform error', function (done) {
     server.respondWith('GET', '/users', [
       500,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify(data)
     ])
 
-    endpoint.setTransformer({error: tr})
+    endpoint.setTransformer({ error: tr })
 
     endpoint.fetch()
       .then(done)
@@ -182,7 +182,7 @@ describe('test-events', function () {
   it('should broadcast success event', function (done) {
     server.respondWith('GET', '/users', [
       200,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify({})
     ])
 
@@ -196,7 +196,7 @@ describe('test-events', function () {
   it('should broadcast error event', function (done) {
     server.respondWith('GET', '/users', [
       501,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify({})
     ])
 
@@ -210,7 +210,7 @@ describe('test-events', function () {
   it('should broadcast loading event', function (done) {
     server.respondWith('GET', '/users', [
       200,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify({})
     ])
 
@@ -224,7 +224,7 @@ describe('test-events', function () {
   it('should broadcast cancel event', function (done) {
     server.respondWith('GET', '/users', [
       200,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify({})
     ])
 
@@ -232,10 +232,10 @@ describe('test-events', function () {
       url: '/users',
       auto: false,
       on: {
-        [events.CANCEL]() {
+        [events.CANCEL] () {
           done()
         }
-      },
+      }
     })
 
     endpoint.fetch()
@@ -247,7 +247,7 @@ describe('test-cancellation', function () {
   it('should cancel the request', function (done) {
     server.respondWith('GET', '/users', [
       200,
-      {'Content-Type': 'application/json'},
+      { 'Content-Type': 'application/json' },
       JSON.stringify({})
     ])
 
@@ -273,5 +273,5 @@ describe('test-misc', function () {
   it('should serialize', function () {
     expect(isPlainObject(endpoint.response)).toBeTruthy()
     expect(endpoint.toString()).toEqual(JSON.stringify(endpoint.response))
-  });
+  })
 })

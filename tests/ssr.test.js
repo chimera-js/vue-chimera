@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import { render } from '@vue/server-test-utils'
-import VueChimera from "../src/index";
+import VueChimera from '../src/index'
 
 Vue.use(VueChimera, {
   prefetch: true,
@@ -10,8 +10,8 @@ Vue.use(VueChimera, {
 describe('test-server-side-rendering', function () {
   it('should ', async function () {
     const result = await render(Vue.extend({
-      render(h) {
-        return h('span', {}, [this.$chimera.users.loading ? 't': 'f'])
+      render (h) {
+        return h('span', {}, [this.$chimera.users.loading ? 't' : 'f'])
       },
       chimera: {
         users: {
@@ -25,5 +25,5 @@ describe('test-server-side-rendering', function () {
     }))
 
     // console.log(result)
-  });
+  })
 })

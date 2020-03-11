@@ -1,7 +1,7 @@
 import VueChimera from './VueChimera'
 import { isPlainObject } from './utils'
 
-export default (options = {}) => ({
+export default {
   beforeCreate () {
     const vmOptions = this.$options
     let chimera
@@ -17,7 +17,7 @@ export default (options = {}) => ({
     /* istanbul ignore else */
     if (isPlainObject(vmOptions.chimera)) {
       const { $options, ...endpoints } = vmOptions.chimera
-      chimera = new VueChimera(this, endpoints, { ...options, ...$options })
+      chimera = new VueChimera(this, endpoints, $options)
     } else {
       throw new Error('[Chimera]: chimera options should be an object or a function that returns object')
     }
@@ -61,4 +61,4 @@ export default (options = {}) => ({
       })
     })
   }
-})
+}

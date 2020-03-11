@@ -1,9 +1,8 @@
-import VueChimera from '../../src/index'
+import VueChimera, { install } from '../../src/index'
 
 describe('test-import', function () {
-
   it('should be a vue plugin', function () {
-    expect(typeof VueChimera.install).toBe('function')
+    expect(typeof VueChimera).toBe('function')
+    expect(typeof install).toBe('function')
   })
-
 })

@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import VueChimera from '../../src/index.js'
-import Endpoint from "../../src/Endpoint";
+import Endpoint from '../../src/Endpoint'
 import sinon from 'sinon'
 import Axios from 'axios'
 
@@ -31,7 +31,7 @@ describe('vue-test-reactivity', function () {
 
       let watcherKeys = Object.keys(app.users.response).concat(['loading'])
       watcherKeys.forEach(key => {
-        if (key === 'error') return;
+        if (key === 'error') return
         watchers.push(jest.fn())
         app.$watch('users.' + key, watchers[watchers.length - 1])
       })
@@ -85,7 +85,7 @@ describe('vue-test-reactivity', function () {
         }
       })
       const fetchSpy = jest.spyOn(Endpoint.prototype, 'fetch')
-      expect(app._chimera._deep).toBe(false)
+      expect(app._chimera.deep).toBe(false)
       expect(app.users.url).toBe('/users/1')
       expect(app.users.params).toEqual({ page: 2 })
 
@@ -110,14 +110,13 @@ describe('vue-test-reactivity', function () {
       await app.$nextTick()
       expect(watcher).toBeCalledTimes(3)
       expect(fetchSpy).toBeCalled()
-    });
+    })
   })
 
-  describe('test-function-init', function() {
-
+  describe('test-function-init', function () {
     it('should initialized with a function', function () {
       const app = new Vue({
-        chimera() {
+        chimera () {
           return {
             $options: {
               auto: false
@@ -127,7 +126,7 @@ describe('vue-test-reactivity', function () {
           }
         }
       })
-      expect(app._chimera.constructor.name).toBe( 'VueChimera')
+      expect(app._chimera.constructor.name).toBe('VueChimera')
       expect(app.$chimera.users.constructor.name).toBe('Endpoint')
 
       expect(app.$chimera.$users).toBeUndefined()
@@ -136,7 +135,7 @@ describe('vue-test-reactivity', function () {
 
     it('should destroy', async function () {
       const app = new Vue({
-        chimera() {
+        chimera () {
           return {
             $options: {
               auto: false
@@ -156,8 +155,6 @@ describe('vue-test-reactivity', function () {
 
       expect(cancel).toBeCalledTimes(1)
       expect(destroy).toBeCalledTimes(1)
-    });
-
+    })
   })
-
 })

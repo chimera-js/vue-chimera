@@ -1,34 +1,34 @@
 import mixin from './mixin'
-import ChimeraEndpoint from './components/ChimeraEndpoint.vue'
+import VueChimera from './VueChimera'
+import ChimeraEndpoint from './components/ChimeraEndpoint'
 import Endpoint from './Endpoint'
 import { mergeExistingKeys } from './utils'
 
-const plugin = {
+const DEFAULT_OPTIONS = {
+  baseURL: null,
+  cache: null,
+  debounce: 50,
+  deep: true,
+  keepData: true,
+  auto: 'get', // false, true, '%METHOD%',
+  prefetch: null,
+  prefetchTimeout: 4000,
+  transformer: null,
+  ssrContext: null
+}
 
-  options: {
-    baseURL: null,
-    cache: null,
-    debounce: 50,
-    deep: true,
-    keepData: true,
-    auto: 'get', // false, true, '%METHOD%',
-    prefetch: null,
-    prefetchTimeout: 4000,
-    transformer: null,
-    ssrContext: null
-  },
+export function install (Vue, options = {}) {
+  options = mergeExistingKeys({}, DEFAULT_OPTIONS, options)
 
-  install (Vue, options = {}) {
-    options = mergeExistingKeys(this.options, options)
+  Vue.mixin(mixin)
+  Vue.component('chimera-endpoint', ChimeraEndpoint)
 
-    Vue.mixin(mixin(options))
-    Vue.component('chimera-endpoint', ChimeraEndpoint)
-    Vue.prototype.$chimeraOptions = options
-
-    const { deep, ssrContext, ...endpointOptions } = options
-    Object.assign(Endpoint.prototype, endpointOptions)
-  }
-
+  const { deep, ssrContext, ...endpointOptions } = options
+  Object.assign(Endpoint.prototype, endpointOptions)
+  Object.assign(VueChimera.prototype, {
+    deep,
+    ssrContext
+  })
 }
 
 // Auto-install
@@ -43,10 +43,10 @@ if (typeof window !== 'undefined') {
 
 /* istanbul ignore if */
 if (GlobalVue) {
-  GlobalVue.use(plugin, plugin.options)
+  GlobalVue.use(install, DEFAULT_OPTIONS)
 }
 
-export default plugin
+export default install
 
 export * from './events'
 export { StorageCache } from './cache/StorageCache'

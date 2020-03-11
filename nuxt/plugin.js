@@ -3,7 +3,6 @@ import VueChimera from 'vue-chimera'
 
 Vue.use(VueChimera, <%= serialize(options, null, 2) %>)
 
-// export default VueChimera.NuxtPlugin()
 export default function ({ beforeNuxtRender, app }) {
     if (process.server) {
         const ChimeraSSR = require('vue-chimera/ssr')

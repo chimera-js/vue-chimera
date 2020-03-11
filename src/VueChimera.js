@@ -1,19 +1,23 @@
-import Endpoint from './Endpoint'
+import BaseEndpoint from './Endpoint'
 import NullEndpoint from './NullEndpoint'
 import { hasKey, isPlainObject, getServerContext, warn } from './utils'
 
 const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')
 
 export default class VueChimera {
-  constructor (vm, { ...endpoints }, { deep, ssrContext, ...options }) {
+  constructor (vm, { ...endpoints }, options) {
     this._vm = vm
     this._watchers = []
 
-    this.LocalEndpoint = class extends Endpoint {}
-    Object.assign(this.LocalEndpoint.prototype, options)
+    if (options) {
+      const { deep, ssrContext, ...endpointOptions } = options
 
-    this._deep = deep
-    this._ssrContext = getServerContext(ssrContext)
+      this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
+      Object.assign(this.LocalEndpoint.prototype, endpointOptions)
+      Object.assign(this, JSON.parse(JSON.stringify({ deep, ssrContext })))
+    }
+
+    this._ssrContext = getServerContext(this.ssrContext)
     this._server = vm.$isServer
     const watchOption = {
       immediate: true,
@@ -101,7 +105,7 @@ export default class VueChimera {
       })
     }
 
-    const endpoint = new this.LocalEndpoint(value, initial)
+    const endpoint = new (this.LocalEndpoint || BaseEndpoint)(value, initial)
 
     if (!this._server && !initial && endpoint.key && endpoint.prefetch && this._ssrContext) {
       initial = this._ssrContext[value.key]
