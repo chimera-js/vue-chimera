@@ -82,7 +82,7 @@ describe('test-execution', function () {
 
     expect(endpoint.loading).toBeFalsy()
 
-    endpoint.fetch().then(res => {
+    endpoint.fetch().then(() => {
       expect(endpoint.status).toBe(200)
       expect(endpoint.data).toEqual(data)
       expect(endpoint.headers).toEqual(headers)
@@ -105,7 +105,7 @@ describe('test-execution', function () {
     ])
 
     expect(endpoint.loading).toBeFalsy()
-    endpoint.send().then(done).catch(err => {
+    endpoint.send().then(done).catch(() => {
       expect(endpoint.loading).toBeFalsy()
       expect(endpoint.status).toBe(501)
       expect(endpoint.error).toEqual(data)
@@ -154,7 +154,7 @@ describe('test-transformers', function () {
 
     endpoint.setTransformer({ response: tr })
 
-    endpoint.fetch().then(res => {
+    endpoint.fetch().then(() => {
       expect(endpoint.data).toEqual(tr(data))
       done()
     }).catch(Promise.reject)
@@ -171,7 +171,7 @@ describe('test-transformers', function () {
 
     endpoint.fetch()
       .then(done)
-      .catch(err => {
+      .catch(() => {
         expect(endpoint.error).toEqual(tr(data))
         done()
       })

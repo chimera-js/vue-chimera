@@ -53,7 +53,6 @@ describe('test-memory-cache', function () {
 
 describe('test-storage-cache', function () {
   beforeAll(() => {
-    let store = {}
     global.window.localStorage = new MemoryCache()
   })
   it('should work', async function () {

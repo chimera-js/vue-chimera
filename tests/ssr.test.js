@@ -9,7 +9,7 @@ Vue.use(VueChimera, {
 
 describe('test-server-side-rendering', function () {
   it('should ', async function () {
-    const result = await render(Vue.extend({
+    await render(Vue.extend({
       render (h) {
         return h('span', {}, [this.$chimera.users.loading ? 't' : 'f'])
       },

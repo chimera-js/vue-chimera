@@ -13,5 +13,5 @@ exports.serializeStates = function () {
 }
 
 exports.exportStates = function (attachTo, globalName) {
-  return `${attachTo}.${globalName} = ${serializeStates()};`
+  return `${attachTo}.${globalName} = ${exports.serializeStates()};`
 }

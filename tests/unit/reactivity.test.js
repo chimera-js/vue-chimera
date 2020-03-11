@@ -45,7 +45,7 @@ describe('vue-test-reactivity', function () {
       await p
       await app.$nextTick()
 
-      watchers.forEach((w, i) => {
+      watchers.forEach((w) => {
         expect(w).toBeCalled()
       })
       expect(app.users.data).toEqual(responseData)

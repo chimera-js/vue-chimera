@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import VueChimera from '../../src/VueChimera'
 import Endpoint from '../../src/Endpoint'
-import NullEndpoint from '../../src/Endpoint'
+import NullEndpoint from '../../src/NullEndpoint'
 
 global.window = {
   __STATE__: {
