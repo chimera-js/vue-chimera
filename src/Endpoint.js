@@ -111,9 +111,6 @@ export default class Endpoint {
         }
       }
 
-      this.loading = true
-      this.emit(events.LOADING)
-
       let { request } = this
       if (isPlainObject(extraOptions)) {
         // Merge extra options
@@ -122,6 +119,9 @@ export default class Endpoint {
         }
         request = Object.assign({}, request, extraOptions)
       }
+
+      this.loading = true
+      this.emit(events.LOADING)
 
       // Finally make request
       this.http.request(request, this).then(res => {

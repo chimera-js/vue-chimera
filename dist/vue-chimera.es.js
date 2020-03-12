@@ -1181,38 +1181,36 @@ var StorageCache = /*#__PURE__*/function (_MemoryCache) {
   return StorageCache;
 }(MemoryCache);
 
-var plugin = {
-  options: {
-    baseURL: null,
-    cache: null,
-    debounce: 50,
-    deep: true,
-    keepData: true,
-    auto: 'get',
-    // false, true, '%METHOD%',
-    prefetch: null,
-    prefetchTimeout: 4000,
-    transformer: null,
-    ssrContext: null
-  },
-  install: function install(Vue) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    options = mergeExistingKeys(this.options, options);
-    Vue.mixin(mixin);
-    Vue.component('chimera-endpoint', ChimeraEndpoint);
+var DEFAULT_OPTIONS = {
+  baseURL: null,
+  cache: null,
+  debounce: 50,
+  deep: true,
+  keepData: true,
+  auto: 'get',
+  // false, true, '%METHOD%',
+  prefetch: null,
+  prefetchTimeout: 4000,
+  transformer: null,
+  ssrContext: null
+};
+function install(Vue) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  options = mergeExistingKeys({}, DEFAULT_OPTIONS, options);
+  Vue.mixin(mixin);
+  Vue.component('chimera-endpoint', ChimeraEndpoint);
 
-    var _options = options,
-        deep = _options.deep,
-        ssrContext = _options.ssrContext,
-        endpointOptions = _objectWithoutProperties(_options, ["deep", "ssrContext"]);
+  var _options = options,
+      deep = _options.deep,
+      ssrContext = _options.ssrContext,
+      endpointOptions = _objectWithoutProperties(_options, ["deep", "ssrContext"]);
 
-    Object.assign(Endpoint.prototype, endpointOptions);
-    Object.assign(VueChimera.prototype, {
-      deep: deep,
-      ssrContext: ssrContext
-    });
-  }
-}; // Auto-install
+  Object.assign(Endpoint.prototype, endpointOptions);
+  Object.assign(VueChimera.prototype, {
+    deep: deep,
+    ssrContext: ssrContext
+  });
+} // Auto-install
 
 var GlobalVue = null;
 /* istanbul ignore if */
@@ -1228,8 +1226,8 @@ if (typeof window !== 'undefined') {
 
 
 if (GlobalVue) {
-  GlobalVue.use(plugin, plugin.options);
+  GlobalVue.use(install, DEFAULT_OPTIONS);
 }
 
-export default plugin;
-export { CANCEL, ERROR, LOADING, MemoryCache, SUCCESS, StorageCache, TIMEOUT };
+export default install;
+export { CANCEL, ERROR, LOADING, MemoryCache, SUCCESS, StorageCache, TIMEOUT, install };

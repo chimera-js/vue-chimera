@@ -1,9 +1,6 @@
 import './vue'
-import Vue, { PluginFunction, PluginObject } from 'vue'
+import { PluginFunction } from 'vue'
 
-export default class VueChimera implements PluginObject<{}>{
-    [key: string]: any
-    install: PluginFunction<{}>
+export const install : PluginFunction<{}>;
 
-    static install(vue: typeof Vue, options?:{} | undefined): void
-}
+export default install

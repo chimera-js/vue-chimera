@@ -15,6 +15,10 @@ function createAxios (config) {
 export default {
   request (request, endpoint) {
     const axios = endpoint.axios ? createAxios(endpoint.axios) : Axios
+    if ((request.method || 'get') !== 'get' && request.params) {
+      request.data = request.params
+      delete request.params
+    }
     return axios.request({
       ...request,
       cancelToken: new CancelToken(c => { endpoint._canceler = c })

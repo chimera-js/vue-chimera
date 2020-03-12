@@ -31,21 +31,6 @@ export function install (Vue, options = {}) {
   })
 }
 
-// Auto-install
-let GlobalVue = null
-/* istanbul ignore if */
-/* istanbul ignore else */
-if (typeof window !== 'undefined') {
-  GlobalVue = window.Vue
-} else if (typeof global !== 'undefined') {
-  GlobalVue = global.Vue
-}
-
-/* istanbul ignore if */
-if (GlobalVue) {
-  GlobalVue.use(install, DEFAULT_OPTIONS)
-}
-
 export default install
 
 export * from './events'
