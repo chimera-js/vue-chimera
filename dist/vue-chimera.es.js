@@ -396,6 +396,12 @@ function createAxios(config) {
 var axiosAdapter = {
   request: function request(_request, endpoint) {
     var axios = endpoint.axios ? createAxios(endpoint.axios) : Axios;
+
+    if ((_request.method || 'get') !== 'get' && _request.params) {
+      _request.data = _request.params;
+      delete _request.params;
+    }
+
     return axios.request(_objectSpread2({}, _request, {
       cancelToken: new CancelToken(function (c) {
         endpoint._canceler = c;
@@ -528,10 +534,6 @@ var Endpoint = /*#__PURE__*/function () {
           }
         }
 
-        _this2.loading = true;
-
-        _this2.emit(LOADING);
-
         var request = _this2.request;
 
         if (isPlainObject(extraOptions)) {
@@ -541,7 +543,11 @@ var Endpoint = /*#__PURE__*/function () {
           }
 
           request = Object.assign({}, request, extraOptions);
-        } // Finally make request
+        }
+
+        _this2.loading = true;
+
+        _this2.emit(LOADING); // Finally make request
 
 
         _this2.http.request(request, _this2).then(function (res) {
@@ -911,6 +917,7 @@ var VueChimera = /*#__PURE__*/function () {
 
 var mixin = {
   beforeCreate: function beforeCreate() {
+    console.log('sssssJ');
     var vmOptions = this.$options;
     var chimera; // Stop if instance doesn't have chimera or already initialized
 
@@ -1196,7 +1203,7 @@ var DEFAULT_OPTIONS = {
 };
 function install(Vue) {
   var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-  options = mergeExistingKeys({}, DEFAULT_OPTIONS, options);
+  options = Object.assign({}, DEFAULT_OPTIONS, options);
   Vue.mixin(mixin);
   Vue.component('chimera-endpoint', ChimeraEndpoint);
 
@@ -1209,24 +1216,21 @@ function install(Vue) {
   Object.assign(VueChimera.prototype, {
     deep: deep,
     ssrContext: ssrContext
-  });
-} // Auto-install
+  }); // const merge = Vue.config.optionMergeStrategies.methods
 
-var GlobalVue = null;
-/* istanbul ignore if */
+  Vue.config.optionMergeStrategies.chimera = function (toVal, fromVal, vm) {
+    if (!toVal) return fromVal;
+    if (!fromVal) return toVal;
+    if (typeof fromVal === 'function') fromVal = fromVal.call(vm);
+    if (typeof toVal === 'function') toVal = toVal.call(vm);
+    var newVal = Object.assign({}, toVal, fromVal);
 
-/* istanbul ignore else */
+    if (toVal.$options && fromVal.$options) {
+      newVal.$options = Object.assign({}, toVal.$options, fromVal.$options);
+    }
 
-if (typeof window !== 'undefined') {
-  GlobalVue = window.Vue;
-} else if (typeof global !== 'undefined') {
-  GlobalVue = global.Vue;
-}
-/* istanbul ignore if */
-
-
-if (GlobalVue) {
-  GlobalVue.use(install, DEFAULT_OPTIONS);
+    return newVal;
+  };
 }
 
 export default install;

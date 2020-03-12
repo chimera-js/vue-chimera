@@ -2,7 +2,6 @@ import mixin from './mixin'
 import VueChimera from './VueChimera'
 import ChimeraEndpoint from './components/ChimeraEndpoint'
 import Endpoint from './Endpoint'
-import { mergeExistingKeys } from './utils'
 
 const DEFAULT_OPTIONS = {
   baseURL: null,
@@ -18,7 +17,7 @@ const DEFAULT_OPTIONS = {
 }
 
 export function install (Vue, options = {}) {
-  options = mergeExistingKeys({}, DEFAULT_OPTIONS, options)
+  options = Object.assign({}, DEFAULT_OPTIONS, options)
 
   Vue.mixin(mixin)
   Vue.component('chimera-endpoint', ChimeraEndpoint)
@@ -29,6 +28,22 @@ export function install (Vue, options = {}) {
     deep,
     ssrContext
   })
+
+  // const merge = Vue.config.optionMergeStrategies.methods
+  Vue.config.optionMergeStrategies.chimera = function (toVal, fromVal, vm) {
+    if (!toVal) return fromVal
+    if (!fromVal) return toVal
+
+    if (typeof fromVal === 'function') fromVal = fromVal.call(vm)
+    if (typeof toVal === 'function') toVal = toVal.call(vm)
+
+    const newVal = Object.assign({}, toVal, fromVal)
+    if (toVal.$options && fromVal.$options) {
+      newVal.$options = Object.assign({}, toVal.$options, fromVal.$options)
+    }
+
+    return newVal
+  }
 }
 
 export default install
