@@ -99,8 +99,6 @@ describe('test-vue-chimera', function () {
 
   it('should start interval', async function () {
     jest.useFakeTimers()
-    const startSpy = jest.spyOn(Endpoint.prototype, 'startInterval')
-    const stopSpy = jest.spyOn(Endpoint.prototype, 'stopInterval')
     const chimera = chimeraFactory({
       test: {
         url: 'interval',
@@ -110,11 +108,18 @@ describe('test-vue-chimera', function () {
     })
 
     const endpoints = chimera.endpoints
-
-    expect(startSpy).toBeCalledTimes(1)
+    const spy = jest.spyOn(endpoints.test, 'reload')
     expect(endpoints.test.looping).toBeTruthy()
 
+    jest.runOnlyPendingTimers()
+    expect(spy).toBeCalledTimes(1)
+
+    jest.runOnlyPendingTimers()
+    expect(spy).toBeCalledTimes(2)
+
     chimera.endpoints.test.stopInterval()
-    expect(stopSpy).toBeCalled()
+
+    jest.runOnlyPendingTimers()
+    expect(spy).toBeCalledTimes(2)
   })
 })

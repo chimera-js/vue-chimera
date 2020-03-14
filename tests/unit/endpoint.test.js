@@ -131,6 +131,27 @@ describe('test-execution', function () {
       b: 3
     })
   })
+
+  it('should send headers', async function () {
+    const headers = { 'X-Test': 'TEST' }
+    server.respondWith('GET', '/users', [
+      200,
+      { 'Content-Type': 'application/json' },
+      JSON.stringify(data)
+    ])
+    let endpoint = new Endpoint({
+      url: '/users',
+      headers
+    })
+    let spy = jest.spyOn(endpoint.http, 'request')
+    await endpoint.fetch()
+    await endpoint.fetch(true, {
+      headers: { 'X-Test2': 'TEST2' }
+    })
+
+    expect(spy.mock.calls[0][0].headers).toEqual(headers)
+    expect(spy.mock.calls[1][0].headers).toEqual({ 'X-Test': 'TEST', 'X-Test2': 'TEST2' })
+  })
 })
 
 describe('test-transformers', function () {
@@ -274,4 +295,25 @@ describe('test-misc', function () {
     expect(isPlainObject(endpoint.response)).toBeTruthy()
     expect(endpoint.toString()).toEqual(JSON.stringify(endpoint.response))
   })
+  it('should be light', async function () {
+    let endpoint = new Endpoint({
+      url: 'test',
+      light: true
+    })
+    endpoint.http = {
+      request (request, endpoint) {
+        return Promise.resolve({
+          data: {},
+          headers: {},
+          status: 200
+        })
+      }
+    }
+
+    await endpoint.fetch()
+
+    const obj = JSON.parse(JSON.stringify(endpoint.response))
+    expect(obj).not.toHaveProperty('lastLoaded')
+    expect(obj).not.toHaveProperty('headers')
+  });
 })

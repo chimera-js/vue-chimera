@@ -6,9 +6,9 @@ import axiosAdapter from './http/axiosAdapter'
 const INITIAL_RESPONSE = {
   status: null,
   data: null,
-  headers: null,
+  headers: undefined,
   error: null,
-  lastLoaded: null
+  lastLoaded: undefined
 }
 
 const INITIAL_REQUEST = {
@@ -34,6 +34,7 @@ export default class Endpoint {
       transformer,
       interval,
       on: listeners,
+      headers,
       ...options
     } = opts
 
@@ -50,7 +51,7 @@ export default class Endpoint {
     this.loading = false
 
     // Set Events
-    this.listeners = {}
+    this.listeners = Object.create(null)
     if (isPlainObject(listeners)) {
       for (const key in listeners) {
         this.on(key, listeners[key])
@@ -58,6 +59,7 @@ export default class Endpoint {
     }
 
     Object.assign(this, options)
+    this.requestHeaders = Object.assign({}, this.headers, headers || {})
 
     // Handle type on auto
     if (typeof this.auto === 'string') {
@@ -114,9 +116,11 @@ export default class Endpoint {
       let { request } = this
       if (isPlainObject(extraOptions)) {
         // Merge extra options
-        if (extraOptions.params) {
-          extraOptions.params = Object.assign({}, request.params, extraOptions.params)
-        }
+        ['params', 'headers'].forEach(key => {
+          if (extraOptions[key]) {
+            extraOptions[key] = Object.assign({}, request[key], extraOptions[key])
+          }
+        })
         request = Object.assign({}, request, extraOptions)
       }
 
@@ -161,9 +165,8 @@ export default class Endpoint {
 
   getCacheKey () {
     if (this.key) return this.key
-    return (typeof window !== 'undefined' && typeof btoa !== 'undefined'
-      ? window.btoa
-      : x => x)(Object.values(this.request).join(':'))
+    /* istanbul ignore next */
+    throw new Error('[Chimera]: cannot use cache without "key" property')
   }
 
   getCache () {
@@ -182,10 +185,12 @@ export default class Endpoint {
     res = res || {}
     const isSuccessful = String(res.status).charAt(0) === '2'
     this.status = res.status
-    this.headers = res.headers || {}
-    this.lastLoaded = new Date()
     this.data = isSuccessful ? this.responseTransformer(res.data, this) : null
     this.error = !isSuccessful ? this.errorTransformer(res.data, this) : null
+    if (!this.light) {
+      this.headers = res.headers || {}
+      this.lastLoaded = new Date()
+    }
   }
 
   startInterval (ms) {
@@ -215,7 +220,8 @@ export default class Endpoint {
     return mergeExistingKeys(INITIAL_REQUEST, this, {
       baseURL: this.baseURL,
       timeout: this.timeout,
-      headers: this.headers
+      params: this.params,
+      headers: this.requestHeaders
     })
   }
 
