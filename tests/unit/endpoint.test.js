@@ -245,5 +245,5 @@ describe('test-misc', function () {
     const obj = JSON.parse(JSON.stringify(endpoint.response))
     expect(obj).not.toHaveProperty('lastLoaded')
     expect(obj).not.toHaveProperty('headers')
-  });
+  })
 })

@@ -1,6 +1,6 @@
 {
   "name": "vue-chimera",
-  "version": "4.0.0-alpha3",
+  "version": "3.0.0-rc.1",
   "description": "VueJS RESTful client with reactive endpoints and features",
   "main": "dist/vue-chimera.umd.js",
   "module": "dist/vue-chimera.es.js",
@@ -40,7 +40,6 @@
   "homepage": "https://github.com/chimera-js/vue-chimera#readme",
   "dependencies": {
     "axios": "^0.10.0",
-    "lodash": ">=4.17.11",
     "p-debounce": "^1.0.0"
   },
   "devDependencies": {
@@ -62,7 +61,6 @@
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-terser": "^5.3.0",
     "sinon": "^6.1.4",
-    "uglify-es": "^3.1.6",
     "vue": "^2.6.11",
     "vue-jest": "^4.0.0-beta.2",
     "vue-server-renderer": "^2.6.11",

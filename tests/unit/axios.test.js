@@ -1,5 +1,5 @@
 import axiosAdapter from '../../src/http/axiosAdapter'
-import Axios from "axios";
+import Axios from 'axios'
 
 describe('test-axios-adapter', function () {
   it('should instantiate axios correctly', function () {

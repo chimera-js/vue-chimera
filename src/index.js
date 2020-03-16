@@ -10,7 +10,7 @@ const DEFAULT_OPTIONS = {
   deep: true,
   keepData: true,
   auto: 'get', // false, true, '%METHOD%',
-  prefetch: null,
+  prefetch: true,
   prefetchTimeout: 4000,
   transformer: null,
   ssrContext: null

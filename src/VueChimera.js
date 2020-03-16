@@ -66,7 +66,7 @@ export default class VueChimera {
   initServer () {
     this._vm.$_chimeraPromises = []
     Object.values(this.endpoints).forEach(endpoint => {
-      if (endpoint.prefetch) {
+      if (endpoint.auto && endpoint.prefetch) {
         /* istanbul ignore if */
         if (!endpoint.key) {
           warn('used prefetch with no key associated with endpoint!')

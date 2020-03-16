@@ -141,5 +141,5 @@ describe('test-vue-chimera', function () {
     })
 
     expect(chimera.endpoints.test.data).toEqual(context.test.data)
-  });
+  })
 })

@@ -1,23 +1,15 @@
-// Light Resources
-
-//Merging Strategy
-
-Load More
-
-//Components
-
-Short polling
-
-// Typescript support
-
 Document
-
-// Test
-
-ESlint plugin
-
-Plugin able
+Vue CLI plugin
 
 Fetch
+ESlint plugin
+Load More
+Short polling
+Plugin able
 
-Vue CLI plugin
+
+// Light Resources
+//Merging Strategy
+//Components
+// Typescript support
+// Test

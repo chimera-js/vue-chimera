@@ -1,7 +1,7 @@
-import Vue from 'vue'
 import { render } from '@vue/server-test-utils'
 import { createLocalVue } from '@vue/test-utils'
 import VueChimera from '../src/index'
+import ssr from '../ssr/index'
 
 let localVue
 
@@ -23,8 +23,8 @@ beforeEach(() => {
 })
 
 describe('test-server-side-rendering', function () {
-  it('should ', async function () {
-    const result = await render({
+  it('should render correctly', async function () {
+    await render({
       name: 'ssr-component',
       render (h) {
         return h('span', {}, [this.$chimera.users.loading ? 't' : 'f'])
@@ -41,5 +41,7 @@ describe('test-server-side-rendering', function () {
     }, {
       localVue
     })
+
+    expect(ssr.getStates().test.data).toEqual({ test: 1 })
   })
 })
