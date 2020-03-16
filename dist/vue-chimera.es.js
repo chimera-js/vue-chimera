@@ -328,15 +328,6 @@ var CANCEL = 'cancel';
 var LOADING = 'loading';
 var TIMEOUT = 'timeout';
 
-var events = /*#__PURE__*/Object.freeze({
-  __proto__: null,
-  SUCCESS: SUCCESS,
-  ERROR: ERROR,
-  CANCEL: CANCEL,
-  LOADING: LOADING,
-  TIMEOUT: TIMEOUT
-});
-
 function isPlainObject(value) {
   return _typeof(value) === 'object' && value && Object.prototype.toString(value) === '[object Object]';
 }
@@ -394,19 +385,31 @@ function createAxios(config) {
 }
 
 var axiosAdapter = {
-  request: function request(_request, endpoint) {
-    var axios = endpoint.axios ? createAxios(endpoint.axios) : Axios;
+  request: function request(endpoint) {
+    var axios = createAxios(endpoint.axios);
 
-    if ((_request.method || 'get') !== 'get' && _request.params) {
-      _request.data = _request.params;
-      delete _request.params;
-    }
+    var request = function (_ref) {
+      var url = _ref.url,
+          method = _ref.method,
+          baseURL = _ref.baseURL,
+          headers = _ref.requestHeaders,
+          timeout = _ref.timeout;
+      return {
+        url: url,
+        method: method,
+        baseURL: baseURL,
+        headers: headers,
+        timeout: timeout
+      };
+    }(endpoint);
 
-    return axios.request(_objectSpread2({}, _request, {
-      cancelToken: new CancelToken(function (c) {
-        endpoint._canceler = c;
-      })
-    }));
+    request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params;
+    request.cancelToken = new CancelToken(function (c) {
+      endpoint._canceler = c;
+    });
+    return axios.request(request)["catch"](function (err) {
+      throw Object.assign(err, err.response);
+    });
   },
   cancel: function cancel(endpoint) {
     if (typeof endpoint._canceler === 'function') endpoint._canceler();
@@ -414,23 +417,18 @@ var axiosAdapter = {
   },
   isCancelError: function isCancelError(err) {
     return Axios.isCancel(err);
+  },
+  isTimeoutError: function isTimeoutError(err) {
+    return err.message && !err.response && err.message.indexOf('timeout') !== -1;
   }
 };
 
 var INITIAL_RESPONSE = {
   status: null,
   data: null,
-  headers: null,
+  headers: undefined,
   error: null,
-  lastLoaded: null
-};
-var INITIAL_REQUEST = {
-  url: null,
-  baseURL: null,
-  method: 'get',
-  params: null,
-  timeout: 0,
-  headers: null
+  lastLoaded: undefined
 };
 
 var Endpoint = /*#__PURE__*/function () {
@@ -447,12 +445,17 @@ var Endpoint = /*#__PURE__*/function () {
       throw new Error('[Chimera]: invalid options');
     }
 
+    opts = this.options ? this.constructor.applyDefaults(this.options, opts) : opts;
+
     var _opts = opts,
         debounce = _opts.debounce,
         transformer = _opts.transformer,
         interval = _opts.interval,
+        headers = _opts.headers,
         listeners = _opts.on,
-        options = _objectWithoutProperties(_opts, ["debounce", "transformer", "interval", "on"]);
+        auto = _opts.auto,
+        prefetch = _opts.prefetch,
+        options = _objectWithoutProperties(_opts, ["debounce", "transformer", "interval", "headers", "on", "auto", "prefetch"]);
 
     options.method = (options.method || 'get').toLowerCase();
     this.fetchDebounced = debounce !== false ? pDebounce(this.fetch.bind(this), debounce || 50, {
@@ -463,7 +466,7 @@ var Endpoint = /*#__PURE__*/function () {
     this.prefetched = false;
     this.loading = false; // Set Events
 
-    this.listeners = {};
+    this.listeners = Object.create(null);
 
     if (isPlainObject(listeners)) {
       for (var key in listeners) {
@@ -471,17 +474,17 @@ var Endpoint = /*#__PURE__*/function () {
       }
     }
 
-    Object.assign(this, options); // Handle type on auto
+    Object.assign(this, options);
+    this.requestHeaders = headers; // Handle type on auto
 
-    if (typeof this.auto === 'string') {
-      this.auto = this.auto.toLowerCase() === this.method;
-    } else {
-      this.auto = Boolean(this.auto);
+    this.auto = typeof auto === 'string' ? auto.toLowerCase() === options.method : !!auto;
+    this.prefetch = prefetch != null ? prefetch : this.auto;
+    Object.assign(this, INITIAL_RESPONSE, initial || {});
+
+    if (!this.http) {
+      this.http = axiosAdapter;
     }
 
-    this.prefetch = this.prefetch != null ? this.prefetch : this.auto;
-    Object.assign(this, INITIAL_RESPONSE, initial || {});
-    this.http = axiosAdapter;
     interval && this.startInterval(interval);
   }
 
@@ -504,9 +507,7 @@ var Endpoint = /*#__PURE__*/function () {
   }, {
     key: "on",
     value: function on(event, handler) {
-      var listeners = this.listeners[event] || [];
-      listeners.push(handler);
-      this.listeners[event] = listeners;
+      this.listeners[event] = (this.listeners[event] || []).concat(handler);
       return this;
     }
   }, {
@@ -523,60 +524,53 @@ var Endpoint = /*#__PURE__*/function () {
     value: function fetch(force, extraOptions) {
       var _this2 = this;
 
-      return new Promise(function (resolve, reject) {
-        if (_this2.cache && !force) {
-          var cacheValue = _this2.getCache();
+      if (this.cache && !force) {
+        var cacheValue = this.getCache();
 
-          if (cacheValue) {
-            _this2.setResponse(cacheValue);
+        if (cacheValue) {
+          this.setResponse(cacheValue, true);
+          return Promise.resolve(cacheValue);
+        }
+      }
 
-            return resolve(cacheValue);
+      var request = this;
+
+      if (isPlainObject(extraOptions)) {
+        request = Object.create(this); // Merge extra options
+
+        if (extraOptions.params) extraOptions.params = Object.assign({}, request.params, extraOptions.params);
+        if (extraOptions.headers) extraOptions.requestHeaders = Object.assign({}, request.requestHeaders, extraOptions.headers);
+        Object.assign(request, extraOptions);
+      }
+
+      this.loading = true;
+      this.emit(LOADING);
+      return this.http.request(request).then(function (res) {
+        _this2.loading = false;
+
+        _this2.setResponse(res, true);
+
+        _this2.setCache(res);
+
+        _this2.emit(SUCCESS);
+
+        return res;
+      })["catch"](function (err) {
+        _this2.loading = false;
+
+        _this2.setResponse(err, false);
+
+        if (_this2.http.isCancelError(err)) {
+          _this2.emit(CANCEL);
+        } else {
+          if (_this2.http.isTimeoutError) {
+            _this2.emit(TIMEOUT);
           }
+
+          _this2.emit(ERROR);
         }
 
-        var request = _this2.request;
-
-        if (isPlainObject(extraOptions)) {
-          // Merge extra options
-          if (extraOptions.params) {
-            extraOptions.params = Object.assign({}, request.params, extraOptions.params);
-          }
-
-          request = Object.assign({}, request, extraOptions);
-        }
-
-        _this2.loading = true;
-
-        _this2.emit(LOADING); // Finally make request
-
-
-        _this2.http.request(request, _this2).then(function (res) {
-          _this2.loading = false;
-
-          _this2.setResponse(res);
-
-          _this2.setCache(res);
-
-          _this2.emit(SUCCESS);
-
-          resolve(res);
-        })["catch"](function (err) {
-          _this2.loading = false;
-
-          _this2.setResponse(err.response);
-
-          if (_this2.http.isCancelError(err)) {
-            _this2.emit(CANCEL);
-          } else {
-            if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-              _this2.emit(TIMEOUT);
-            }
-
-            _this2.emit(ERROR);
-          }
-
-          reject(err);
-        });
+        throw err;
       });
     }
   }, {
@@ -587,7 +581,7 @@ var Endpoint = /*#__PURE__*/function () {
   }, {
     key: "send",
     value: function send(params) {
-      return this.fetchDebounced(true, {
+      return this.fetch(true, {
         params: params
       });
     }
@@ -600,9 +594,9 @@ var Endpoint = /*#__PURE__*/function () {
     key: "getCacheKey",
     value: function getCacheKey() {
       if (this.key) return this.key;
-      return (typeof window !== 'undefined' && typeof btoa !== 'undefined' ? window.btoa : function (x) {
-        return x;
-      })(Object.values(this.request).join(':'));
+      /* istanbul ignore next */
+
+      throw new Error('[Chimera]: cannot use cache without "key" property');
     }
   }, {
     key: "getCache",
@@ -621,14 +615,16 @@ var Endpoint = /*#__PURE__*/function () {
     }
   }, {
     key: "setResponse",
-    value: function setResponse(res) {
+    value: function setResponse(res, success) {
       res = res || {};
-      var isSuccessful = String(res.status).charAt(0) === '2';
       this.status = res.status;
-      this.headers = res.headers || {};
-      this.lastLoaded = new Date();
-      this.data = isSuccessful ? this.responseTransformer(res.data, this) : null;
-      this.error = !isSuccessful ? this.errorTransformer(res.data, this) : null;
+      this.data = success ? this.responseTransformer(res.data, this) : null;
+      this.error = !success ? this.errorTransformer(res.data, this) : null;
+
+      if (!this.light) {
+        this.headers = res.headers || {};
+        this.lastLoaded = new Date();
+      }
     }
   }, {
     key: "startInterval",
@@ -666,23 +662,48 @@ var Endpoint = /*#__PURE__*/function () {
       return !!this._interval;
     }
   }, {
-    key: "request",
-    get: function get() {
-      return mergeExistingKeys(INITIAL_REQUEST, this, {
-        baseURL: this.baseURL,
-        timeout: this.timeout,
-        headers: this.headers
-      });
-    }
-  }, {
     key: "response",
     get: function get() {
       return mergeExistingKeys(INITIAL_RESPONSE, this);
+    }
+  }], [{
+    key: "applyDefaults",
+    value: function applyDefaults(base, options) {
+      if (!base) return options;
+      options = _objectSpread2({}, options);
+      var strats = this.optionMergeStrategies;
+      Object.keys(base).forEach(function (key) {
+        options[key] = key in options && strats[key] ? strats[key](base[key], options[key]) : key in options ? options[key] : base[key];
+      });
+      return options;
     }
   }]);
 
   return Endpoint;
 }();
+var strats = Endpoint.optionMergeStrategies = {};
+
+strats.headers = strats.params = strats.transformers = function (base, opts) {
+  if (isPlainObject(base) && isPlainObject(opts)) {
+    return _objectSpread2({}, base, {}, opts);
+  }
+
+  return opts === undefined ? base : opts;
+};
+
+strats.on = function (fromVal, toVal) {
+  var value = _objectSpread2({}, fromVal || {});
+
+  Object.entries(toVal || {}).forEach(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+        event = _ref2[0],
+        handlers = _ref2[1];
+
+    var h = value[event];
+    value[event] = h ? [].concat(h).concat(handlers) : handlers;
+  });
+  return value;
+};
 
 var NullEndpoint = /*#__PURE__*/function (_Endpoint) {
   _inherits(NullEndpoint, _Endpoint);
@@ -726,7 +747,7 @@ var VueChimera = /*#__PURE__*/function () {
           ssrContext = options.ssrContext,
           endpointOptions = _objectWithoutProperties(options, ["deep", "ssrContext"]);
 
-      this.LocalEndpoint = /*#__PURE__*/function (_BaseEndpoint) {
+      var LocalEndpoint = this.LocalEndpoint = /*#__PURE__*/function (_BaseEndpoint) {
         _inherits(Endpoint, _BaseEndpoint);
 
         function Endpoint() {
@@ -738,7 +759,7 @@ var VueChimera = /*#__PURE__*/function () {
         return Endpoint;
       }(Endpoint);
 
-      Object.assign(this.LocalEndpoint.prototype, endpointOptions);
+      LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions);
       Object.assign(this, JSON.parse(JSON.stringify({
         deep: deep,
         ssrContext: ssrContext
@@ -826,6 +847,7 @@ var VueChimera = /*#__PURE__*/function () {
       this._vm.$_chimeraPromises = [];
       Object.values(this.endpoints).forEach(function (endpoint) {
         if (endpoint.prefetch) {
+          /* istanbul ignore if */
           if (!endpoint.key) {
             warn('used prefetch with no key associated with endpoint!');
             return;
@@ -845,7 +867,7 @@ var VueChimera = /*#__PURE__*/function () {
     key: "updateEndpoint",
     value: function updateEndpoint(key, newValue, oldValue) {
       var oldEndpoint = this.endpoints[key];
-      var newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.toObj() : null);
+      var newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.response : null);
 
       if (oldValue && oldEndpoint) {
         oldEndpoint.stopInterval();
@@ -869,17 +891,21 @@ var VueChimera = /*#__PURE__*/function () {
       };
 
       if (isPlainObject(value.on)) {
-        Object.entries(value.on).forEach(function (_ref2) {
-          var _ref3 = _slicedToArray(_ref2, 2),
-              event = _ref3[0],
-              handler = _ref3[1];
-
+        var bindVm = function bindVm(handler) {
           if (typeof handler === 'function') {
             handler = handler.bind(_this4._vm);
           }
 
           if (typeof handler === 'string') handler = _this4._vm[handler];
-          value.on[event] = handler;
+          return handler;
+        };
+
+        Object.entries(value.on).forEach(function (_ref2) {
+          var _ref3 = _slicedToArray(_ref2, 2),
+              event = _ref3[0],
+              handlers = _ref3[1];
+
+          value.on[event] = Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers);
         });
       }
 
@@ -917,7 +943,6 @@ var VueChimera = /*#__PURE__*/function () {
 
 var mixin = {
   beforeCreate: function beforeCreate() {
-    console.log('sssssJ');
     var vmOptions = this.$options;
     var chimera; // Stop if instance doesn't have chimera or already initialized
 
@@ -991,10 +1016,13 @@ var ChimeraEndpoint = {
   inheritAttrs: false,
   props: {
     options: {
-      type: [Object, String],
-      required: true
+      type: [Object, String]
     },
     tag: {
+      type: String,
+      "default": null
+    },
+    ssrContext: {
       type: String,
       "default": null
     }
@@ -1003,9 +1031,6 @@ var ChimeraEndpoint = {
     return {
       endpoint: this.getEndpoint()
     };
-  },
-  beforeCreate: function beforeCreate() {
-    this._ssrContext = getServerContext(this.$chimeraOptions.ssrContext);
   },
   render: function render(h) {
     var result = this.$scopedSlots["default"](this.endpoint);
@@ -1045,12 +1070,15 @@ var ChimeraEndpoint = {
       if (typeof value === 'string') value = {
         url: value
       };
-      var endpoint = new Endpoint(_objectSpread2({}, this.$chimeraOptions, {}, value));
-      Object.values(events).forEach(function (ev) {
-        endpoint.on(ev, function () {
-          return _this.$emit(ev, endpoint);
-        });
-      });
+      var endpoint = new Endpoint(value);
+
+      endpoint.emit = function (ev) {
+        Endpoint.prototype.emit.call(endpoint, ev);
+
+        _this.$emit(ev, endpoint);
+      };
+
+      this._ssrContext = getServerContext(this.ssrContext || VueChimera.prototype.ssrContext);
 
       if (!this._server && endpoint.key && endpoint.prefetch && this._ssrContext) {
         var initial = this._ssrContext[endpoint.key];
@@ -1212,7 +1240,7 @@ function install(Vue) {
       ssrContext = _options.ssrContext,
       endpointOptions = _objectWithoutProperties(_options, ["deep", "ssrContext"]);
 
-  Object.assign(Endpoint.prototype, endpointOptions);
+  Endpoint.prototype.options = endpointOptions;
   Object.assign(VueChimera.prototype, {
     deep: deep,
     ssrContext: ssrContext
@@ -1223,13 +1251,9 @@ function install(Vue) {
     if (!fromVal) return toVal;
     if (typeof fromVal === 'function') fromVal = fromVal.call(vm);
     if (typeof toVal === 'function') toVal = toVal.call(vm);
-    var newVal = Object.assign({}, toVal, fromVal);
-
-    if (toVal.$options && fromVal.$options) {
-      newVal.$options = Object.assign({}, toVal.$options, fromVal.$options);
-    }
-
-    return newVal;
+    return Object.assign({}, toVal, fromVal, toVal.$options && fromVal.$options ? {
+      $options: Endpoint.applyDefaults(toVal.$options, fromVal.$options)
+    } : {});
   };
 }
 

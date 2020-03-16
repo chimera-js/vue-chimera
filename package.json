@@ -1,6 +1,6 @@
 {
   "name": "vue-chimera",
-  "version": "4.0.0-alpha1",
+  "version": "4.0.0-alpha3",
   "description": "VueJS RESTful client with reactive endpoints and features",
   "main": "dist/vue-chimera.umd.js",
   "module": "dist/vue-chimera.es.js",
@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/chimera-js/vue-chimera#readme",
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.10.0",
     "lodash": ">=4.17.11",
     "p-debounce": "^1.0.0"
   },

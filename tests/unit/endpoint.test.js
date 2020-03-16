@@ -4,6 +4,7 @@ import NullEndpoint from '../../src/NullEndpoint'
 import * as events from '../../src/events'
 import axios from 'axios'
 import { isPlainObject } from '../../src/utils'
+import axiosMock from '../mocks/axios.mock'
 
 let server
 let endpoint
@@ -30,15 +31,15 @@ describe('test-instantiation', function () {
   it('should instantiate Endpoint from string', function () {
     let r = new Endpoint('/users')
     expect(r).toBeInstanceOf(Endpoint)
-    expect(r.request.method.toLowerCase()).toBe('get')
-    expect(r.request.url).toBe('/users')
+    expect(r.method.toLowerCase()).toBe('get')
+    expect(r.url).toBe('/users')
   })
 
   it('should instantiate Endpoint from object', function () {
     let tr = (v) => v
     let r = new Endpoint({
       url: '/u',
-      prefetch: false,
+      auto: false,
       method: 'POST',
       debounce: false,
       transformer: {
@@ -47,8 +48,8 @@ describe('test-instantiation', function () {
       }
     })
     expect(r).toBeInstanceOf(Endpoint)
-    expect(r.request.method.toLowerCase()).toBe('post')
-    expect(r.request.url).toBe('/u')
+    expect(r.method.toLowerCase()).toBe('post')
+    expect(r.url).toBe('/u')
     expect(r.responseTransformer).toBe(tr)
     expect(r.errorTransformer).toBe(tr)
     expect(r.fetch === r.fetchDebounced).toBeTruthy()
@@ -116,17 +117,15 @@ describe('test-execution', function () {
   })
 
   it('should send with extra', async function () {
-    endpoint.http = {
-      request: (o) => Promise.resolve(o)
-    }
+    endpoint.axios = axiosMock()
     endpoint.params = {
       a: 1,
       b: 2
     }
 
-    const options = await endpoint.send({ b: 3 })
+    await endpoint.send({ b: 3 })
 
-    expect(options.params).toEqual({
+    expect(endpoint.axios.mock.calls[0][0].params).toEqual({
       a: 1,
       b: 3
     })
@@ -134,23 +133,19 @@ describe('test-execution', function () {
 
   it('should send headers', async function () {
     const headers = { 'X-Test': 'TEST' }
-    server.respondWith('GET', '/users', [
-      200,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify(data)
-    ])
+    const axios = axiosMock()
     let endpoint = new Endpoint({
       url: '/users',
-      headers
+      headers,
+      axios
     })
-    let spy = jest.spyOn(endpoint.http, 'request')
     await endpoint.fetch()
+    expect(axios.mock.calls[0][0].headers).toEqual(headers)
+
     await endpoint.fetch(true, {
       headers: { 'X-Test2': 'TEST2' }
     })
-
-    expect(spy.mock.calls[0][0].headers).toEqual(headers)
-    expect(spy.mock.calls[1][0].headers).toEqual({ 'X-Test': 'TEST', 'X-Test2': 'TEST2' })
+    expect(axios.mock.calls[1][0].headers).toEqual({ 'X-Test': 'TEST', 'X-Test2': 'TEST2' })
   })
 })
 
@@ -196,71 +191,6 @@ describe('test-transformers', function () {
         expect(endpoint.error).toEqual(tr(data))
         done()
       })
-  })
-})
-
-describe('test-events', function () {
-  it('should broadcast success event', function (done) {
-    server.respondWith('GET', '/users', [
-      200,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({})
-    ])
-
-    endpoint.fetch()
-
-    endpoint.on(events.SUCCESS, () => {
-      done()
-    })
-  })
-
-  it('should broadcast error event', function (done) {
-    server.respondWith('GET', '/users', [
-      501,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({})
-    ])
-
-    endpoint.fetch()
-
-    endpoint.on(events.ERROR, () => {
-      done()
-    })
-  })
-
-  it('should broadcast loading event', function (done) {
-    server.respondWith('GET', '/users', [
-      200,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({})
-    ])
-
-    endpoint.on(events.LOADING, () => {
-      done()
-    })
-
-    endpoint.fetch()
-  })
-
-  it('should broadcast cancel event', function (done) {
-    server.respondWith('GET', '/users', [
-      200,
-      { 'Content-Type': 'application/json' },
-      JSON.stringify({})
-    ])
-
-    endpoint = new Endpoint({
-      url: '/users',
-      auto: false,
-      on: {
-        [events.CANCEL] () {
-          done()
-        }
-      }
-    })
-
-    endpoint.fetch()
-    endpoint.cancel()
   })
 })
 

@@ -23,7 +23,7 @@ export function install (Vue, options = {}) {
   Vue.component('chimera-endpoint', ChimeraEndpoint)
 
   const { deep, ssrContext, ...endpointOptions } = options
-  Object.assign(Endpoint.prototype, endpointOptions)
+  Endpoint.prototype.options = endpointOptions
   Object.assign(VueChimera.prototype, {
     deep,
     ssrContext
@@ -37,12 +37,9 @@ export function install (Vue, options = {}) {
     if (typeof fromVal === 'function') fromVal = fromVal.call(vm)
     if (typeof toVal === 'function') toVal = toVal.call(vm)
 
-    const newVal = Object.assign({}, toVal, fromVal)
-    if (toVal.$options && fromVal.$options) {
-      newVal.$options = Object.assign({}, toVal.$options, fromVal.$options)
-    }
-
-    return newVal
+    return Object.assign({}, toVal, fromVal, toVal.$options && fromVal.$options ? {
+      $options: Endpoint.applyDefaults(toVal.$options, fromVal.$options)
+    } : {})
   }
 }
 

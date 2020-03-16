@@ -12,8 +12,8 @@ export default class VueChimera {
     if (options) {
       const { deep, ssrContext, ...endpointOptions } = options
 
-      this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
-      Object.assign(this.LocalEndpoint.prototype, endpointOptions)
+      const LocalEndpoint = this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
+      LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions)
       Object.assign(this, JSON.parse(JSON.stringify({ deep, ssrContext })))
     }
 
@@ -67,6 +67,7 @@ export default class VueChimera {
     this._vm.$_chimeraPromises = []
     Object.values(this.endpoints).forEach(endpoint => {
       if (endpoint.prefetch) {
+        /* istanbul ignore if */
         if (!endpoint.key) {
           warn('used prefetch with no key associated with endpoint!')
           return
@@ -78,7 +79,7 @@ export default class VueChimera {
 
   updateEndpoint (key, newValue, oldValue) {
     const oldEndpoint = this.endpoints[key]
-    const newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.toObj() : null)
+    const newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.response : null)
 
     if (oldValue && oldEndpoint) {
       oldEndpoint.stopInterval()
@@ -96,12 +97,15 @@ export default class VueChimera {
     if (typeof value === 'string') value = { url: value }
 
     if (isPlainObject(value.on)) {
-      Object.entries(value.on).forEach(([event, handler]) => {
+      const bindVm = (handler) => {
         if (typeof handler === 'function') {
           handler = handler.bind(this._vm)
         }
         if (typeof handler === 'string') handler = this._vm[handler]
-        value.on[event] = handler
+        return handler
+      }
+      Object.entries(value.on).forEach(([event, handlers]) => {
+        value.on[event] = (Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers))
       })
     }
 

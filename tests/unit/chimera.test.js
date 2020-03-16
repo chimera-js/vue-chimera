@@ -122,4 +122,24 @@ describe('test-vue-chimera', function () {
     jest.runOnlyPendingTimers()
     expect(spy).toBeCalledTimes(2)
   })
+
+  it('should apply ssr context', function () {
+    const vm = new Vue()
+    const context = window.__CONTEXT__ = {
+      test: {
+        data: { __test__: 1 }
+      }
+    }
+    const chimera = new VueChimera(vm, {
+      test: {
+        url: 'test',
+        key: 'test',
+        prefetch: true
+      }
+    }, {
+      ssrContext: '__CONTEXT__'
+    })
+
+    expect(chimera.endpoints.test.data).toEqual(context.test.data)
+  });
 })

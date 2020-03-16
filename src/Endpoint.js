@@ -11,15 +11,6 @@ const INITIAL_RESPONSE = {
   lastLoaded: undefined
 }
 
-const INITIAL_REQUEST = {
-  url: null,
-  baseURL: null,
-  method: 'get',
-  params: null,
-  timeout: 0,
-  headers: null
-}
-
 export default class Endpoint {
   constructor (opts, initial) {
     if (typeof opts === 'string') opts = { url: opts, key: opts }
@@ -29,12 +20,16 @@ export default class Endpoint {
       throw new Error('[Chimera]: invalid options')
     }
 
+    opts = this.options ? this.constructor.applyDefaults(this.options, opts) : opts
+
     let {
       debounce,
       transformer,
       interval,
-      on: listeners,
       headers,
+      on: listeners,
+      auto,
+      prefetch,
       ...options
     } = opts
 
@@ -59,19 +54,17 @@ export default class Endpoint {
     }
 
     Object.assign(this, options)
-    this.requestHeaders = Object.assign({}, this.headers, headers || {})
+    this.requestHeaders = headers
 
     // Handle type on auto
-    if (typeof this.auto === 'string') {
-      this.auto = this.auto.toLowerCase() === this.method
-    } else {
-      this.auto = Boolean(this.auto)
-    }
-    this.prefetch = this.prefetch != null ? this.prefetch : this.auto
+    this.auto = typeof auto === 'string' ? auto.toLowerCase() === options.method : !!auto
+    this.prefetch = prefetch != null ? prefetch : this.auto
 
     Object.assign(this, INITIAL_RESPONSE, initial || {})
 
-    this.http = axiosAdapter
+    if (!this.http) {
+      this.http = axiosAdapter
+    }
 
     interval && this.startInterval(interval)
   }
@@ -91,9 +84,7 @@ export default class Endpoint {
   }
 
   on (event, handler) {
-    let listeners = this.listeners[event] || []
-    listeners.push(handler)
-    this.listeners[event] = listeners
+    this.listeners[event] = (this.listeners[event] || []).concat(handler)
     return this
   }
 
@@ -104,50 +95,42 @@ export default class Endpoint {
   }
 
   fetch (force, extraOptions) {
-    return new Promise((resolve, reject) => {
-      if (this.cache && !force) {
-        let cacheValue = this.getCache()
-        if (cacheValue) {
-          this.setResponse(cacheValue)
-          return resolve(cacheValue)
+    if (this.cache && !force) {
+      let cacheValue = this.getCache()
+      if (cacheValue) {
+        this.setResponse(cacheValue, true)
+        return Promise.resolve(cacheValue)
+      }
+    }
+    let request = this
+    if (isPlainObject(extraOptions)) {
+      request = Object.create(this)
+      // Merge extra options
+      if (extraOptions.params) extraOptions.params = Object.assign({}, request.params, extraOptions.params)
+      if (extraOptions.headers) extraOptions.requestHeaders = Object.assign({}, request.requestHeaders, extraOptions.headers)
+      Object.assign(request, extraOptions)
+    }
+    this.loading = true
+    this.emit(events.LOADING)
+    return this.http.request(request).then(res => {
+      this.loading = false
+      this.setResponse(res, true)
+      this.setCache(res)
+      this.emit(events.SUCCESS)
+      return res
+    }).catch(err => {
+      this.loading = false
+      this.setResponse(err, false)
+      if (this.http.isCancelError(err)) {
+        this.emit(events.CANCEL)
+      } else {
+        if (this.http.isTimeoutError) {
+          this.emit(events.TIMEOUT)
         }
+        this.emit(events.ERROR)
       }
 
-      let { request } = this
-      if (isPlainObject(extraOptions)) {
-        // Merge extra options
-        ['params', 'headers'].forEach(key => {
-          if (extraOptions[key]) {
-            extraOptions[key] = Object.assign({}, request[key], extraOptions[key])
-          }
-        })
-        request = Object.assign({}, request, extraOptions)
-      }
-
-      this.loading = true
-      this.emit(events.LOADING)
-
-      // Finally make request
-      this.http.request(request, this).then(res => {
-        this.loading = false
-        this.setResponse(res)
-        this.setCache(res)
-        this.emit(events.SUCCESS)
-        resolve(res)
-      }).catch(err => {
-        this.loading = false
-        this.setResponse(err.response)
-        if (this.http.isCancelError(err)) {
-          this.emit(events.CANCEL)
-        } else {
-          if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-            this.emit(events.TIMEOUT)
-          }
-          this.emit(events.ERROR)
-        }
-
-        reject(err)
-      })
+      throw err
     })
   }
 
@@ -156,7 +139,7 @@ export default class Endpoint {
   }
 
   send (params) {
-    return this.fetchDebounced(true, { params })
+    return this.fetch(true, { params })
   }
 
   cancel () {
@@ -181,12 +164,11 @@ export default class Endpoint {
     this.cache && this.cache.removeItem(this.getCacheKey())
   }
 
-  setResponse (res) {
+  setResponse (res, success) {
     res = res || {}
-    const isSuccessful = String(res.status).charAt(0) === '2'
     this.status = res.status
-    this.data = isSuccessful ? this.responseTransformer(res.data, this) : null
-    this.error = !isSuccessful ? this.errorTransformer(res.data, this) : null
+    this.data = success ? this.responseTransformer(res.data, this) : null
+    this.error = !success ? this.errorTransformer(res.data, this) : null
     if (!this.light) {
       this.headers = res.headers || {}
       this.lastLoaded = new Date()
@@ -216,15 +198,6 @@ export default class Endpoint {
     return !!this._interval
   }
 
-  get request () {
-    return mergeExistingKeys(INITIAL_REQUEST, this, {
-      baseURL: this.baseURL,
-      timeout: this.timeout,
-      params: this.params,
-      headers: this.requestHeaders
-    })
-  }
-
   get response () {
     return mergeExistingKeys(INITIAL_RESPONSE, this)
   }
@@ -232,4 +205,36 @@ export default class Endpoint {
   toString () {
     return JSON.stringify(this.response)
   }
+
+  static applyDefaults (base, options) {
+    if (!base) return options
+    options = { ...options }
+    const strats = this.optionMergeStrategies
+    Object.keys(base).forEach(key => {
+      options[key] = (key in options && strats[key])
+        ? strats[key](base[key], options[key])
+        : (key in options ? options[key] : base[key])
+    })
+    return options
+  }
+}
+
+const strats = Endpoint.optionMergeStrategies = {}
+
+strats.headers = strats.params = strats.transformers = function (base, opts) {
+  if (isPlainObject(base) && isPlainObject(opts)) {
+    return {
+      ...base,
+      ...opts
+    }
+  }
+  return opts === undefined ? base : opts
+}
+strats.on = function (fromVal, toVal) {
+  const value = { ...(fromVal || {}) }
+  Object.entries(toVal || {}).forEach(([event, handlers]) => {
+    const h = value[event]
+    value[event] = h ? [].concat(h).concat(handlers) : handlers
+  })
+  return value
 }

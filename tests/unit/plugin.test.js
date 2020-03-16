@@ -1,8 +1,6 @@
 import Vue from 'vue'
 import VueChimera, { install } from '../../src/index'
 
-
-
 describe('test-import', function () {
   it('should be a vue plugin', function () {
     expect(typeof VueChimera).toBe('function')
@@ -13,25 +11,22 @@ describe('test-import', function () {
   })
 })
 
-describe('test-plugin-options', function () {
-  // let localVue = Vue.extend()
-  // const headers = {
-  //   'X-Test': 'test'
-  // }
-  // Vue.use(VueChimera, {
-  //   headers,
-  //   auto: false
-  // })
-})
-
 describe('test-mixin', function () {
   let mixinOptions, baseOptions, LocalVue
   beforeEach(() => {
     LocalVue = Vue
-    LocalVue.use(VueChimera)
+    LocalVue.use(VueChimera, {
+      headers: {
+        'X-Test-1': '1'
+      },
+      params: {
+        a: 1
+      }
+    })
     mixinOptions = {
       $options: {
-        headers: { 'X-Test2': 'test' }
+        headers: { 'X-Test-2': '2' },
+        params: { b: 1 }
       },
       test: {
         url: '/a'
@@ -40,12 +35,14 @@ describe('test-mixin', function () {
     baseOptions = {
       $options: {
         baseURL: 's',
+        headers: { 'X-Test-3': '3' },
         params: {
-          a: 1
+          a: 2
         }
       },
       test: {
-        url: '/b'
+        url: '/b',
+        headers: { 'X-Test-4': '4' }
       }
     }
   })
@@ -59,10 +56,15 @@ describe('test-mixin', function () {
 
     expect(vm.$chimera.test === vm.test).toBeTruthy()
     expect(vm.test.headers).not.toEqual(mixinOptions.$options.headers)
-    expect(vm.test.request.headers).toEqual(mixinOptions.$options.headers)
-    expect(vm.test.request.url).toEqual('/b')
-    expect(vm.test.request.baseURL).toEqual('s')
-    expect(vm.test.request.params).toEqual({ a: 1 })
+    expect(vm.test.requestHeaders).toEqual({
+      'X-Test-1': '1',
+      'X-Test-2': '2',
+      'X-Test-3': '3',
+      'X-Test-4': '4'
+    })
+    expect(vm.test.url).toEqual('/b')
+    expect(vm.test.baseURL).toEqual('s')
+    expect(vm.test.params).toEqual({ a: 2, b: 1 })
   })
 
   it('should inherit options with functions', function () {
@@ -71,13 +73,24 @@ describe('test-mixin', function () {
         { chimera: () => mixinOptions }
       ],
       chimera () {
-        return baseOptions
+        return {
+          ...baseOptions,
+          noParams: {
+            params: null
+          }
+        }
       }
     })
 
-    expect(vm.test.request.url).toEqual('/b')
-    expect(vm.test.request.headers).toEqual(mixinOptions.$options.headers)
-    expect(vm.test.request.baseURL).toEqual('s')
-    expect(vm.test.request.params).toEqual({ a: 1 })
+    expect(vm.test.url).toEqual('/b')
+    expect(vm.test.requestHeaders).toEqual({
+      'X-Test-1': '1',
+      'X-Test-2': '2',
+      'X-Test-3': '3',
+      'X-Test-4': '4'
+    })
+    expect(vm.test.baseURL).toEqual('s')
+    expect(vm.test.params).toEqual({ a: 2, b: 1 })
+    expect(vm.noParams.params).toBeNull()
   })
 })

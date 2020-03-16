@@ -13,15 +13,28 @@ function createAxios (config) {
 }
 
 export default {
-  request (request, endpoint) {
-    const axios = endpoint.axios ? createAxios(endpoint.axios) : Axios
-    if ((request.method || 'get') !== 'get' && request.params) {
-      request.data = request.params
-      delete request.params
-    }
-    return axios.request({
-      ...request,
-      cancelToken: new CancelToken(c => { endpoint._canceler = c })
+  request (endpoint) {
+    const axios = createAxios(endpoint.axios)
+    const request = (({
+      url,
+      method,
+      baseURL,
+      requestHeaders: headers,
+      timeout
+    }) => ({
+      url,
+      method,
+      baseURL,
+      headers,
+      timeout
+    }))(endpoint)
+
+    request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params
+    request.cancelToken = new CancelToken(c => {
+      endpoint._canceler = c
+    })
+    return axios.request(request).catch(err => {
+      throw Object.assign(err, err.response)
     })
   },
   cancel (endpoint) {
@@ -30,5 +43,8 @@ export default {
   },
   isCancelError (err) {
     return Axios.isCancel(err)
+  },
+  isTimeoutError (err) {
+    return err.message && !err.response && err.message.indexOf('timeout') !== -1
   }
 }

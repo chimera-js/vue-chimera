@@ -10,12 +10,17 @@ export interface CacheInterface {
 
 export type TransformerDef = (res: any) => any
 
+export type Dictionary = { [key: string]: string }
+
+export type EventHandler = ((endpoint: Endpoint) => void) | string
+
 export type EndpointDef = {
     url: string,
     method?: string,
     params?: any,
+    headers?: Dictionary,
     on: {
-        [key: string]: (endpoint: Endpoint) => void
+        [key: string]: EventHandler | EventHandler[]
     },
     debounce?: boolean | number,
     interval?: number | boolean,
@@ -31,7 +36,7 @@ export type EndpointDef = {
 type Response = {
     status: number | null,
     data: any,
-    headers: object | null,
+    headers: Dictionary | null,
     error: object | string | null,
     lastLoaded: Date | null
 }
@@ -42,12 +47,12 @@ type Request = {
     method: 'get' | 'post' | 'delete' | 'patch' | 'put',
     params: object | null,
     timeout: number,
-    headers: object | null
+    headers: Dictionary | null
 }
 
 export interface Endpoint {
     data: any,
-    headers: object | null,
+    headers: Dictionary | null,
     params: object | null,
     loading: boolean,
     prefetched: boolean,

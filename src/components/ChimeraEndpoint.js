@@ -1,6 +1,6 @@
 import NullEndpoint from '../NullEndpoint'
 import Endpoint from '../Endpoint'
-import * as events from '../events'
+import VueChimera from '../VueChimera'
 import { getServerContext } from '../utils'
 
 export default {
@@ -9,10 +9,13 @@ export default {
 
   props: {
     options: {
-      type: [Object, String],
-      required: true
+      type: [Object, String]
     },
     tag: {
+      type: String,
+      default: null
+    },
+    ssrContext: {
       type: String,
       default: null
     }
@@ -22,10 +25,6 @@ export default {
     return {
       endpoint: this.getEndpoint()
     }
-  },
-
-  beforeCreate () {
-    this._ssrContext = getServerContext(this.$chimeraOptions.ssrContext)
   },
 
   render (h) {
@@ -58,15 +57,13 @@ export default {
       if (value == null) return new NullEndpoint()
       if (typeof value === 'string') value = { url: value }
 
-      const endpoint = new Endpoint({
-        ...this.$chimeraOptions,
-        ...value
-      })
+      const endpoint = new Endpoint(value)
+      endpoint.emit = ev => {
+        Endpoint.prototype.emit.call(endpoint, ev)
+        this.$emit(ev, endpoint)
+      }
 
-      Object.values(events).forEach(ev => {
-        endpoint.on(ev, () => this.$emit(ev, endpoint))
-      })
-
+      this._ssrContext = getServerContext(this.ssrContext || VueChimera.prototype.ssrContext)
       if (!this._server && endpoint.key && endpoint.prefetch && this._ssrContext) {
         const initial = this._ssrContext[endpoint.key]
         if (initial) initial.prefetched = true
