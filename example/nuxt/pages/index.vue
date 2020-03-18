@@ -1,77 +1,43 @@
 <template>
-    <section class="container">
-        <ul>
-            <li v-if="blogPost.data">
-                <strong>NonePrefetch:</strong> {{ blogPost.data[0].title }} ({{ prefetched(blogPost) }})
-            </li>
-            <li v-if="blogPostPrefetch.data">
-                <strong>Prefetch:</strong> {{ blogPostPrefetch.data[2].title }} ({{ prefetched(blogPostPrefetch) }})
-            </li>
-            <li>
-                <nuxt-link to="page">NextPage</nuxt-link>
-                <a href="#" @click="i++">increment</a>
-            </li>
-        </ul>
-    </section>
+  <div class="container">
+    <h1 class="title" v-if="simple.data">
+      {{ simple.data.name }}
+    </h1>
+    <div>
+      {{ $chimera.$loading ? 'Loading' : '' }}
+      {{ env }}
+    </div>
+  </div>
 </template>
 
 <script>
-import AppLogo from '~/components/AppLogo.vue'
-
 export default {
-  components: {
-    AppLogo
-  },
-  data() {
-      return {
-          i: 0
-      }
-  },
   chimera: {
-
-    $options: {
+    simple() {
+      return {
+        url: 'https://elastic.indraproject.ir/',
+        key: 'el'
+      }
     },
-
-    blogPostPrefetch: {
-      url: '/posts',
-      ssrPrefetch: true
-    },
-    blogPost: {
-      url: '/posts?i=1',
-      ssrPrefetch: false,
-      // interval: 3000
-    },
-
-    blogPostReactive() {
-        return {
-            url: '/posts?i=' + this.i,
-            interval: 3000
-        }
-    }
   },
-
-  mounted() {
+  data () {
+    return {
+      id: 55,
+      env: process.env.VUE_ENV
+    };
+  },
+  mounted () {
     window.app = this
   },
-
-  methods: {
-    prefetched(resource) {
-      return resource.ssrPrefetched ? 'SSR Prefetch' : '!'
-    }
-  }
 }
 </script>
 
 <style>
-    .container {
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+.container {
+  margin: 200px auto;
+  min-height: 100vh;
+  text-align: center;
+  line-height: 4em;
+}
 
-    ul {
-        line-height: 3em;
-    }
 </style>
-

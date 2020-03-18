@@ -1,83 +1,129 @@
-import Resource from './Resource'
-import NullResource from './NullResource'
-import Cache from './cache'
-import { createAxios } from './utils'
+import BaseEndpoint from './Endpoint'
+import NullEndpoint from './NullEndpoint'
+import { isPlainObject, getServerContext, warn } from './utils'
+
+const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')
 
 export default class VueChimera {
-  constructor (vm, resources, options) {
+  constructor (vm, { ...endpoints }, options) {
     this._vm = vm
-    this._reactiveResources = {}
-    this.options = options || {}
+    this._watchers = []
 
-    this.axios = this.options.axios = (!this.options.axios && this._vm.$axios) ? this._vm.$axios : createAxios(this.options.axios)
-    if (this.options.cache) {
-      this.cache = this.options.cache = Cache.from(this.options.cache)
+    if (options) {
+      const { deep, ssrContext, ...endpointOptions } = options
+
+      const LocalEndpoint = this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
+      LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions)
+      Object.assign(this, JSON.parse(JSON.stringify({ deep, ssrContext })))
     }
 
-    const vmOptions = this._vm.$options
-    vmOptions.computed = vmOptions.computed || {}
-    vmOptions.watch = vmOptions.watch || {}
+    this._ssrContext = getServerContext(this.ssrContext)
+    this._server = vm.$isServer
+    const watchOption = {
+      immediate: true,
+      deep: this._deep,
+      sync: true
+    }
 
-    resources = Object.assign({}, resources)
+    for (let key in endpoints) {
+      if (key.charAt(0) === '$') {
+        delete endpoints[key]
+        continue
+      }
 
-    for (let key in resources) {
-      if (!resources.hasOwnProperty(key) || key.charAt(0) === '$') continue
-
-      let r = resources[key]
-
+      let r = endpoints[key]
       if (typeof r === 'function') {
-        r = r.bind(this._vm)
-        resources[key] = new NullResource()
-        this._reactiveResources[key] = r
-        vmOptions.computed['$_chimera__' + key] = r
-        vmOptions.watch['$_chimera__' + key] = (t) => this.updateReactiveResource(key, t)
+        this._watchers.push([
+          () => r.call(this._vm),
+          (t, f) => this.updateEndpoint(key, t, f),
+          watchOption
+        ])
       } else {
-        resources[key] = Resource.from(r, this.options, key)
-      }
-      vmOptions.computed[key] = () => resources[key]
-      resources[key].bindListeners(this._vm)
-    }
-
-    Object.defineProperty(resources, '$cancelAll', { value: this.cancelAll.bind(this) })
-    Object.defineProperty(resources, '$axios', { get: () => this.axios })
-    Object.defineProperty(resources, '$loading', {
-      get () {
-        for (let r in this) {
-          if (this.hasOwnProperty(r) && r.loading) return true
+        r = endpoints[key] = this.endpointFrom(r)
+        if (!this._server) {
+          shouldAutoFetch(r) && r.reload()
         }
-        return false
       }
-    })
-    this.resources = resources
-  }
-
-  updateReactiveResources () {
-    Object.keys(this._reactiveResources).forEach(key => {
-      this.updateReactiveResource(key)
-    })
-  }
-
-  updateReactiveResource (key) {
-    const oldResource = this.resources[key]
-    oldResource.stopInterval()
-    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, key)
-
-    // Keep data
-    if (oldResource.keepData) {
-      r._data = oldResource._data
-      r._status = oldResource._status
-      r._headers = oldResource._headers
-      r._error = oldResource._error
     }
 
-    r._lastLoaded = oldResource._lastLoaded
-    if (r.prefetch) r.reload()
-    this.resources[key] = r
+    Object.defineProperty(endpoints, '$cancelAll', { value: () => this.cancelAll() })
+    Object.defineProperty(endpoints, '$loading', { get () { return !!Object.values(this).find(el => !!el.loading) } })
+    this.endpoints = endpoints
+  }
+
+  init () {
+    this._watchers = this._watchers.map(w => this._vm.$watch(...w))
+  }
+
+  initServer () {
+    this._vm.$_chimeraPromises = []
+    Object.values(this.endpoints).forEach(endpoint => {
+      if (endpoint.auto && endpoint.prefetch) {
+        /* istanbul ignore if */
+        if (!endpoint.key) {
+          warn('used prefetch with no key associated with endpoint!')
+          return
+        }
+        this._vm.$_chimeraPromises.push(endpoint.fetch(true, { timeout: endpoint.prefetchTimeout }).then(() => endpoint).catch(() => null))
+      }
+    })
+  }
+
+  updateEndpoint (key, newValue, oldValue) {
+    const oldEndpoint = this.endpoints[key]
+    const newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.response : null)
+
+    if (oldValue && oldEndpoint) {
+      oldEndpoint.stopInterval()
+      newEndpoint.lastLoaded = oldEndpoint.lastLoaded
+    }
+
+    if (!this._server) {
+      if (shouldAutoFetch(newEndpoint)) newEndpoint.reload()
+    }
+    this._vm.$set(this.endpoints, key, newEndpoint)
+  }
+
+  endpointFrom (value, initial) {
+    if (value == null) return new NullEndpoint()
+    if (typeof value === 'string') value = { url: value }
+
+    if (isPlainObject(value.on)) {
+      const bindVm = (handler) => {
+        if (typeof handler === 'function') {
+          handler = handler.bind(this._vm)
+        }
+        if (typeof handler === 'string') handler = this._vm[handler]
+        return handler
+      }
+      Object.entries(value.on).forEach(([event, handlers]) => {
+        value.on[event] = (Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers))
+      })
+    }
+
+    const endpoint = new (this.LocalEndpoint || BaseEndpoint)(value, initial)
+
+    if (!this._server && !initial && endpoint.key && endpoint.prefetch && this._ssrContext) {
+      initial = this._ssrContext[value.key]
+      if (initial) initial.prefetched = true
+      Object.assign(endpoint, initial)
+    }
+    return endpoint
   }
 
   cancelAll () {
-    Object.keys(this.resources).forEach(r => {
-      this.resources[r].cancel()
+    Object.values(this.endpoints).forEach(r => {
+      r.cancel()
     })
+  }
+
+  destroy () {
+    const vm = this._vm
+
+    this.cancelAll()
+    Object.values(this.endpoints).forEach(r => {
+      r.stopInterval()
+    })
+    delete vm._chimera
   }
 }

@@ -1,2 +1,5 @@
-**/*.js
-!src/**/*.js
+dist/*
+coverage/*
+example/**/*
+node_modules/**/*
+nuxt/*

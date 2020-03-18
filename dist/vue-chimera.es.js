@@ -1,5 +1,48 @@
-import Axios from 'axios';
-import pDebounce from 'p-debounce';
+import Axios, { CancelToken } from 'axios';
+
+var SUCCESS = 'success';
+var ERROR = 'error';
+var CANCEL = 'cancel';
+var LOADING = 'loading';
+var TIMEOUT = 'timeout';
+
+function _typeof(obj) {
+  "@babel/helpers - typeof";
+
+  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+    _typeof = function (obj) {
+      return typeof obj;
+    };
+  } else {
+    _typeof = function (obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+    };
+  }
+
+  return _typeof(obj);
+}
+
+function _classCallCheck(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+function _defineProperties(target, props) {
+  for (var i = 0; i < props.length; i++) {
+    var descriptor = props[i];
+    descriptor.enumerable = descriptor.enumerable || false;
+    descriptor.configurable = true;
+    if ("value" in descriptor) descriptor.writable = true;
+    Object.defineProperty(target, descriptor.key, descriptor);
+  }
+}
+
+function _createClass(Constructor, protoProps, staticProps) {
+  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+  if (staticProps) _defineProperties(Constructor, staticProps);
+  return Constructor;
+}
 
 function _defineProperty(obj, key, value) {
   if (key in obj) {
@@ -16,23 +59,87 @@ function _defineProperty(obj, key, value) {
   return obj;
 }
 
-function _objectSpread(target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i] != null ? arguments[i] : {};
-    var ownKeys = Object.keys(source);
+function _extends() {
+  _extends = Object.assign || function (target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = arguments[i];
 
-    if (typeof Object.getOwnPropertySymbols === 'function') {
-      ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-        return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-      }));
+      for (var key in source) {
+        if (Object.prototype.hasOwnProperty.call(source, key)) {
+          target[key] = source[key];
+        }
+      }
     }
 
-    ownKeys.forEach(function (key) {
-      _defineProperty(target, key, source[key]);
+    return target;
+  };
+
+  return _extends.apply(this, arguments);
+}
+
+function ownKeys(object, enumerableOnly) {
+  var keys = Object.keys(object);
+
+  if (Object.getOwnPropertySymbols) {
+    var symbols = Object.getOwnPropertySymbols(object);
+    if (enumerableOnly) symbols = symbols.filter(function (sym) {
+      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
     });
+    keys.push.apply(keys, symbols);
+  }
+
+  return keys;
+}
+
+function _objectSpread2(target) {
+  for (var i = 1; i < arguments.length; i++) {
+    var source = arguments[i] != null ? arguments[i] : {};
+
+    if (i % 2) {
+      ownKeys(Object(source), true).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      });
+    } else if (Object.getOwnPropertyDescriptors) {
+      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+    } else {
+      ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
   }
 
   return target;
+}
+
+function _inherits(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function");
+  }
+
+  subClass.prototype = Object.create(superClass && superClass.prototype, {
+    constructor: {
+      value: subClass,
+      writable: true,
+      configurable: true
+    }
+  });
+  if (superClass) _setPrototypeOf(subClass, superClass);
+}
+
+function _getPrototypeOf(o) {
+  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+    return o.__proto__ || Object.getPrototypeOf(o);
+  };
+  return _getPrototypeOf(o);
+}
+
+function _setPrototypeOf(o, p) {
+  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+
+  return _setPrototypeOf(o, p);
 }
 
 function _objectWithoutPropertiesLoose(source, excluded) {
@@ -71,756 +178,1080 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-function isPlainObject(value) {
-  const OBJECT_STRING = '[object Object]';
-  return typeof value === 'object' && Object.prototype.toString(value) === OBJECT_STRING;
+function _assertThisInitialized(self) {
+  if (self === void 0) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }
+
+  return self;
 }
+
+function _possibleConstructorReturn(self, call) {
+  if (call && (typeof call === "object" || typeof call === "function")) {
+    return call;
+  }
+
+  return _assertThisInitialized(self);
+}
+
+function _superPropBase(object, property) {
+  while (!Object.prototype.hasOwnProperty.call(object, property)) {
+    object = _getPrototypeOf(object);
+    if (object === null) break;
+  }
+
+  return object;
+}
+
+function _get(target, property, receiver) {
+  if (typeof Reflect !== "undefined" && Reflect.get) {
+    _get = Reflect.get;
+  } else {
+    _get = function _get(target, property, receiver) {
+      var base = _superPropBase(target, property);
+
+      if (!base) return;
+      var desc = Object.getOwnPropertyDescriptor(base, property);
+
+      if (desc.get) {
+        return desc.get.call(receiver);
+      }
+
+      return desc.value;
+    };
+  }
+
+  return _get(target, property, receiver || target);
+}
+
+function _slicedToArray(arr, i) {
+  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
+}
+
+function _toConsumableArray(arr) {
+  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+}
+
+function _arrayWithoutHoles(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+}
+
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+function _iterableToArray(iter) {
+  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+}
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance");
+}
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
+var MemoryCache_1 = /*#__PURE__*/function () {
+  function MemoryCache(expiration) {
+    _classCallCheck(this, MemoryCache);
+
+    this.expiration = expiration || 1000 * 60;
+    this._store = {};
+  }
+  /**
+     *
+     * @param key         Key for the cache
+     * @param value       Value for cache persistence
+     * @param expiration  Expiration time in milliseconds
+     */
+
+
+  _createClass(MemoryCache, [{
+    key: "setItem",
+    value: function setItem(key, value, expiration) {
+      this._store[key] = {
+        expiration: Date.now() + (expiration || this.expiration),
+        value: value
+      };
+    }
+    /**
+       * If Cache exists return the Parsed Value, If Not returns {null}
+       *
+       * @param key
+       */
+
+  }, {
+    key: "getItem",
+    value: function getItem(key) {
+      var item = this._store[key];
+
+      if (item && item.value && Date.now() <= item.expiration) {
+        return item.value;
+      }
+
+      this.removeItem(key);
+      return null;
+    }
+  }, {
+    key: "removeItem",
+    value: function removeItem(key) {
+      delete this._store[key];
+    }
+  }, {
+    key: "keys",
+    value: function keys() {
+      return Object.keys(this._store);
+    }
+  }, {
+    key: "all",
+    value: function all() {
+      var _this = this;
+
+      return this.keys().reduce(function (obj, str) {
+        obj[str] = _this._store[str];
+        return obj;
+      }, {});
+    }
+  }, {
+    key: "length",
+    value: function length() {
+      return this.keys().length;
+    }
+  }, {
+    key: "clear",
+    value: function clear() {
+      this._store = {};
+    }
+  }]);
+
+  return MemoryCache;
+}();
+
+var StorageCache_1 = /*#__PURE__*/function (_MemoryCache) {
+  _inherits(StorageCache, _MemoryCache);
+
+  function StorageCache(key, expiration) {
+    var _this;
+
+    var sessionStorage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    _classCallCheck(this, StorageCache);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(StorageCache).call(this, expiration));
+    _this.key = key;
+    var storage = sessionStorage ? 'sessionStorage' : 'localStorage';
+    /* istanbul ignore if */
+
+    if (typeof window === 'undefined' || !window[storage]) {
+      throw Error("StorageCache: ".concat(storage, " is not available."));
+    } else {
+      _this.storage = window[storage];
+    }
+
+    try {
+      _this._store = JSON.parse(_this.storage.getItem(key)) || {};
+    } catch (e) {
+      _this.clear();
+
+      _this._store = {};
+    }
+
+    return _this;
+  }
+
+  _createClass(StorageCache, [{
+    key: "setItem",
+    value: function setItem(key, value, expiration) {
+      _get(_getPrototypeOf(StorageCache.prototype), "setItem", this).call(this, key, value, expiration);
+
+      this.storage.setItem(this.key, JSON.stringify(this._store));
+    }
+  }, {
+    key: "clear",
+    value: function clear() {
+      this.storage.removeItem(this.key);
+    }
+  }]);
+
+  return StorageCache;
+}(MemoryCache_1);
+
+var pDebounce = (fn, wait, opts) => {
+	if (!Number.isFinite(wait)) {
+		throw new TypeError('Expected `wait` to be a finite number');
+	}
+
+	opts = opts || {};
+
+	let leadingVal;
+	let timer;
+	let resolveList = [];
+
+	return function () {
+		const ctx = this;
+		const args = arguments;
+
+		return new Promise(resolve => {
+			const runImmediately = opts.leading && !timer;
+
+			clearTimeout(timer);
+
+			timer = setTimeout(() => {
+				timer = null;
+
+				const res = opts.leading ? leadingVal : fn.apply(ctx, args);
+
+				for (resolve of resolveList) {
+					resolve(res);
+				}
+
+				resolveList = [];
+			}, wait);
+
+			if (runImmediately) {
+				leadingVal = fn.apply(ctx, args);
+				resolve(leadingVal);
+			} else {
+				resolveList.push(resolve);
+			}
+		});
+	};
+};
+
+function isPlainObject(value) {
+  return _typeof(value) === 'object' && value && Object.prototype.toString(value) === '[object Object]';
+}
+function mergeExistingKeys() {
+  for (var _len = arguments.length, obj = new Array(_len), _key = 0; _key < _len; _key++) {
+    obj[_key] = arguments[_key];
+  }
+
+  var o = Object.assign.apply(Object, [{}].concat(obj));
+  return Object.keys(obj[0]).reduce(function (carry, item) {
+    carry[item] = o[item];
+    return carry;
+  }, {});
+}
+var hasKey = function hasKey(obj, key) {
+  return key in (obj || {});
+};
+function getServerContext(contextString) {
+  try {
+    var context = window;
+    var keys = contextString.split('.');
+    keys.forEach(function (key) {
+      context = context[key];
+    });
+    return context;
+  } catch (e) {}
+
+  return null;
+}
+function noopReturn(arg) {
+  return arg;
+}
+function warn(arg) {
+  var _console;
+
+  for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    args[_key2 - 1] = arguments[_key2];
+  }
+
+  // eslint-disable-next-line no-console
+  (_console = console).warn.apply(_console, ['[Chimera]: ' + arg].concat(args));
+}
+
 function createAxios(config) {
-  if (config && typeof config.request === 'function') {
-    return config;
+  if (typeof config === 'function') {
+    if (typeof config.request === 'function') return config;
+    return config();
   }
 
   if (isPlainObject(config)) {
     return Axios.create(config);
   }
 
-  if (typeof config === 'function') {
-    let axios = config();
-    return createAxios(axios);
-  }
-
   return Axios;
 }
 
-const {
-  CancelToken
-} = Axios;
-const EVENT_SUCCESS = 'success';
-const EVENT_ERROR = 'error';
-const EVENT_CANCEL = 'cancel';
-const EVENT_LOADING = 'loading';
-const EVENT_TIMEOUT = 'timeout';
-class Resource {
-  static from(value, baseOptions = {}, id) {
-    if (value == null) throw new Error('Cannot create resource from `null`');
+var axiosAdapter = {
+  request: function request(endpoint) {
+    var axios = createAxios(endpoint.axios);
 
-    if (value instanceof Resource) {
-      return value;
-    }
+    var request = function (_ref) {
+      var url = _ref.url,
+          method = _ref.method,
+          baseURL = _ref.baseURL,
+          headers = _ref.requestHeaders,
+          timeout = _ref.timeout;
+      return {
+        url: url,
+        method: method,
+        baseURL: baseURL,
+        headers: headers,
+        timeout: timeout
+      };
+    }(endpoint);
 
-    if (typeof value === 'string') {
-      return new Resource(id, value, null, baseOptions);
-    }
-
-    if (isPlainObject(value)) {
-      const {
-        url,
-        method
-      } = value,
-            options = _objectWithoutProperties(value, ["url", "method"]);
-
-      if (options.cache) {
-        if (!baseOptions.cache) throw new Error('Pre definition of cache should be on Chimera instance options');
-        if (!isPlainObject(options.cache)) throw Error('Cache should be an object');
-        let cache = Object.create(baseOptions.cache);
-        options.cache = Object.assign(cache, options.cache);
-      }
-
-      return new Resource(id, url, method, Object.assign({}, baseOptions, options));
-    }
+    request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params;
+    request.cancelToken = new CancelToken(function (c) {
+      endpoint._canceler = c;
+    });
+    return axios.request(request)["catch"](function (err) {
+      throw Object.assign(err, err.response);
+    });
+  },
+  cancel: function cancel(endpoint) {
+    if (typeof endpoint._canceler === 'function') endpoint._canceler();
+    endpoint._canceler = null;
+  },
+  isCancelError: function isCancelError(err) {
+    return Axios.isCancel(err);
+  },
+  isTimeoutError: function isTimeoutError(err) {
+    return err.message && !err.response && err.message.indexOf('timeout') !== -1;
   }
+};
 
-  constructor(id, url, method, options) {
-    options = options || {};
-    method = method ? method.toLowerCase() : 'get';
+var INITIAL_RESPONSE = {
+  status: null,
+  data: null,
+  headers: undefined,
+  error: null,
+  lastLoaded: undefined
+};
 
-    if (method && ['get', 'post', 'put', 'patch', 'delete'].indexOf(method) === -1) {
-      throw new Error('Bad Method requested: ' + method);
+var Endpoint = /*#__PURE__*/function () {
+  function Endpoint(opts, initial) {
+    _classCallCheck(this, Endpoint);
+
+    if (typeof opts === 'string') opts = {
+      url: opts,
+      key: opts
+    };
+
+    if (!opts) {
+      warn('Invalid options', opts);
+      throw new Error('[Chimera]: invalid options');
     }
 
-    this.axios = createAxios(options.axios);
-    this.requestConfig = {
-      url: url,
-      method: method ? method.toLowerCase() : 'get',
-      headers: options.headers || {},
-      cancelToken: new CancelToken(c => {
-        this._canceler = c;
-      }),
-      timeout: options.timeout || undefined
-    };
-    this.requestConfig[this.requestConfig.method === 'get' ? 'params' : 'data'] = options.params;
-    this._loading = false;
-    this._status = null;
-    this._data = null;
-    this._headers = null;
-    this._error = null;
-    this._lastLoaded = null;
-    this._eventListeners = {};
-    this.keepData = !!options.keepData;
-    this.cache = options.cache;
-    this.id = id;
-    this.ssrPrefetched = false;
-    this.cacheHit = false;
-    this.prefetch = typeof options.prefetch === 'string' ? options.prefetch.toLowerCase() === method : Boolean(options.prefetch);
-    this.ssrPrefetch = options.ssrPrefetch;
-    this.fetchDebounced = pDebounce(this.fetch.bind(this), options.debounce || 80, {
+    opts = this.options ? this.constructor.applyDefaults(this.options, opts) : opts;
+
+    var _opts = opts,
+        debounce = _opts.debounce,
+        transformer = _opts.transformer,
+        interval = _opts.interval,
+        headers = _opts.headers,
+        listeners = _opts.on,
+        auto = _opts.auto,
+        prefetch = _opts.prefetch,
+        options = _objectWithoutProperties(_opts, ["debounce", "transformer", "interval", "headers", "on", "auto", "prefetch"]);
+
+    options.method = (options.method || 'get').toLowerCase();
+    this.fetchDebounced = debounce !== false ? pDebounce(this.fetch.bind(this), debounce || 50, {
       leading: true
-    }); // Set Transformers
+    }) : this.fetch; // Set Transformers
 
-    if (options.transformer) {
-      if (typeof options.transformer === 'function') {
-        this.setTransformer(options.transformer);
-      } else if (typeof options.transformer === 'object') {
-        this.setResponseTransformer(options.transformer.response);
-        this.setErrorTransformer(options.transformer.error);
+    this.setTransformer(transformer);
+    this.prefetched = false;
+    this.loading = false; // Set Events
+
+    this.listeners = Object.create(null);
+
+    if (isPlainObject(listeners)) {
+      for (var key in listeners) {
+        this.on(key, listeners[key]);
       }
     }
 
-    this.responseTransformer = this.responseTransformer || (r => r);
+    Object.assign(this, options);
+    this.requestHeaders = headers; // Handle type on auto
 
-    this.errorTransformer = this.errorTransformer || (r => r); // Set interval.
+    this.auto = typeof auto === 'string' ? auto.toLowerCase() === options.method : !!auto;
+    this.prefetch = prefetch != null ? prefetch : this.auto;
+    Object.assign(this, INITIAL_RESPONSE, initial || {});
+    interval && this.startInterval(interval);
+  }
 
-
-    if (options.interval) {
-      this.startInterval(options.interval);
-    } // Set Events
-
-
-    if (typeof options.on === 'object' && options.on) {
-      for (let key in options.on) {
-        this.on(key, options.on[key]);
+  _createClass(Endpoint, [{
+    key: "setTransformer",
+    value: function setTransformer(transformer) {
+      if (typeof transformer === 'function') {
+        this.responseTransformer = transformer;
+        this.errorTransformer = transformer;
+      } else if (isPlainObject(transformer)) {
+        var response = transformer.response,
+            error = transformer.error;
+        this.responseTransformer = response || noopReturn;
+        this.errorTransformer = error || noopReturn;
+      } else {
+        this.responseTransformer = noopReturn;
+        this.errorTransformer = noopReturn;
       }
     }
-  }
+  }, {
+    key: "on",
+    value: function on(event, handler) {
+      this.listeners[event] = (this.listeners[event] || []).concat(handler);
+      return this;
+    }
+  }, {
+    key: "emit",
+    value: function emit(event) {
+      var _this = this;
 
-  setResponseTransformer(transformer) {
-    this.responseTransformer = transformer;
-  }
-
-  setErrorTransformer(transformer) {
-    this.errorTransformer = transformer;
-  }
-
-  setTransformer(transformer) {
-    this.responseTransformer = transformer;
-    this.errorTransformer = transformer;
-  }
-
-  startInterval(ms) {
-    if (typeof process !== 'undefined' && process.server) return;
-    if (ms) this._interval = ms;
-    this.stopInterval();
-    this._interval_id = setInterval(() => this.reload(true), this._interval);
-  }
-
-  stopInterval() {
-    if (this._interval_id) clearInterval(this._interval_id);
-  }
-
-  on(event, handler) {
-    let listeners = this._eventListeners[event] || [];
-    listeners.push(handler);
-    this._eventListeners[event] = listeners;
-    return this;
-  }
-
-  bindListeners(obj) {
-    Object.keys(this._eventListeners).forEach(key => {
-      (this._eventListeners[key] || []).forEach((handler, i) => {
-        this._eventListeners[key][i] = handler.bind(obj);
+      (this.listeners[event] || []).forEach(function (handler) {
+        handler(_this, event);
       });
-    });
-  }
+    }
+  }, {
+    key: "fetch",
+    value: function fetch(force, extraOptions) {
+      var _this2 = this;
 
-  emit(event) {
-    (this._eventListeners[event] || []).forEach(handler => {
-      handler(this);
-    });
-  }
-
-  fetch(force, extraData) {
-    return new Promise((resolve, reject) => {
       if (this.cache && !force) {
-        let cacheResult = this.cache.assignCache(this);
+        var cacheValue = this.getCache();
 
-        if (cacheResult) {
-          this.cacheHit = true;
-          return resolve(cacheResult._data);
+        if (cacheValue) {
+          this.setResponse(cacheValue, true);
+          return Promise.resolve(cacheValue);
         }
       }
 
-      this._loading = true;
-      this.emit(EVENT_LOADING); // Assign Extra data
+      var request = this;
 
-      let requestConfig = Object.assign({}, this.requestConfig, typeof extraData === 'object' ? {
-        [this.requestConfig.method === 'get' ? 'params' : 'data']: extraData
-      } : {});
-      this.axios.request(requestConfig).then(res => {
-        this._error = null;
-        this._loading = false;
-        this._lastLoaded = new Date();
-        this._status = res.status;
-        this._data = res.data ? this.responseTransformer(res.data) : null;
-        this._headers = res.headers || {};
-        this.cache && this.cache.set(this);
-        this.emit(EVENT_SUCCESS);
-        resolve(this._data);
-      }).catch(err => {
-        this._data = null;
-        this._loading = false;
-        const res = err.response;
+      if (isPlainObject(extraOptions)) {
+        request = Object.create(this); // Merge extra options
 
-        if (res) {
-          this._status = res.status;
-          this._error = res.data = res.data ? this.errorTransformer(res.data) : true;
-          this._headers = res.headers || {};
+        if (extraOptions.params) extraOptions.params = Object.assign({}, request.params, extraOptions.params);
+        if (extraOptions.headers) extraOptions.requestHeaders = Object.assign({}, request.requestHeaders, extraOptions.headers);
+        Object.assign(request, extraOptions);
+      }
+
+      this.loading = true;
+      this.emit(LOADING);
+      return this.http.request(request).then(function (res) {
+        _this2.loading = false;
+
+        _this2.setResponse(res, true);
+
+        _this2.setCache(res);
+
+        _this2.emit(SUCCESS);
+
+        return res;
+      })["catch"](function (err) {
+        _this2.loading = false;
+
+        _this2.setResponse(err, false);
+
+        if (_this2.http.isCancelError(err)) {
+          _this2.emit(CANCEL);
         } else {
-          this._status = 0;
-          this._error = true;
-          this._headers = {};
+          if (_this2.http.isTimeoutError) {
+            _this2.emit(TIMEOUT);
+          }
+
+          _this2.emit(ERROR);
         }
 
-        if (this.cache && this.cache.strategy === 'network-first') {
-          this.cache.assignCache(this);
-          this.cacheHit = true;
-          return resolve(this._data);
-        }
-
-        if (err.message && !err.response && err.message.indexOf('timeout') !== -1) {
-          err.timeout = true;
-          this.emit(EVENT_TIMEOUT);
-        } else if (Axios.isCancel(err)) {
-          err.cancel = true;
-          this.emit(EVENT_CANCEL);
-        } else {
-          this.emit(EVENT_ERROR);
-        }
-
-        reject(err);
+        throw err;
       });
-    });
-  }
-
-  reload(force) {
-    return this.fetchDebounced(force);
-  }
-
-  execute() {
-    return this.fetchDebounced(true);
-  }
-
-  send(extra) {
-    return this.fetchDebounced(true, extra);
-  }
-
-  cancel(unload) {
-    this.stopInterval();
-    if (unload) this._data = null;
-    if (typeof this._canceler === 'function') this._canceler();
-    this.requestConfig.cancelToken = new CancelToken(c => {
-      this._canceler = c;
-    });
-  }
-
-  stop() {
-    this.cancel();
-  }
-
-  toJSON() {
-    const json = {};
-    ['_loading', '_status', '_data', '_headers', '_error', '_lastLoaded', 'ssrPrefetched'].forEach(key => {
-      json[key] = this[key];
-    });
-    return json;
-  }
-
-  get loading() {
-    return this._loading;
-  }
-
-  get status() {
-    return this._status;
-  }
-
-  get data() {
-    return this._data;
-  }
-
-  get headers() {
-    return this._headers;
-  }
-
-  get error() {
-    return this._error;
-  }
-
-  get lastLoaded() {
-    return this._lastLoaded;
-  }
-
-}
-
-class NullResource extends Resource {
-  fetch(force) {
-    return Promise.reject(new Error('Null Resource'));
-  }
-
-  cancel() {}
-
-  get loading() {
-    return false;
-  }
-
-  get status() {
-    return 0;
-  }
-
-  get data() {
-    return null;
-  }
-
-  get error() {
-    return null;
-  }
-
-  get lastLoaded() {
-    return null;
-  }
-
-}
-
-const storage = {};
-class MemoryCache {
-  constructor(options = {}) {
-    this.storage = storage;
-    this.defaultExpiration = options.defaultExpiration || 60000;
-  }
-
-  clear() {
-    this.storage = {};
-  }
-
-  setItem(key, value, expiration) {
-    this.storage[key] = {
-      expiration: Date.now() + (expiration || this.defaultExpiration),
-      value
-    };
-  }
-
-  getItem(key) {
-    let item = this.storage[key];
-
-    if (item && item.value && Date.now() <= item.expiration) {
-      return item.value;
     }
-
-    this.removeItem(key);
-    return null;
-  }
-
-  removeItem(key) {
-    delete this.storage[key];
-  }
-
-  keys() {
-    return Object.keys(this.storage);
-  }
-
-  length() {
-    return this.keys().length;
-  }
-
-}
-
-class Cache {
-  static from(options) {
-    if (!options) return null;
-
-    if (isPlainObject(options)) {
-      return new Cache(options.strategy || 'stale', options.store);
+  }, {
+    key: "reload",
+    value: function reload(force) {
+      return this.fetchDebounced(force);
     }
+  }, {
+    key: "send",
+    value: function send(params) {
+      return this.fetch(true, {
+        params: params
+      });
+    }
+  }, {
+    key: "cancel",
+    value: function cancel() {
+      this.http.cancel(this);
+    }
+  }, {
+    key: "getCacheKey",
+    value: function getCacheKey() {
+      if (this.key) return this.key;
+      /* istanbul ignore next */
 
-    return new Cache('stale', options);
-  }
+      throw new Error('[Chimera]: cannot use cache without "key" property');
+    }
+  }, {
+    key: "getCache",
+    value: function getCache() {
+      return this.cache ? this.cache.getItem(this.getCacheKey()) : undefined;
+    }
+  }, {
+    key: "setCache",
+    value: function setCache(value) {
+      this.cache && this.cache.setItem(this.getCacheKey(), value);
+    }
+  }, {
+    key: "deleteCache",
+    value: function deleteCache() {
+      this.cache && this.cache.removeItem(this.getCacheKey());
+    }
+  }, {
+    key: "setResponse",
+    value: function setResponse(res, success) {
+      res = res || {};
+      this.status = res.status;
+      this.data = success ? this.responseTransformer(res.data, this) : null;
+      this.error = !success ? this.errorTransformer(res.data, this) : null;
+      this.headers = !this.light ? res.headers || {} : undefined;
+      this.lastLoaded = !this.light ? new Date() : undefined;
+    }
+  }, {
+    key: "startInterval",
+    value: function startInterval(ms) {
+      var _this3 = this;
 
-  constructor(strategy, store) {
-    this.strategy = strategy;
-    this.store = store;
-  }
+      /* istanbul ignore if */
+      if (typeof ms !== 'number') throw new Error('[Chimera]: interval should be number');
+      /* istanbul ignore if */
 
-  get(r) {
-    return this.store.getItem(this.getCacheKey(r));
-  }
-
-  set(r, value) {
-    value = value || r.toJSON();
-    delete value.ssrPrefetched;
-    this.store.setItem(this.getCacheKey(r), value);
-  }
-
-  assignCache(r, value) {
-    if (!value) value = this.get(r);
-    const strategy = (r.cacheOptions || {}).strategy || this.strategy;
-
-    const assign = () => {
-      Object.assign(r, value);
-    };
-
-    if (value) {
-      if (strategy === 'cache-first') {
-        assign();
-        return r;
-      } else if (this.strategy === 'network-first') {
-        if (typeof navigator !== 'undefined' && !navigator.onLine || r.error === true) {
-          assign();
-          return r;
-        }
-      } else if (this.strategy === 'stale') {
-        assign();
+      if (typeof process !== 'undefined' && process.server) return;
+      this._interval = ms;
+      this.stopInterval();
+      this._interval_id = setInterval(function () {
+        return _this3.reload(true);
+      }, this._interval);
+    }
+  }, {
+    key: "stopInterval",
+    value: function stopInterval() {
+      if (this._interval_id) {
+        clearInterval(this._interval_id);
+        this._interval_id = null;
+        this._interval = false;
       }
     }
-  }
-
-  clear() {
-    this.store && this.store.clear();
-  }
-
-  getCacheKey(r) {
-    const hash = typeof window !== 'undefined' ? window.btoa : x => x;
-    return '$_chimera_' + (r.id || 'r') + '_' + hash([r.requestConfig.url, r.requestConfig.params, r.requestConfig.data, r.requestConfig.method].join('|'));
-  }
-
-  set store(x) {
-    if (!x || typeof x !== 'object') {
-      this._store = new MemoryCache();
-    } else {
-      this._store = x;
+  }, {
+    key: "toString",
+    value: function toString() {
+      return JSON.stringify(this.response);
     }
+  }, {
+    key: "looping",
+    get: function get() {
+      return !!this._interval;
+    }
+  }, {
+    key: "response",
+    get: function get() {
+      return mergeExistingKeys(INITIAL_RESPONSE, this);
+    }
+  }], [{
+    key: "applyDefaults",
+    value: function applyDefaults(base, options) {
+      if (!base) return options;
+      options = _objectSpread2({}, options);
+      var strats = this.optionMergeStrategies;
+      Object.keys(base).forEach(function (key) {
+        options[key] = key in options && strats[key] ? strats[key](base[key], options[key]) : key in options ? options[key] : base[key];
+      });
+      return options;
+    }
+  }]);
+
+  return Endpoint;
+}();
+Endpoint.prototype.http = axiosAdapter;
+var strats = Endpoint.optionMergeStrategies = {};
+
+strats.headers = strats.params = strats.transformers = function (base, opts) {
+  if (isPlainObject(base) && isPlainObject(opts)) {
+    return _objectSpread2({}, base, {}, opts);
   }
 
-  get store() {
-    return this._store;
+  return opts === undefined ? base : opts;
+};
+
+strats.on = function (fromVal, toVal) {
+  var value = _objectSpread2({}, fromVal || {});
+
+  Object.entries(toVal || {}).forEach(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+        event = _ref2[0],
+        handlers = _ref2[1];
+
+    var h = value[event];
+    value[event] = h ? [].concat(h).concat(handlers) : handlers;
+  });
+  return value;
+};
+
+var NullEndpoint = /*#__PURE__*/function (_Endpoint) {
+  _inherits(NullEndpoint, _Endpoint);
+
+  function NullEndpoint() {
+    _classCallCheck(this, NullEndpoint);
+
+    return _possibleConstructorReturn(this, _getPrototypeOf(NullEndpoint).call(this, {}));
   }
 
-}
+  _createClass(NullEndpoint, [{
+    key: "fetch",
+    value: function fetch(force) {
+      return Promise.reject(new Error('[Chimera]: Fetching null endpoint'));
+    }
+  }, {
+    key: "cancel",
+    value: function cancel() {}
+  }]);
 
-class VueChimera {
-  constructor(vm, resources, options) {
+  return NullEndpoint;
+}(Endpoint);
+
+var shouldAutoFetch = function shouldAutoFetch(r) {
+  return r.auto && (!r.prefetched || r.prefetch === 'override');
+};
+
+var VueChimera = /*#__PURE__*/function () {
+  function VueChimera(vm, _ref, options) {
+    var _this = this;
+
+    var endpoints = _extends({}, _ref);
+
+    _classCallCheck(this, VueChimera);
+
     this._vm = vm;
-    this._reactiveResources = {};
-    this.options = options || {};
-    this.axios = this.options.axios = !this.options.axios && this._vm.$axios ? this._vm.$axios : createAxios(this.options.axios);
+    this._watchers = [];
 
-    if (this.options.cache) {
-      this.cache = this.options.cache = Cache.from(this.options.cache);
+    if (options) {
+      var deep = options.deep,
+          ssrContext = options.ssrContext,
+          endpointOptions = _objectWithoutProperties(options, ["deep", "ssrContext"]);
+
+      var LocalEndpoint = this.LocalEndpoint = /*#__PURE__*/function (_BaseEndpoint) {
+        _inherits(Endpoint, _BaseEndpoint);
+
+        function Endpoint() {
+          _classCallCheck(this, Endpoint);
+
+          return _possibleConstructorReturn(this, _getPrototypeOf(Endpoint).apply(this, arguments));
+        }
+
+        return Endpoint;
+      }(Endpoint);
+
+      LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions);
+      Object.assign(this, JSON.parse(JSON.stringify({
+        deep: deep,
+        ssrContext: ssrContext
+      })));
     }
 
-    const vmOptions = this._vm.$options;
-    vmOptions.computed = vmOptions.computed || {};
-    vmOptions.watch = vmOptions.watch || {};
-    resources = Object.assign({}, resources);
+    this._ssrContext = getServerContext(this.ssrContext);
+    this._server = vm.$isServer;
+    var watchOption = {
+      immediate: true,
+      deep: this._deep,
+      sync: true
+    };
 
-    for (let key in resources) {
-      if (!resources.hasOwnProperty(key) || key.charAt(0) === '$') continue;
-      let r = resources[key];
+    var _loop = function _loop(key) {
+      if (key.charAt(0) === '$') {
+        delete endpoints[key];
+        return "continue";
+      }
+
+      var r = endpoints[key];
 
       if (typeof r === 'function') {
-        r = r.bind(this._vm);
-        resources[key] = new NullResource();
-        this._reactiveResources[key] = r;
-        vmOptions.computed['$_chimera__' + key] = r;
-
-        vmOptions.watch['$_chimera__' + key] = t => this.updateReactiveResource(key, t);
+        _this._watchers.push([function () {
+          return r.call(_this._vm);
+        }, function (t, f) {
+          return _this.updateEndpoint(key, t, f);
+        }, watchOption]);
       } else {
-        resources[key] = Resource.from(r, this.options, key);
-      }
+        r = endpoints[key] = _this.endpointFrom(r);
 
-      vmOptions.computed[key] = () => resources[key];
-
-      resources[key].bindListeners(this._vm);
-    }
-
-    Object.defineProperty(resources, '$cancelAll', {
-      value: this.cancelAll.bind(this)
-    });
-    Object.defineProperty(resources, '$axios', {
-      get: () => this.axios
-    });
-    Object.defineProperty(resources, '$loading', {
-      get() {
-        for (let r in this) {
-          if (this.hasOwnProperty(r) && r.loading) return true;
-        }
-
-        return false;
-      }
-
-    });
-    this.resources = resources;
-  }
-
-  updateReactiveResources() {
-    Object.keys(this._reactiveResources).forEach(key => {
-      this.updateReactiveResource(key);
-    });
-  }
-
-  updateReactiveResource(key) {
-    const oldResource = this.resources[key];
-    oldResource.stopInterval();
-    let r = Resource.from(this._reactiveResources[key].call(this._vm), this.options, key); // Keep data
-
-    if (oldResource.keepData) {
-      r._data = oldResource._data;
-      r._status = oldResource._status;
-      r._headers = oldResource._headers;
-      r._error = oldResource._error;
-    }
-
-    r._lastLoaded = oldResource._lastLoaded;
-    if (r.prefetch) r.reload();
-    this.resources[key] = r;
-  }
-
-  cancelAll() {
-    Object.keys(this.resources).forEach(r => {
-      this.resources[r].cancel();
-    });
-  }
-
-}
-
-var mixin = ((config = {}) => ({
-  beforeCreate() {
-    const options = this.$options;
-
-    let _chimera; // Stop if instance doesn't have chimera or already initialized
-
-
-    if (!options.chimera || options._chimera) return;
-
-    if (typeof options.chimera === 'function') {
-      // Initialize with function
-      options.chimera = options.chimera.call(this);
-    }
-
-    if (options.chimera instanceof VueChimera) {
-      _chimera = options.chimera;
-    } else if (isPlainObject(options.chimera)) {
-      const _options$chimera = options.chimera,
-            {
-        $options
-      } = _options$chimera,
-            resources = _objectWithoutProperties(_options$chimera, ["$options"]);
-
-      _chimera = new VueChimera(this, resources, _objectSpread({}, config, $options));
-    }
-
-    options.computed = options.computed || {};
-    options.watch = options.watch || {}; // Nuxtjs prefetch
-
-    const NUXT = typeof process !== 'undefined' && process.server && this.$ssrContext ? this.$ssrContext.nuxt : typeof window !== 'undefined' ? window.__NUXT__ : null;
-
-    if (_chimera && NUXT && NUXT.chimera) {
-      try {
-        if (this.$router) {
-          let matched = this.$router.match(this.$router.currentRoute.fullPath);
-          (matched ? matched.matched : []).forEach((m, i) => {
-            let nuxtChimera = NUXT.chimera[i];
-
-            if (nuxtChimera) {
-              Object.keys(_chimera.resources).forEach(key => {
-                let localResource = _chimera.resources[key];
-                let ssrResource = nuxtChimera[key];
-
-                if (localResource && ssrResource && ssrResource._data) {
-                  ['_data', '_status', '_headers', 'ssrPrefetched', '_lastLoaded'].forEach(key => {
-                    localResource[key] = ssrResource[key];
-                  });
-                }
-              });
-            }
-          }); // if (process.client) {
-          //   delete NUXT.chimera
-          // }
-        }
-      } catch (e) {}
-    }
-
-    this._chimera = _chimera;
-  },
-
-  data() {
-    if (this._chimera) {
-      return {
-        $chimera: this._chimera.resources
-      };
-    }
-
-    return {};
-  },
-
-  mounted() {
-    if (this._chimera) {
-      this._chimera.updateReactiveResources();
-
-      for (let r in this._chimera.resources) {
-        let resource = this._chimera.resources[r];
-
-        if (resource.prefetch && (!resource.ssrPrefetched || resource.ssrPrefetch === 'override')) {
-          resource.reload();
+        if (!_this._server) {
+          shouldAutoFetch(r) && r.reload();
         }
       }
+    };
+
+    for (var key in endpoints) {
+      var _ret = _loop(key);
+
+      if (_ret === "continue") continue;
     }
-  },
 
-  beforeDestroy() {
-    if (!this._chimera) {
-      return;
-    }
-
-    this._chimera.cancelAll();
-
-    this._chimera = null;
-    delete this._chimera;
+    Object.defineProperty(endpoints, '$cancelAll', {
+      value: function value() {
+        return _this.cancelAll();
+      }
+    });
+    Object.defineProperty(endpoints, '$loading', {
+      get: function get() {
+        return !!Object.values(this).find(function (el) {
+          return !!el.loading;
+        });
+      }
+    });
+    this.endpoints = endpoints;
   }
 
-}));
+  _createClass(VueChimera, [{
+    key: "init",
+    value: function init() {
+      var _this2 = this;
 
-function NuxtPlugin () {
-  this.options = this.options || {};
-  const baseOptions = this.options;
-  return function ({
-    beforeNuxtRender,
-    isDev,
-    $axios
-  }) {
-    if (!beforeNuxtRender) {
-      return;
+      this._watchers = this._watchers.map(function (w) {
+        var _this2$_vm;
+
+        return (_this2$_vm = _this2._vm).$watch.apply(_this2$_vm, _toConsumableArray(w));
+      });
     }
+  }, {
+    key: "initServer",
+    value: function initServer() {
+      var _this3 = this;
 
-    const cancelTokens = [];
-
-    async function prefetchAsyncData({
-      Components,
-      nuxtState
-    }) {
-      nuxtState.chimera = nuxtState.chimera || {};
-
-      for (let i = 0, len = Components.length; i < len; i++) {
-        let component = Components[i];
-        let chimera = component.options ? component.options.chimera : null;
-
-        if (typeof chimera === 'function') {
-          // Append @Nuxtjs/axios to component (maybe needed by constructor)
-          if ($axios && !component.$axios) component.$axios = $axios;
-          chimera = chimera.bind(component)();
-        }
-
-        if (!chimera) {
-          continue;
-        }
-
-        const nuxtChimera = {};
-
-        const {
-          $options
-        } = chimera,
-              resources = _objectWithoutProperties(chimera, ["$options"]);
-
-        const options = Object.assign({}, baseOptions, $options);
-        if (!options.axios) options.axios = $axios;
-
-        for (let key in resources) {
-          let resource = resources[key];
-
-          if (resource && typeof resource !== 'function') {
-            resource = resource && resource._data ? resource : Resource.from(resource, options);
-            cancelTokens.push(resource.cancel.bind(resource));
-            if (!resource.prefetch || !resource.ssrPrefetch) continue;
-
-            try {
-              isDev && console.log('  Prefetching: ' + resource.requestConfig.url); // eslint-disable-line no-console
-
-              let response = await resource.execute();
-              resource._data = response.data;
-            } catch (err) {
-              isDev && console.error(err.message); // eslint-disable-line no-console
-            }
-
-            resource.ssrPrefetched = true;
-            resources[key] = nuxtChimera[key] = resource;
+      this._vm.$_chimeraPromises = [];
+      Object.values(this.endpoints).forEach(function (endpoint) {
+        if (endpoint.auto && endpoint.prefetch) {
+          /* istanbul ignore if */
+          if (!endpoint.key) {
+            warn('used prefetch with no key associated with endpoint!');
+            return;
           }
-        }
 
-        if (Object.keys(nuxtChimera).length) {
-          nuxtState.chimera[i] = nuxtChimera;
+          _this3._vm.$_chimeraPromises.push(endpoint.fetch(true, {
+            timeout: endpoint.prefetchTimeout
+          }).then(function () {
+            return endpoint;
+          })["catch"](function () {
+            return null;
+          }));
         }
+      });
+    }
+  }, {
+    key: "updateEndpoint",
+    value: function updateEndpoint(key, newValue, oldValue) {
+      var oldEndpoint = this.endpoints[key];
+      var newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.response : null);
+
+      if (oldValue && oldEndpoint) {
+        oldEndpoint.stopInterval();
+        newEndpoint.lastLoaded = oldEndpoint.lastLoaded;
       }
+
+      if (!this._server) {
+        if (shouldAutoFetch(newEndpoint)) newEndpoint.reload();
+      }
+
+      this._vm.$set(this.endpoints, key, newEndpoint);
+    }
+  }, {
+    key: "endpointFrom",
+    value: function endpointFrom(value, initial) {
+      var _this4 = this;
+
+      if (value == null) return new NullEndpoint();
+      if (typeof value === 'string') value = {
+        url: value
+      };
+
+      if (isPlainObject(value.on)) {
+        var bindVm = function bindVm(handler) {
+          if (typeof handler === 'function') {
+            handler = handler.bind(_this4._vm);
+          }
+
+          if (typeof handler === 'string') handler = _this4._vm[handler];
+          return handler;
+        };
+
+        Object.entries(value.on).forEach(function (_ref2) {
+          var _ref3 = _slicedToArray(_ref2, 2),
+              event = _ref3[0],
+              handlers = _ref3[1];
+
+          value.on[event] = Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers);
+        });
+      }
+
+      var endpoint = new (this.LocalEndpoint || Endpoint)(value, initial);
+
+      if (!this._server && !initial && endpoint.key && endpoint.prefetch && this._ssrContext) {
+        initial = this._ssrContext[value.key];
+        if (initial) initial.prefetched = true;
+        Object.assign(endpoint, initial);
+      }
+
+      return endpoint;
+    }
+  }, {
+    key: "cancelAll",
+    value: function cancelAll() {
+      Object.values(this.endpoints).forEach(function (r) {
+        r.cancel();
+      });
+    }
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      var vm = this._vm;
+      this.cancelAll();
+      Object.values(this.endpoints).forEach(function (r) {
+        r.stopInterval();
+      });
+      delete vm._chimera;
+    }
+  }]);
+
+  return VueChimera;
+}();
+
+var mixin = {
+  beforeCreate: function beforeCreate() {
+    var _this = this;
+
+    var vmOptions = this.$options;
+    var chimera; // Stop if instance doesn't have chimera or already initialized
+
+    /* istanbul ignore if */
+
+    if (!vmOptions.chimera || vmOptions._chimera) return;
+
+    if (typeof vmOptions.chimera === 'function') {
+      // Initialize with function
+      vmOptions.chimera = vmOptions.chimera.call(this);
+    }
+    /* istanbul ignore else */
+
+
+    if (isPlainObject(vmOptions.chimera)) {
+      var _vmOptions$chimera = vmOptions.chimera,
+          $options = _vmOptions$chimera.$options,
+          endpoints = _objectWithoutProperties(_vmOptions$chimera, ["$options"]);
+
+      chimera = new VueChimera(this, endpoints, $options);
+    } else {
+      throw new Error('[Chimera]: chimera options should be an object or a function that returns object');
     }
 
-    beforeNuxtRender((...args) => {
-      return new Promise((resolve, reject) => {
-        prefetchAsyncData(...args).then(resolve).catch(reject);
-        setTimeout(reject, baseOptions.ssrPrefetchTimeout, new Error('  SSR Prefetch Timeout.'));
-      }).catch(err => {
-        for (let cancel of cancelTokens) if (typeof cancel === 'function') cancel();
+    if (!Object.prototype.hasOwnProperty.call(this, '$chimera')) {
+      Object.defineProperty(this, '$chimera', {
+        get: function get() {
+          return chimera.endpoints;
+        }
+      });
+    }
 
-        isDev && console.error(err.message); // eslint-disable-line no-console
+    Object.keys(chimera.endpoints).forEach(function (key) {
+      if (!(hasKey(vmOptions.computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key))) {
+        Object.defineProperty(_this, key, {
+          get: function get() {
+            return _this.$chimera[key];
+          },
+          enumerable: true,
+          configurable: true
+        });
+      }
+    });
+    this._chimera = chimera;
+  },
+  data: function data() {
+    /* istanbul ignore if */
+    if (!this._chimera) return {};
+    return {
+      $chimera: this._chimera.endpoints
+    };
+  },
+  created: function created() {
+    /* istanbul ignore if */
+    if (!this._chimera) return;
+
+    this._chimera.init();
+
+    this.$isServer && this._chimera.initServer();
+  },
+  beforeDestroy: function beforeDestroy() {
+    /* istanbul ignore if */
+    if (!this._chimera) return;
+
+    this._chimera.destroy();
+  },
+  serverPrefetch: function serverPrefetch() {
+    /* istanbul ignore if */
+    if (!this.$_chimeraPromises) return;
+
+    var ChimeraSSR = require('../ssr/index');
+
+    return Promise.all(this.$_chimeraPromises).then(function (results) {
+      results.forEach(function (endpoint) {
+        endpoint && ChimeraSSR.addEndpoint(endpoint);
       });
     });
+  }
+};
+
+var ChimeraEndpoint = {
+  inheritAttrs: false,
+  props: {
+    options: {
+      type: [Object, String]
+    },
+    tag: {
+      type: String,
+      "default": null
+    },
+    ssrContext: {
+      type: String,
+      "default": null
+    }
+  },
+  data: function data() {
+    return {
+      endpoint: this.getEndpoint()
+    };
+  },
+  render: function render(h) {
+    var result = this.$scopedSlots["default"](this.endpoint);
+
+    if (Array.isArray(result)) {
+      result = result.concat(this.$slots["default"]);
+    } else {
+      result = [result].concat(this.$slots["default"]);
+    }
+
+    return this.tag ? h(this.tag, result) : result[0];
+  },
+  created: function created() {
+    var ep = this.endpoint;
+
+    if (this.$isServer && ep.key) {
+      this.$_chimeraPromises = [ep.fetch(true).then(function () {
+        return ep;
+      })["catch"](function () {
+        return null;
+      })];
+    }
+  },
+  mounted: function mounted() {
+    var ep = this.endpoint;
+
+    if (ep.auto && (!ep.data || ep.prefetch === 'override')) {
+      ep.reload();
+    }
+  },
+  methods: {
+    getEndpoint: function getEndpoint() {
+      var _this = this;
+
+      var value = this.options;
+      if (value == null) return new NullEndpoint();
+      if (typeof value === 'string') value = {
+        url: value
+      };
+      var endpoint = new Endpoint(value);
+
+      endpoint.emit = function (ev) {
+        Endpoint.prototype.emit.call(endpoint, ev);
+
+        _this.$emit(ev, endpoint);
+      };
+
+      this._ssrContext = getServerContext(this.ssrContext || VueChimera.prototype.ssrContext);
+
+      if (!this._server && endpoint.key && endpoint.prefetch && this._ssrContext) {
+        var initial = this._ssrContext[endpoint.key];
+        if (initial) initial.prefetched = true;
+        Object.assign(endpoint, initial);
+      }
+
+      return endpoint;
+    }
+  }
+};
+
+var DEFAULT_OPTIONS = {
+  baseURL: null,
+  cache: null,
+  debounce: 50,
+  deep: true,
+  keepData: true,
+  auto: 'get',
+  // false, true, '%METHOD%',
+  prefetch: true,
+  prefetchTimeout: 4000,
+  transformer: null,
+  ssrContext: null
+};
+function install(Vue) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+  options = Object.assign({}, DEFAULT_OPTIONS, options);
+  Vue.mixin(mixin);
+  Vue.component('chimera-endpoint', ChimeraEndpoint);
+
+  var _options = options,
+      deep = _options.deep,
+      ssrContext = _options.ssrContext,
+      endpointOptions = _objectWithoutProperties(_options, ["deep", "ssrContext"]);
+
+  Endpoint.prototype.options = endpointOptions;
+  Object.assign(VueChimera.prototype, {
+    deep: deep,
+    ssrContext: ssrContext
+  }); // const merge = Vue.config.optionMergeStrategies.methods
+
+  Vue.config.optionMergeStrategies.chimera = function (toVal, fromVal, vm) {
+    if (!toVal) return fromVal;
+    if (!fromVal) return toVal;
+    if (typeof fromVal === 'function') fromVal = fromVal.call(vm);
+    if (typeof toVal === 'function') toVal = toVal.call(vm);
+    return Object.assign({}, toVal, fromVal, toVal.$options && fromVal.$options ? {
+      $options: Endpoint.applyDefaults(toVal.$options, fromVal.$options)
+    } : {});
   };
 }
 
-const plugin = {
-  options: {
-    axios: null,
-    cache: null,
-    debounce: 80,
-    prefetch: 'get',
-    // false, true, '%METHOD%',
-    ssrPrefetch: true,
-    ssrPrefetchTimeout: 4000,
-    transformer: null,
-    headers: null
-  },
-
-  install(Vue, options = {}) {
-    Object.keys(options).forEach(key => {
-      if (key in this.options) {
-        this.options[key] = options[key];
-      }
-    });
-
-    if (!Vue.prototype.hasOwnProperty('$chimera')) {
-      Object.defineProperty(Vue.prototype, '$chimera', {
-        get() {
-          if (this._chimera) {
-            return this._chimera.resources;
-          }
-
-          return null;
-        }
-
-      });
-    }
-
-    Vue.mixin(mixin(this.options));
-  },
-
-  NuxtPlugin // Auto-install
-
-};
-let GlobalVue = null;
-
-if (typeof window !== 'undefined') {
-  GlobalVue = window.Vue;
-} else if (typeof global !== 'undefined') {
-  GlobalVue = global.Vue;
-}
-
-if (GlobalVue) {
-  GlobalVue.use(plugin, plugin.options);
-}
-
-export default plugin;
+export default install;
+export { CANCEL, ERROR, LOADING, MemoryCache_1 as MemoryCache, SUCCESS, StorageCache_1 as StorageCache, TIMEOUT };

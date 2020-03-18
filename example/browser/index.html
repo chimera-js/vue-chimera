@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Vue-Chimera Example</title>
+    <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+    <style>
+        #app {
+            max-width: 800px;
+            margin: 100px auto;
+            color: #333;
+            font-family: Raleway, Tahoma, serif;
+        }
+
+        .con {
+            margin-bottom: 60px;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #e0e0e0 !important;
+            margin-bottom: 40px;
+            color: #fff;
+        }
+
+        pre {
+            background-color: #666;
+            color: #f8f8f8;
+            padding: 20px;
+            text-indent: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div align="center">
+        <img src="logo.png" alt="VueJS is Awesome">
+        <h1>Vue-Chimera</h1>
+        <p>Easiest way to interact with RESTful APIs</p>
+    </div>
+    <hr/>
+    <div v-if="$chimera">
+        <div class="con">
+            <h3>Simple GET</h3>
+            <p>
+                <span v-if="!$chimera.simple.loading && $chimera.simple.data">{{ $chimera.simple.data.title }}</span>
+                <span v-else>Loading...</span>
+            </p>
+            <pre>
+resources: {
+    myResource: '/api/v1/posts/1'
+}
+        </pre>
+        </div>
+
+        <div class="con">
+            <h3>Reactive GET</h3>
+            Post id: <input type="number" v-model="postId">
+            <p>
+                <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
+                <small v-if="$chimera.reactive.loading">Loading...</small>
+            </p>
+            <pre>
+resources: {
+    myResource: () => `/api/v1/posts/${this.postId}`,
+}
+        </pre>
+        </div>
+
+        <div class="con">
+            <h3>Simple GET with auto refresh interval</h3>
+            <p>
+                Current UTC time:
+                <span style="font-family: arial;"
+                      v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
+                <small v-if="$chimera.time.loading">Refreshing...</small>
+            </p>
+            <pre>
+resources: {
+    myResource: '/api/v1/posts/1',
+    interval: 2000
+}
+        </pre>
+        </div>
+
+        <div class="con">
+            <h3>POST Without prefetch</h3>
+            <p>
+            <span v-if="!$chimera.prefetch.loading && $chimera.prefetch.data">
+                <span style="color: #4cbd51">Successfully created:</span>
+                {{ $chimera.prefetch.data.name }}
+                {{ $chimera.prefetch.data.job }}
+            </span>
+            </p>
+            <div>
+                <button v-if="!$chimera.prefetch.lastLoaded" @click="load">Execute</button>
+                <small v-if="$chimera.prefetch.loading">Loading...</small>
+            </div>
+            <pre>
+resources: {
+    myResource: '/api/v1/posts/1',
+    prefetch: false
+}
+        </pre>
+        </div>
+    </div>
+
+</div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.min.js"></script>
+<!--<script src="https://unpkg.com/vue-chimera@0.3.4/dist/vue-chimera.js"></script>-->
+<script src="../../dist/vue-chimera.min.js"></script>
+<script>
+  var app = new Vue({
+    el: '#app',
+
+    chimera: {
+
+      $options: {
+        prefetch: true,
+      },
+
+      simple: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
+      time: {
+        url: 'https://reqres.in/api/users',
+        interval: 2000,
+      },
+
+      reactive: function () {
+        return 'https://idehhub.com/api/v1/blog/posts/' + this.postId + '?lang=en'
+      },
+
+      prefetch: {
+        url: 'https://reqres.in/api/users',
+        method: 'POST',
+        params: {
+          'name': 'morpheus',
+          'job': 'leader'
+        },
+        prefetch: false
+      }
+    },
+
+    data: {
+      postId: 27
+    },
+
+    methods: {
+      load: function () {
+        this.$chimera.prefetch.execute()
+      }
+    }
+  })
+</script>
+</html>

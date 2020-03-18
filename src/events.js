@@ -1,0 +1,5 @@
+export const SUCCESS = 'success'
+export const ERROR = 'error'
+export const CANCEL = 'cancel'
+export const LOADING = 'loading'
+export const TIMEOUT = 'timeout'
