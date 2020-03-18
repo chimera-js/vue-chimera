@@ -1,94 +1,67 @@
+
 # Javascript Node CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-javascript/ for more details
 #
-version: 2
+
+aliases:
+  - &install_yarn_version
+    name: Install specific Yarn version
+    command: |
+      curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 1.16.0
+      echo 'export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"' >> $BASH_ENV
+
+  - &restore_yarn_cache
+    name: Restore Yarn cache
+    keys:
+      - yarn-{{ .Branch }}-packages-{{ checksum "yarn.lock" }}
+
+  - &save_yarn_cache
+    name: Save Yarn cache
+    key: yarn-{{ .Branch }}-packages-{{ checksum "yarn.lock" }}
+    paths:
+      - ~/.cache/yarn
+
+  - &run_yarn_install
+    name: Install dependencies
+    command: yarn install
 
 defaults: &defaults
   working_directory: ~/repo
   docker:
-    # specify the version you desire here
-    - image: circleci/node:12-browsers
+    - image: circleci/node:8.16.2
 
+version: 2
 jobs:
-  setup:
-    <<: *defaults
-    steps:
-      - checkout
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "package.json" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
-      - run: yarn install
-
-      - save_cache:
-          paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
-      - persist_to_workspace:
-          root: ~/repo
-          paths: .
-
-  lint:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: ~/repo
-      - run: yarn lint
-
-  build:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: ~/repo
-      - run: yarn build
-
-  # run tests!
   test:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: ~/repo
-      - run: yarn test
+      - checkout
+      - run: *install_yarn_version
+      - restore_cache: *restore_yarn_cache
+      - run: *run_yarn_install
+      - save_cache: *save_yarn_cache
+      - run:
+          name: Run Tests
+          command: yarn test
 
-  deploy:
+  release_if_needed:
     <<: *defaults
     steps:
-      - attach_workspace:
-          at: ~/repo
-      - run: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/repo/.npmrc && yarn publish
-
+      - checkout
+      - run: *install_yarn_version
+      - restore_cache: *restore_yarn_cache
+      - run: *run_yarn_install
+      - save_cache: *save_yarn_cache
+      - run:
+          name: Try to Release
+          command: yarn release:trigger
 workflows:
   version: 2
-  setup-lint-build-test-deploy:
+  ci:
     jobs:
-      - setup
-
-      - lint:
-          requires:
-            - setup
-
-      - build:
-          requires:
-            - setup
-
-      - test:
-          requires:
-            - setup
-            - lint
-            - build
-          filters:
-            tags:
-              only: /^v.*/
-      - deploy:
+      - test
+      - release_if_needed:
           requires:
             - test
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
+
