@@ -9,7 +9,9 @@
     "lint": "eslint src --ext .js",
     "test": "yarn test:unit",
     "test:unit": "karma start config/karma.unit.conf.js",
-    "report-coverage": "codecov"
+    "report-coverage": "codecov",
+    "release:prepare": "shipjs prepare",
+    "release:trigger": "shipjs trigger"
   },
   "repository": {
     "type": "git",
@@ -63,6 +65,7 @@
     "karma-webpack": "^3.0.0",
     "mocha": "^5.2.0",
     "nightwatch": "^0.9.21",
+    "shipjs": "0.18.0",
     "sinon": "^6.1.4",
     "vue": "^2.5.17",
     "webpack": "^3.12.0",
