@@ -1,5 +1,5 @@
 import VueChimera from './VueChimera'
-import { isPlainObject } from './utils'
+import { hasKey, isPlainObject } from './utils'
 
 export default {
   beforeCreate () {
@@ -22,12 +22,21 @@ export default {
       throw new Error('[Chimera]: chimera options should be an object or a function that returns object')
     }
 
-    this._chimera = chimera
     if (!Object.prototype.hasOwnProperty.call(this, '$chimera')) {
       Object.defineProperty(this, '$chimera', {
         get: () => chimera.endpoints
       })
     }
+    Object.keys(chimera.endpoints).forEach(key => {
+      if (!(hasKey(vmOptions.computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key))) {
+        Object.defineProperty(this, key, {
+          get: () => this.$chimera[key],
+          enumerable: true,
+          configurable: true
+        })
+      }
+    })
+    this._chimera = chimera
   },
 
   data () {

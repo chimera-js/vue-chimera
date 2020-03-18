@@ -6,9 +6,9 @@ actionText: Get Started →
 actionLink: /guide/installation
 features:
 
-- title: Declarative REST resources
+- title: Declarative REST endpoints
   details: Auto fetching apis, loading flags, status codes and errors
-- title: Reactive restful endpoints
+- title: Reactive RESTful endpoints
   details: Automatic reloading apis on parameter changes
 - title: Server side fetch
   details: No xhr on pages, Execute your api on the server before rendering

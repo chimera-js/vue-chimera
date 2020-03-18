@@ -63,13 +63,9 @@ export default {
 There are some useful global props prepending with $.
 This is the reason why you cannot define endpoint with name starting with $ 
 
-- `$chimera.$axios`
-
-   returns axios client that chimera use to send requests
-   
 - `$chimera.$loading`
    
-   Global loading indicator, returns `true` if there's any resource in loading state
+   Global loading indicator, returns `true` if there's any endpoint in loading state
    
 - `$chimera.$cancelAll()`
 

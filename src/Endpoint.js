@@ -62,10 +62,6 @@ export default class Endpoint {
 
     Object.assign(this, INITIAL_RESPONSE, initial || {})
 
-    if (!this.http) {
-      this.http = axiosAdapter
-    }
-
     interval && this.startInterval(interval)
   }
 
@@ -169,10 +165,9 @@ export default class Endpoint {
     this.status = res.status
     this.data = success ? this.responseTransformer(res.data, this) : null
     this.error = !success ? this.errorTransformer(res.data, this) : null
-    if (!this.light) {
-      this.headers = res.headers || {}
-      this.lastLoaded = new Date()
-    }
+
+    this.headers = !this.light ? res.headers || {} : undefined
+    this.lastLoaded = !this.light ? new Date() : undefined
   }
 
   startInterval (ms) {
@@ -218,6 +213,8 @@ export default class Endpoint {
     return options
   }
 }
+
+Endpoint.prototype.http = axiosAdapter
 
 const strats = Endpoint.optionMergeStrategies = {}
 

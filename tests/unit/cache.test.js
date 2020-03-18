@@ -1,6 +1,6 @@
 import Endpoint from '../../src/Endpoint'
-import { MemoryCache } from '../../src/cache/MemoryCache'
-import { StorageCache } from '../../src/cache/StorageCache'
+import MemoryCache from '../../src/cache/MemoryCache'
+import StorageCache from '../../src/cache/StorageCache'
 
 let axiosResponse, axiosMock
 beforeEach(() => {

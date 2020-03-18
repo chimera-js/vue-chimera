@@ -29,6 +29,10 @@ Overview of features:
 ## Demo
 [Demo: vue-chimera](https://cdn.rawgit.com/chimera-js/vue-chimera/f4312e49/example/simple/index.html)
 
+## Documents
+
+[Full Documentation](https://vue-chimera.netlify.com)
+
 ## Installing
 
 Using npm:

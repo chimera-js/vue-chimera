@@ -6,12 +6,10 @@ export default {
   input: 'src/index.js',
   plugins: [
     resolve({
-      jsnext: true,
-      main: true,
-      browser: true
+      mainFields: ['jsnext', 'main', 'browser']
     }),
     cjs({
-      exclude: 'src/**'
+      exclude: ['src/*', 'src/components/*']
     }),
     babel({
       exclude: 'node_modules/**'

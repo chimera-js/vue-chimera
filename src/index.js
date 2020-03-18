@@ -16,7 +16,7 @@ const DEFAULT_OPTIONS = {
   ssrContext: null
 }
 
-export function install (Vue, options = {}) {
+export default function install (Vue, options = {}) {
   options = Object.assign({}, DEFAULT_OPTIONS, options)
 
   Vue.mixin(mixin)
@@ -42,9 +42,3 @@ export function install (Vue, options = {}) {
     } : {})
   }
 }
-
-export default install
-
-export * from './events'
-export { StorageCache } from './cache/StorageCache'
-export { MemoryCache } from './cache/MemoryCache'

@@ -5,7 +5,7 @@ const config = Object.assign({}, base, {
   output: {
     file: 'dist/vue-chimera.umd.js',
     format: 'umd',
-    name: 'vue-chimera',
+    name: 'VueChimera',
     globals: {
       axios: 'Axios'
     },
@@ -13,6 +13,10 @@ const config = Object.assign({}, base, {
   }
 })
 
-config.plugins.push(terser())
+config.plugins.push(terser({
+  mangle: {
+    properties: true
+  }
+}))
 
 export default config

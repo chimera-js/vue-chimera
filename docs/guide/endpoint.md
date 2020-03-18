@@ -26,9 +26,11 @@ export default {
     sendProduct: {
         url: '/products',
         method: 'POST',
+
+        // POST body
         params: {
           title: 'My Product',
-          body: '<h1>Vue Chimera is awesome...</h1>'
+          description: 'Vue Chimera is awesome...'
         },
         auto: false
     }
@@ -52,10 +54,7 @@ format:
  [Endpoint](https://github.com/chimera-js/vue-chimera/blob/master/src/Endpoint.js) (manually instantiate Endpoint)
 * **Function**: for reactive endpoints [Reactive-Endpoints](#reactive-endpoints) (explained later)
 
-## Extra endpoint options
-Additional to
-[axios configuration](https://github.com/axios/axios#request-config)
-endpoints can have these options
+## Endpoint options
 
 | Properties | Type   | Default value | Description |
 | ---------- | -----  | ------------- | ----------- |
@@ -82,7 +81,7 @@ _Note_ : All the endpoint options can have some defaults, like `baseURL` or `hea
 To set global defaults we can use plugin options or set `$options` on a 
 [Chimera instance](/guide/chimera)
 
-## Sending request to endpoints
+## Sending endpoint request
 Component endpoints can be accessed via `$chimera` property injected to vue instance,
 and also for simplicity if there is no props or data conflicting endpoint name, 
 endpoints can directly accessed via it's name.
