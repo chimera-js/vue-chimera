@@ -1,6 +1,6 @@
 import BaseEndpoint from './Endpoint'
 import NullEndpoint from './NullEndpoint'
-import { hasKey, isPlainObject, getServerContext, warn } from './utils'
+import { isPlainObject, getServerContext, warn } from './utils'
 
 const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')
 
@@ -49,14 +49,6 @@ export default class VueChimera {
     Object.defineProperty(endpoints, '$cancelAll', { value: () => this.cancelAll() })
     Object.defineProperty(endpoints, '$loading', { get () { return !!Object.values(this).find(el => !!el.loading) } })
     this.endpoints = endpoints
-
-    // Init computeds
-    const vmOptions = this._vm.$options
-    const computeds = vmOptions.computed = vmOptions.computed || {}
-    Object.keys(endpoints).forEach(key => {
-      if (hasKey(computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key)) return
-      computeds[key] = () => this.endpoints[key]
-    })
   }
 
   init () {

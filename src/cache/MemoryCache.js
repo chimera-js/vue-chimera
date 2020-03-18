@@ -1,4 +1,4 @@
-export class MemoryCache {
+module.exports = class MemoryCache {
   constructor (expiration) {
     this.expiration = expiration || 1000 * 60
     this._store = {}

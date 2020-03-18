@@ -1,6 +1,6 @@
-import { MemoryCache } from './MemoryCache'
+const MemoryCache = require('./MemoryCache')
 
-export class StorageCache extends MemoryCache {
+module.exports = class StorageCache extends MemoryCache {
   constructor (key, expiration, sessionStorage = false) {
     super(expiration)
     this.key = key

@@ -1,5 +1,6 @@
 import Vue from 'vue'
-import VueChimera, { install } from '../../src/index'
+import VueChimera from '../../src/index'
+import install from '../../src/index.es'
 
 describe('test-import', function () {
   it('should be a vue plugin', function () {
@@ -7,7 +8,7 @@ describe('test-import', function () {
     expect(typeof install).toBe('function')
 
     const plugin = require('../../dist/vue-chimera.umd')
-    expect(typeof plugin.install).toBe('function')
+    expect(typeof plugin).toBe('function')
   })
 })
 

@@ -1,5 +1,11 @@
 import Axios, { CancelToken } from 'axios';
 
+var SUCCESS = 'success';
+var ERROR = 'error';
+var CANCEL = 'cancel';
+var LOADING = 'loading';
+var TIMEOUT = 'timeout';
+
 function _typeof(obj) {
   "@babel/helpers - typeof";
 
@@ -280,6 +286,131 @@ function _nonIterableRest() {
   throw new TypeError("Invalid attempt to destructure non-iterable instance");
 }
 
+var MemoryCache_1 = /*#__PURE__*/function () {
+  function MemoryCache(expiration) {
+    _classCallCheck(this, MemoryCache);
+
+    this.expiration = expiration || 1000 * 60;
+    this._store = {};
+  }
+  /**
+     *
+     * @param key         Key for the cache
+     * @param value       Value for cache persistence
+     * @param expiration  Expiration time in milliseconds
+     */
+
+
+  _createClass(MemoryCache, [{
+    key: "setItem",
+    value: function setItem(key, value, expiration) {
+      this._store[key] = {
+        expiration: Date.now() + (expiration || this.expiration),
+        value: value
+      };
+    }
+    /**
+       * If Cache exists return the Parsed Value, If Not returns {null}
+       *
+       * @param key
+       */
+
+  }, {
+    key: "getItem",
+    value: function getItem(key) {
+      var item = this._store[key];
+
+      if (item && item.value && Date.now() <= item.expiration) {
+        return item.value;
+      }
+
+      this.removeItem(key);
+      return null;
+    }
+  }, {
+    key: "removeItem",
+    value: function removeItem(key) {
+      delete this._store[key];
+    }
+  }, {
+    key: "keys",
+    value: function keys() {
+      return Object.keys(this._store);
+    }
+  }, {
+    key: "all",
+    value: function all() {
+      var _this = this;
+
+      return this.keys().reduce(function (obj, str) {
+        obj[str] = _this._store[str];
+        return obj;
+      }, {});
+    }
+  }, {
+    key: "length",
+    value: function length() {
+      return this.keys().length;
+    }
+  }, {
+    key: "clear",
+    value: function clear() {
+      this._store = {};
+    }
+  }]);
+
+  return MemoryCache;
+}();
+
+var StorageCache_1 = /*#__PURE__*/function (_MemoryCache) {
+  _inherits(StorageCache, _MemoryCache);
+
+  function StorageCache(key, expiration) {
+    var _this;
+
+    var sessionStorage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+    _classCallCheck(this, StorageCache);
+
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(StorageCache).call(this, expiration));
+    _this.key = key;
+    var storage = sessionStorage ? 'sessionStorage' : 'localStorage';
+    /* istanbul ignore if */
+
+    if (typeof window === 'undefined' || !window[storage]) {
+      throw Error("StorageCache: ".concat(storage, " is not available."));
+    } else {
+      _this.storage = window[storage];
+    }
+
+    try {
+      _this._store = JSON.parse(_this.storage.getItem(key)) || {};
+    } catch (e) {
+      _this.clear();
+
+      _this._store = {};
+    }
+
+    return _this;
+  }
+
+  _createClass(StorageCache, [{
+    key: "setItem",
+    value: function setItem(key, value, expiration) {
+      _get(_getPrototypeOf(StorageCache.prototype), "setItem", this).call(this, key, value, expiration);
+
+      this.storage.setItem(this.key, JSON.stringify(this._store));
+    }
+  }, {
+    key: "clear",
+    value: function clear() {
+      this.storage.removeItem(this.key);
+    }
+  }]);
+
+  return StorageCache;
+}(MemoryCache_1);
+
 var pDebounce = (fn, wait, opts) => {
 	if (!Number.isFinite(wait)) {
 		throw new TypeError('Expected `wait` to be a finite number');
@@ -321,12 +452,6 @@ var pDebounce = (fn, wait, opts) => {
 		});
 	};
 };
-
-var SUCCESS = 'success';
-var ERROR = 'error';
-var CANCEL = 'cancel';
-var LOADING = 'loading';
-var TIMEOUT = 'timeout';
 
 function isPlainObject(value) {
   return _typeof(value) === 'object' && value && Object.prototype.toString(value) === '[object Object]';
@@ -480,11 +605,6 @@ var Endpoint = /*#__PURE__*/function () {
     this.auto = typeof auto === 'string' ? auto.toLowerCase() === options.method : !!auto;
     this.prefetch = prefetch != null ? prefetch : this.auto;
     Object.assign(this, INITIAL_RESPONSE, initial || {});
-
-    if (!this.http) {
-      this.http = axiosAdapter;
-    }
-
     interval && this.startInterval(interval);
   }
 
@@ -620,11 +740,8 @@ var Endpoint = /*#__PURE__*/function () {
       this.status = res.status;
       this.data = success ? this.responseTransformer(res.data, this) : null;
       this.error = !success ? this.errorTransformer(res.data, this) : null;
-
-      if (!this.light) {
-        this.headers = res.headers || {};
-        this.lastLoaded = new Date();
-      }
+      this.headers = !this.light ? res.headers || {} : undefined;
+      this.lastLoaded = !this.light ? new Date() : undefined;
     }
   }, {
     key: "startInterval",
@@ -681,6 +798,7 @@ var Endpoint = /*#__PURE__*/function () {
 
   return Endpoint;
 }();
+Endpoint.prototype.http = axiosAdapter;
 var strats = Endpoint.optionMergeStrategies = {};
 
 strats.headers = strats.params = strats.transformers = function (base, opts) {
@@ -815,17 +933,7 @@ var VueChimera = /*#__PURE__*/function () {
         });
       }
     });
-    this.endpoints = endpoints; // Init computeds
-
-    var vmOptions = this._vm.$options;
-    var computeds = vmOptions.computed = vmOptions.computed || {};
-    Object.keys(endpoints).forEach(function (key) {
-      if (hasKey(computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key)) return;
-
-      computeds[key] = function () {
-        return _this.endpoints[key];
-      };
-    });
+    this.endpoints = endpoints;
   }
 
   _createClass(VueChimera, [{
@@ -846,7 +954,7 @@ var VueChimera = /*#__PURE__*/function () {
 
       this._vm.$_chimeraPromises = [];
       Object.values(this.endpoints).forEach(function (endpoint) {
-        if (endpoint.prefetch) {
+        if (endpoint.auto && endpoint.prefetch) {
           /* istanbul ignore if */
           if (!endpoint.key) {
             warn('used prefetch with no key associated with endpoint!');
@@ -943,6 +1051,8 @@ var VueChimera = /*#__PURE__*/function () {
 
 var mixin = {
   beforeCreate: function beforeCreate() {
+    var _this = this;
+
     var vmOptions = this.$options;
     var chimera; // Stop if instance doesn't have chimera or already initialized
 
@@ -967,8 +1077,6 @@ var mixin = {
       throw new Error('[Chimera]: chimera options should be an object or a function that returns object');
     }
 
-    this._chimera = chimera;
-
     if (!Object.prototype.hasOwnProperty.call(this, '$chimera')) {
       Object.defineProperty(this, '$chimera', {
         get: function get() {
@@ -976,6 +1084,19 @@ var mixin = {
         }
       });
     }
+
+    Object.keys(chimera.endpoints).forEach(function (key) {
+      if (!(hasKey(vmOptions.computeds, key) || hasKey(vmOptions.props, key) || hasKey(vmOptions.methods, key))) {
+        Object.defineProperty(_this, key, {
+          get: function get() {
+            return _this.$chimera[key];
+          },
+          enumerable: true,
+          configurable: true
+        });
+      }
+    });
+    this._chimera = chimera;
   },
   data: function data() {
     /* istanbul ignore if */
@@ -1091,131 +1212,6 @@ var ChimeraEndpoint = {
   }
 };
 
-var MemoryCache = /*#__PURE__*/function () {
-  function MemoryCache(expiration) {
-    _classCallCheck(this, MemoryCache);
-
-    this.expiration = expiration || 1000 * 60;
-    this._store = {};
-  }
-  /**
-     *
-     * @param key         Key for the cache
-     * @param value       Value for cache persistence
-     * @param expiration  Expiration time in milliseconds
-     */
-
-
-  _createClass(MemoryCache, [{
-    key: "setItem",
-    value: function setItem(key, value, expiration) {
-      this._store[key] = {
-        expiration: Date.now() + (expiration || this.expiration),
-        value: value
-      };
-    }
-    /**
-       * If Cache exists return the Parsed Value, If Not returns {null}
-       *
-       * @param key
-       */
-
-  }, {
-    key: "getItem",
-    value: function getItem(key) {
-      var item = this._store[key];
-
-      if (item && item.value && Date.now() <= item.expiration) {
-        return item.value;
-      }
-
-      this.removeItem(key);
-      return null;
-    }
-  }, {
-    key: "removeItem",
-    value: function removeItem(key) {
-      delete this._store[key];
-    }
-  }, {
-    key: "keys",
-    value: function keys() {
-      return Object.keys(this._store);
-    }
-  }, {
-    key: "all",
-    value: function all() {
-      var _this = this;
-
-      return this.keys().reduce(function (obj, str) {
-        obj[str] = _this._store[str];
-        return obj;
-      }, {});
-    }
-  }, {
-    key: "length",
-    value: function length() {
-      return this.keys().length;
-    }
-  }, {
-    key: "clear",
-    value: function clear() {
-      this._store = {};
-    }
-  }]);
-
-  return MemoryCache;
-}();
-
-var StorageCache = /*#__PURE__*/function (_MemoryCache) {
-  _inherits(StorageCache, _MemoryCache);
-
-  function StorageCache(key, expiration) {
-    var _this;
-
-    var sessionStorage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
-
-    _classCallCheck(this, StorageCache);
-
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(StorageCache).call(this, expiration));
-    _this.key = key;
-    var storage = sessionStorage ? 'sessionStorage' : 'localStorage';
-    /* istanbul ignore if */
-
-    if (typeof window === 'undefined' || !window[storage]) {
-      throw Error("StorageCache: ".concat(storage, " is not available."));
-    } else {
-      _this.storage = window[storage];
-    }
-
-    try {
-      _this._store = JSON.parse(_this.storage.getItem(key)) || {};
-    } catch (e) {
-      _this.clear();
-
-      _this._store = {};
-    }
-
-    return _this;
-  }
-
-  _createClass(StorageCache, [{
-    key: "setItem",
-    value: function setItem(key, value, expiration) {
-      _get(_getPrototypeOf(StorageCache.prototype), "setItem", this).call(this, key, value, expiration);
-
-      this.storage.setItem(this.key, JSON.stringify(this._store));
-    }
-  }, {
-    key: "clear",
-    value: function clear() {
-      this.storage.removeItem(this.key);
-    }
-  }]);
-
-  return StorageCache;
-}(MemoryCache);
-
 var DEFAULT_OPTIONS = {
   baseURL: null,
   cache: null,
@@ -1224,7 +1220,7 @@ var DEFAULT_OPTIONS = {
   keepData: true,
   auto: 'get',
   // false, true, '%METHOD%',
-  prefetch: null,
+  prefetch: true,
   prefetchTimeout: 4000,
   transformer: null,
   ssrContext: null
@@ -1258,4 +1254,4 @@ function install(Vue) {
 }
 
 export default install;
-export { CANCEL, ERROR, LOADING, MemoryCache, SUCCESS, StorageCache, TIMEOUT, install };
+export { CANCEL, ERROR, LOADING, MemoryCache_1 as MemoryCache, SUCCESS, StorageCache_1 as StorageCache, TIMEOUT };
