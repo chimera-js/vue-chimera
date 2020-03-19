@@ -6,7 +6,7 @@ Chimera instance manages all endpoints.
 - Update [reactive endpoints](/guide/reactive-endpoints)
 - Provide some globals like `$loading`, `$axios`, `$cancelAll()`
 
-## Define endpoint defaults
+## Endpoint defaults
 To set some defaults to endpoint definitions use `$options` property
 on `chimera` option:
 

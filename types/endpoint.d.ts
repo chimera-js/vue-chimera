@@ -18,17 +18,21 @@ export type EndpointDef = {
     url: string,
     method?: string,
     params?: any,
+    baseURL?: string,
     headers?: Dictionary,
     on: {
         [key: string]: EventHandler | EventHandler[]
     },
     debounce?: boolean | number,
     interval?: number | boolean,
+    timeout?: number,
     transformer?: TransformerDef | { response: TransformerDef, error: TransformerDef },
     auto?: boolean,
     prefetch?: boolean,
+    prefetchTimeout?: number,
     keepData?: boolean,
     cache?: CacheInterface,
+    axios?: object | (() => object),
 
     [key: string]: any
 } | string

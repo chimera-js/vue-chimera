@@ -4,7 +4,6 @@ import ChimeraEndpoint from './components/ChimeraEndpoint'
 import Endpoint from './Endpoint'
 
 const DEFAULT_OPTIONS = {
-  baseURL: null,
   cache: null,
   debounce: 50,
   deep: true,
@@ -16,7 +15,7 @@ const DEFAULT_OPTIONS = {
   ssrContext: null
 }
 
-export default function install (Vue, options = {}) {
+export function install (Vue, options = {}) {
   options = Object.assign({}, DEFAULT_OPTIONS, options)
 
   Vue.mixin(mixin)
@@ -42,3 +41,6 @@ export default function install (Vue, options = {}) {
     } : {})
   }
 }
+
+export default install
+export { Endpoint, ChimeraEndpoint }

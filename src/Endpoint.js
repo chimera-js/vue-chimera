@@ -117,9 +117,7 @@ export default class Endpoint {
     }).catch(err => {
       this.loading = false
       this.setResponse(err, false)
-      if (this.http.isCancelError(err)) {
-        this.emit(events.CANCEL)
-      } else {
+      if (!this.http.isCancelError(err)) {
         if (this.http.isTimeoutError) {
           this.emit(events.TIMEOUT)
         }
@@ -138,8 +136,11 @@ export default class Endpoint {
     return this.fetch(true, { params })
   }
 
-  cancel () {
-    this.http.cancel(this)
+  cancel (silent) {
+    if (this.loading) {
+      this.http.cancel(this)
+      !silent && this.emit(events.CANCEL)
+    }
   }
 
   getCacheKey () {
@@ -178,7 +179,10 @@ export default class Endpoint {
 
     this._interval = ms
     this.stopInterval()
-    this._interval_id = setInterval(() => this.reload(true), this._interval)
+    this._interval_id = setInterval(() => {
+      this.cancel()
+      this.reload(true)
+    }, this._interval)
   }
 
   stopInterval () {

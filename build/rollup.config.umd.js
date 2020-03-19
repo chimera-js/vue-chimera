@@ -9,14 +9,10 @@ const config = Object.assign({}, base, {
     globals: {
       axios: 'Axios'
     },
-    exports: 'auto'
+    exports: 'named'
   }
 })
 
-config.plugins.push(terser({
-  mangle: {
-    properties: true
-  }
-}))
+config.plugins.push(terser())
 
 export default config

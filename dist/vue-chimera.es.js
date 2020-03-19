@@ -528,6 +528,9 @@ var axiosAdapter = {
       };
     }(endpoint);
 
+    Object.keys(request).forEach(function (key) {
+      if (request[key] === undefined) delete request[key];
+    });
     request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params;
     request.cancelToken = new CancelToken(function (c) {
       endpoint._canceler = c;
@@ -1213,7 +1216,6 @@ var ChimeraEndpoint = {
 };
 
 var DEFAULT_OPTIONS = {
-  baseURL: null,
   cache: null,
   debounce: 50,
   deep: true,
@@ -1254,4 +1256,4 @@ function install(Vue) {
 }
 
 export default install;
-export { CANCEL, ERROR, LOADING, MemoryCache_1 as MemoryCache, SUCCESS, StorageCache_1 as StorageCache, TIMEOUT };
+export { CANCEL, ERROR, Endpoint, LOADING, MemoryCache_1 as MemoryCache, SUCCESS, StorageCache_1 as StorageCache, TIMEOUT };

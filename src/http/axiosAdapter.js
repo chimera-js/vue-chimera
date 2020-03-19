@@ -29,6 +29,10 @@ export default {
       timeout
     }))(endpoint)
 
+    Object.keys(request).forEach(key => {
+      if (request[key] === undefined) delete request[key]
+    })
+
     request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params
     request.cancelToken = new CancelToken(c => {
       endpoint._canceler = c

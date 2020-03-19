@@ -8,7 +8,7 @@ describe('test-import', function () {
     expect(typeof install).toBe('function')
 
     const plugin = require('../../dist/vue-chimera.umd')
-    expect(typeof plugin).toBe('function')
+    expect(typeof plugin.install).toBe('function')
   })
 })
 

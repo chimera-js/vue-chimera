@@ -13,6 +13,7 @@ export default class VueChimera {
       const { deep, ssrContext, ...endpointOptions } = options
 
       const LocalEndpoint = this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
+      bindVmToEvents(options, this._vm)
       LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions)
       Object.assign(this, JSON.parse(JSON.stringify({ deep, ssrContext })))
     }
@@ -71,10 +72,11 @@ export default class VueChimera {
 
   updateEndpoint (key, newValue, oldValue) {
     const oldEndpoint = this.endpoints[key]
-    const newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.response : null)
+    const newEndpoint = this.endpointFrom(newValue, oldEndpoint && oldEndpoint.keepData ? oldEndpoint.response : null)
 
     if (oldValue && oldEndpoint) {
       oldEndpoint.stopInterval()
+      oldEndpoint.cancel(true)
       newEndpoint.lastLoaded = oldEndpoint.lastLoaded
     }
 
@@ -88,18 +90,7 @@ export default class VueChimera {
     if (value == null) return new NullEndpoint()
     if (typeof value === 'string') value = { url: value }
 
-    if (isPlainObject(value.on)) {
-      const bindVm = (handler) => {
-        if (typeof handler === 'function') {
-          handler = handler.bind(this._vm)
-        }
-        if (typeof handler === 'string') handler = this._vm[handler]
-        return handler
-      }
-      Object.entries(value.on).forEach(([event, handlers]) => {
-        value.on[event] = (Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers))
-      })
-    }
+    bindVmToEvents(value, this._vm)
 
     const endpoint = new (this.LocalEndpoint || BaseEndpoint)(value, initial)
 
@@ -125,5 +116,20 @@ export default class VueChimera {
       r.stopInterval()
     })
     delete vm._chimera
+  }
+}
+
+function bindVmToEvents (value, vm) {
+  if (isPlainObject(value.on)) {
+    const bindVm = (handler) => {
+      if (typeof handler === 'function') {
+        handler = handler.bind(vm)
+      }
+      if (typeof handler === 'string') handler = vm[handler]
+      return handler
+    }
+    Object.entries(value.on).forEach(([event, handlers]) => {
+      value.on[event] = (Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers))
+    })
   }
 }

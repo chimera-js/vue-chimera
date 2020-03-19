@@ -71,9 +71,6 @@ describe('vue-test-reactivity', function () {
             }
           }
         },
-        watch: {
-          users: watcher
-        },
         data () {
           return {
             id: 1,
@@ -82,6 +79,9 @@ describe('vue-test-reactivity', function () {
               page: 2
             }
           }
+        },
+        watch: {
+          users: watcher
         }
       })
       const fetchSpy = jest.spyOn(Endpoint.prototype, 'fetch')

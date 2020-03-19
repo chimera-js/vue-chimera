@@ -1,5 +1,8 @@
 module.exports = {
-  "extends": "standard",
+  "extends": ["standard", "plugin:vue/recommended"],
+  "plugins": [
+      'vue'
+  ],
   "rules": {
     "no-console": ["error"],
     "no-alert": ["error"],

@@ -59,17 +59,19 @@ format:
 | Properties | Type   | Default value | Description |
 | ---------- | -----  | ------------- | ----------- |
 | key        | String | null          | Unique key that identifies an endpoint, used for caching and server side fetching purpose. <br>_We recommend to always set it on every endpoint_ |      |
-| url*       | String |               | Endpoint url
-| method*    | String |  GET          | Endpoint method: (POST/GET)
-| headers*   | Object |  {}           | Request headers
-| params*    | Object |  {}           | Request parameters (Query string for GET / Body Data for POST/PATCH/DELETE)
-| auto  | Boolean/String | 'get' | A boolean flag that indicates endpoint should be fetched on instantiation or reactive changes. <br> If it's a string, fetches endpoints with same request method |
-| transformer | Function/Object | null | Transform response or error results to something else |
+| url        | String |               | Endpoint url
+| baseURL    | String |               | Endpoint base url like: `http://example.com/api/`
+| method     | String |  GET          | Endpoint method: (POST/GET)
+| headers    | Object |  {}           | Request headers
+| params     | Object |  {}           | Request parameters (Query string for GET / Body Data for POST/PATCH/DELETE)
+| auto       | Boolean/String | 'get' | A boolean flag that indicates endpoint should be fetched on instantiation or reactive changes. <br> If it's a string, fetches endpoints with same request method |
+| transformer| Function/Object | null | Transform response or error results to something else |
 | interval   | Number  | undefined | A number in miliseconds to auto refresh an api
 | debounce   | Number  | 50 | A number in miliseconds that prevent duplicate api calls during this time, can be set to `false` to disable debouncing. |
 | cache      | Cache   | null | Cache strategy object. [More info](/guide/cache)
+| timeout    | Number   | 0 | Request timeout
 | axios      | Axios/Object | null | Axios instance to send requests
-| on      | Object | null | Sets event listeners
+| on      | Object | null | Sets event listeners [Events](/guide/events)
 | prefetch   | Boolean | Equals to `auto` if not set | A boolean flag that indicates endpoint should be fetched on server. [More Info](/guide/ssr) |
 | prefetchTimeout   | Number | 4000 | A number in milliseconds that indicates how much should wait for server to fetch endpoints |
 
@@ -181,5 +183,29 @@ export default {
             this.$chimera.users.reload() // or users.reload()
         }, 15000)
     },
+}
+```
+
+## Auto refresh endpoints
+You can use `interval` property to auto refresh endpoints after time
+```javascript
+export default {
+    chimera: {
+        users: {
+           url: '/users',
+           interval: 10 * 1000 // 10 seconds
+        }
+    },
+    methods: {
+       // Manual start and stop
+       stopInterval () {
+          this.users.startInterval(10000)
+          console.log(this.users.looping) // true
+          setTimeout(() => {
+             this.users.stopInterval()
+             console.log(this.users.looping) // false
+          }, 500000)
+       }
+    }
 }
 ```
