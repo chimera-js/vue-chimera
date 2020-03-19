@@ -117,12 +117,11 @@ export default class Endpoint {
     }).catch(err => {
       this.loading = false
       this.setResponse(err, false)
-      if (!this.http.isCancelError(err)) {
-        if (this.http.isTimeoutError) {
-          this.emit(events.TIMEOUT)
-        }
-        this.emit(events.ERROR)
+      if (this.http.isCancelError(err)) return
+      if (this.http.isTimeoutError) {
+        this.emit(events.TIMEOUT)
       }
+      this.emit(events.ERROR)
 
       throw err
     })
