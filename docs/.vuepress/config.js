@@ -26,7 +26,8 @@ module.exports = {
     smoothScroll: true,
     nav: [
       { text: 'Guide', link: '/guide/installation' },
-      { text: 'API Reference', link: '/api/' }
+      { text: 'API Reference', link: '/api/' },
+      { text: 'Demo', link: '/demo' }
     ],
     sidebarDepth: 1,
     sidebar: {
