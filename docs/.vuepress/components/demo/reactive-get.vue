@@ -1,6 +1,9 @@
 <template>
   <div class="example-box">
-    User ID: <input type="number" v-model="id">
+    User ID: <input
+      v-model="id"
+      type="number"
+    >
     <br>
     <span
       v-if="reactiveGet.loading"

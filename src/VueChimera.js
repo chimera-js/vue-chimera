@@ -1,6 +1,6 @@
 import BaseEndpoint from './Endpoint'
 import NullEndpoint from './NullEndpoint'
-import {isPlainObject, getServerContext, warn, removeUndefined} from './utils'
+import { isPlainObject, getServerContext, warn, removeUndefined } from './utils'
 import { createAxios } from './http/axiosAdapter'
 
 const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')

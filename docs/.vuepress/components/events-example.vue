@@ -8,8 +8,10 @@
         {{ user.name }}
       </li>
     </ul>
-    <button @click="users.reload()">Reload</button> <span v-if="users.loading">Loading...</span>
-      <div>
+    <button @click="users.reload()">
+      Reload
+    </button> <span v-if="users.loading">Loading...</span>
+    <div>
       <p
         v-for="(ev, i) in events"
         :key="i"

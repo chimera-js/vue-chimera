@@ -19,6 +19,6 @@ export default {
       url: '/users/1',
       interval: 4000 // 4 seconds poll interval
     }
-  },
+  }
 }
 </script>

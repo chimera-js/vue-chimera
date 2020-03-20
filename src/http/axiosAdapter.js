@@ -1,5 +1,5 @@
 import Axios, { CancelToken } from 'axios'
-import {isPlainObject, removeUndefined} from '../utils'
+import { isPlainObject, removeUndefined } from '../utils'
 
 export function createAxios (config) {
   if (typeof config === 'function') {
