@@ -7,7 +7,7 @@ const config = Object.assign({}, base, {
     format: 'iife',
     name: 'VueChimera',
     globals: {
-      axios: 'Axios'
+      axios: 'axios'
     }
   }
 })

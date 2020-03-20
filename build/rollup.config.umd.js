@@ -7,7 +7,7 @@ const config = Object.assign({}, base, {
     format: 'umd',
     name: 'VueChimera',
     globals: {
-      axios: 'Axios'
+      axios: 'axios'
     },
     exports: 'named'
   }

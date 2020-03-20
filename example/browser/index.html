@@ -45,12 +45,12 @@
         <div class="con">
             <h3>Simple GET</h3>
             <p>
-                <span v-if="!$chimera.simple.loading && $chimera.simple.data">{{ $chimera.simple.data.title }}</span>
+                <span v-if="!simpleGet.loading && simpleGet.data">{{ simpleGet.data.title }}</span>
                 <span v-else>Loading...</span>
             </p>
             <pre>
-resources: {
-    myResource: '/api/v1/posts/1'
+chimera: {
+    simpleGet: '/api/v1/posts/1'
 }
         </pre>
         </div>
@@ -59,12 +59,14 @@ resources: {
             <h3>Reactive GET</h3>
             Post id: <input type="number" v-model="postId">
             <p>
-                <span v-if="!$chimera.reactive.loading && $chimera.reactive.data">{{ $chimera.reactive.data.title }}</span>
-                <small v-if="$chimera.reactive.loading">Loading...</small>
+                <span v-if="!reactiveGet.loading && reactiveGet.data">{{ reactiveGet.data.title }}</span>
+                <small v-if="reactiveGet.loading">Loading...</small>
             </p>
             <pre>
-resources: {
-    myResource: () => `/api/v1/posts/${this.postId}`,
+chimera: {
+    reactiveGet() {
+        return `/api/v1/posts/${this.postId}`
+    },
 }
         </pre>
         </div>
@@ -74,34 +76,38 @@ resources: {
             <p>
                 Current UTC time:
                 <span style="font-family: arial;"
-                      v-if="$chimera.time.data">Last loaded: {{ $chimera.time.lastLoaded }}</span>
-                <small v-if="$chimera.time.loading">Refreshing...</small>
+                      v-if="time.data">Last loaded: {{ time.lastLoaded }}</span>
+                <small v-if="time.loading">Refreshing...</small>
             </p>
             <pre>
-resources: {
-    myResource: '/api/v1/posts/1',
-    interval: 2000
+chimera: {
+    time: {
+        url: '/api/v1/posts/1',
+        interval: 2000
+    }
 }
         </pre>
         </div>
 
         <div class="con">
-            <h3>POST Without prefetch</h3>
+            <h3>POST with manual send</h3>
             <p>
-            <span v-if="!$chimera.prefetch.loading && $chimera.prefetch.data">
+            <span v-if="!manual.loading && manual.data">
                 <span style="color: #4cbd51">Successfully created:</span>
-                {{ $chimera.prefetch.data.name }}
-                {{ $chimera.prefetch.data.job }}
+                {{ manual.data.name }}
+                {{ manual.data.job }}
             </span>
             </p>
             <div>
-                <button v-if="!$chimera.prefetch.lastLoaded" @click="load">Execute</button>
-                <small v-if="$chimera.prefetch.loading">Loading...</small>
+                <button v-if="!manual.lastLoaded" @click="load">Execute</button>
+                <small v-if="manual.loading">Loading...</small>
             </div>
             <pre>
-resources: {
-    myResource: '/api/v1/posts/1',
-    prefetch: false
+chimera: {
+    manual: {
+        url: '/api/v1/posts/1',
+        auto: false
+    }
 }
         </pre>
         </div>
@@ -109,37 +115,33 @@ resources: {
 
 </div>
 </body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.17/vue.min.js"></script>
-<!--<script src="https://unpkg.com/vue-chimera@0.3.4/dist/vue-chimera.js"></script>-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
 <script src="../../dist/vue-chimera.min.js"></script>
 <script>
+  Vue.use(VueChimera)
   var app = new Vue({
     el: '#app',
 
     chimera: {
-
-      $options: {
-        prefetch: true,
-      },
-
-      simple: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
+      simpleGet: 'https://idehhub.com/api/v1/blog/posts/55?lang=en',
       time: {
         url: 'https://reqres.in/api/users',
         interval: 2000,
       },
 
-      reactive: function () {
+      reactiveGet: function () {
         return 'https://idehhub.com/api/v1/blog/posts/' + this.postId + '?lang=en'
       },
 
-      prefetch: {
+      manual: {
         url: 'https://reqres.in/api/users',
         method: 'POST',
         params: {
           'name': 'morpheus',
           'job': 'leader'
         },
-        prefetch: false
+        auto: false
       }
     },
 
@@ -149,7 +151,7 @@ resources: {
 
     methods: {
       load: function () {
-        this.$chimera.prefetch.execute()
+        this.$chimera.manual.fetch()
       }
     }
   })

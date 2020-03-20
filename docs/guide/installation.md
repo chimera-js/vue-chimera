@@ -49,6 +49,7 @@ look sample above.
 
 ## Using Script tag (CDN)
 ```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js"></script>
 <script src="https://unpkg.com/vue-chimera@latest/dist/vue-chimera.min.js"></script>
 ```
 If you use old browser style and `Vue` is publicly exposed as global variable

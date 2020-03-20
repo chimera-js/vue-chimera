@@ -683,15 +683,13 @@ var Endpoint = /*#__PURE__*/function () {
 
         _this2.setResponse(err, false);
 
-        if (_this2.http.isCancelError(err)) {
-          _this2.emit(CANCEL);
-        } else {
-          if (_this2.http.isTimeoutError) {
-            _this2.emit(TIMEOUT);
-          }
+        if (_this2.http.isCancelError(err)) return;
 
-          _this2.emit(ERROR);
+        if (_this2.http.isTimeoutError) {
+          _this2.emit(TIMEOUT);
         }
+
+        _this2.emit(ERROR);
 
         throw err;
       });
@@ -710,8 +708,11 @@ var Endpoint = /*#__PURE__*/function () {
     }
   }, {
     key: "cancel",
-    value: function cancel() {
-      this.http.cancel(this);
+    value: function cancel(silent) {
+      if (this.loading) {
+        this.http.cancel(this);
+        !silent && this.emit(CANCEL);
+      }
     }
   }, {
     key: "getCacheKey",
@@ -759,7 +760,9 @@ var Endpoint = /*#__PURE__*/function () {
       this._interval = ms;
       this.stopInterval();
       this._interval_id = setInterval(function () {
-        return _this3.reload(true);
+        _this3.cancel();
+
+        _this3.reload(true);
       }, this._interval);
     }
   }, {
@@ -880,6 +883,7 @@ var VueChimera = /*#__PURE__*/function () {
         return Endpoint;
       }(Endpoint);
 
+      bindVmToEvents(options, this._vm);
       LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions);
       Object.assign(this, JSON.parse(JSON.stringify({
         deep: deep,
@@ -978,10 +982,11 @@ var VueChimera = /*#__PURE__*/function () {
     key: "updateEndpoint",
     value: function updateEndpoint(key, newValue, oldValue) {
       var oldEndpoint = this.endpoints[key];
-      var newEndpoint = this.endpointFrom(newValue, oldValue && oldValue.keepData ? oldEndpoint.response : null);
+      var newEndpoint = this.endpointFrom(newValue, oldEndpoint && oldEndpoint.keepData ? oldEndpoint.response : null);
 
       if (oldValue && oldEndpoint) {
         oldEndpoint.stopInterval();
+        oldEndpoint.cancel(true);
         newEndpoint.lastLoaded = oldEndpoint.lastLoaded;
       }
 
@@ -994,32 +999,11 @@ var VueChimera = /*#__PURE__*/function () {
   }, {
     key: "endpointFrom",
     value: function endpointFrom(value, initial) {
-      var _this4 = this;
-
       if (value == null) return new NullEndpoint();
       if (typeof value === 'string') value = {
         url: value
       };
-
-      if (isPlainObject(value.on)) {
-        var bindVm = function bindVm(handler) {
-          if (typeof handler === 'function') {
-            handler = handler.bind(_this4._vm);
-          }
-
-          if (typeof handler === 'string') handler = _this4._vm[handler];
-          return handler;
-        };
-
-        Object.entries(value.on).forEach(function (_ref2) {
-          var _ref3 = _slicedToArray(_ref2, 2),
-              event = _ref3[0],
-              handlers = _ref3[1];
-
-          value.on[event] = Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers);
-        });
-      }
-
+      bindVmToEvents(value, this._vm);
       var endpoint = new (this.LocalEndpoint || Endpoint)(value, initial);
 
       if (!this._server && !initial && endpoint.key && endpoint.prefetch && this._ssrContext) {
@@ -1051,6 +1035,27 @@ var VueChimera = /*#__PURE__*/function () {
 
   return VueChimera;
 }();
+
+function bindVmToEvents(value, vm) {
+  if (isPlainObject(value.on)) {
+    var bindVm = function bindVm(handler) {
+      if (typeof handler === 'function') {
+        handler = handler.bind(vm);
+      }
+
+      if (typeof handler === 'string') handler = vm[handler];
+      return handler;
+    };
+
+    Object.entries(value.on).forEach(function (_ref2) {
+      var _ref3 = _slicedToArray(_ref2, 2),
+          event = _ref3[0],
+          handlers = _ref3[1];
+
+      value.on[event] = Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers);
+    });
+  }
+}
 
 var mixin = {
   beforeCreate: function beforeCreate() {
