@@ -17,7 +17,7 @@ We are going to show list of posts on this api:
 
         <!-- Final json response can be accessed through `posts.data` -->
         <ul v-if="posts.data">
-            <li v-for="post in posts.data">{{ posts.title }}</li>
+            <li v-for="post in posts.data">{{ post.title }}</li>
         </ul>
 
         <!-- If an error occess during API call, json response stored in `posts.error`  -->
