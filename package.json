@@ -16,7 +16,7 @@
     "test:unit": "jest",
     "report-coverage": "codecov",
     "docs:dev": "vuepress dev docs",
-    "docs:build": "vuepress build docs",
+    "docs:build": "yarn build && vuepress build docs",
     "release:prepare": "shipjs prepare",
     "release:trigger": "shipjs trigger"
   },
