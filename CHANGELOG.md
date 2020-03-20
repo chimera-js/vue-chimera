@@ -1,5 +1,7 @@
 ## [3.0.2](https://github.com/chimera-js/vue-chimera/compare/v3.0.1...v3.0.2) (2020-03-20)
 
+## Fixes
+Fix serverside polling (interval)
 
 ### Bug Fixes
 
