@@ -8,7 +8,7 @@
       {{ newUser.data }}
     </span>
     <br>
-    <button @click="newUser.fetch()">
+    <button @click="newUser.send()">
       Submit
     </button>
   </div>
