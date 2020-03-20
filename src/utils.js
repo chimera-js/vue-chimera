@@ -12,6 +12,13 @@ export function mergeExistingKeys (...obj) {
 
 export const hasKey = (obj, key) => key in (obj || {})
 
+export function removeUndefined (obj) {
+  Object.keys(obj).forEach(key => {
+    if (obj[key] === undefined) delete obj[key]
+  })
+  return obj
+}
+
 export function getServerContext (contextString) {
   try {
     let context = window

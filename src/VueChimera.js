@@ -1,6 +1,7 @@
 import BaseEndpoint from './Endpoint'
 import NullEndpoint from './NullEndpoint'
-import { isPlainObject, getServerContext, warn } from './utils'
+import {isPlainObject, getServerContext, warn, removeUndefined} from './utils'
+import { createAxios } from './http/axiosAdapter'
 
 const shouldAutoFetch = r => r.auto && (!r.prefetched || r.prefetch === 'override')
 
@@ -9,14 +10,12 @@ export default class VueChimera {
     this._vm = vm
     this._watchers = []
 
-    if (options) {
-      const { deep, ssrContext, ...endpointOptions } = options
-
-      const LocalEndpoint = this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
-      bindVmToEvents(options, this._vm)
-      LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions)
-      Object.assign(this, JSON.parse(JSON.stringify({ deep, ssrContext })))
-    }
+    let { deep, ssrContext, axios, ...endpointOptions } = options || {}
+    const LocalEndpoint = this.LocalEndpoint = class Endpoint extends BaseEndpoint {}
+    bindVmToEvents(endpointOptions, this._vm)
+    LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions)
+    Object.assign(this, removeUndefined({ deep, ssrContext, axios }))
+    LocalEndpoint.prototype.axios = createAxios(typeof this.axios === 'function' && !this.axios.request ? this.axios.call(vm) : this.axios)
 
     this._ssrContext = getServerContext(this.ssrContext)
     this._server = vm.$isServer
@@ -35,7 +34,7 @@ export default class VueChimera {
       let r = endpoints[key]
       if (typeof r === 'function') {
         this._watchers.push([
-          () => r.call(this._vm),
+          () => r.call(vm),
           (t, f) => this.updateEndpoint(key, t, f),
           watchOption
         ])

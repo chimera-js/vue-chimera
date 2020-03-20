@@ -26,6 +26,10 @@ Overview of features:
 - Events
 - Lightweight
 
+## Demo
+
+[Demo](https://vue-chimera.netlify.com/demo)
+
 ## Documents
 
 [Full Documentation](https://vue-chimera.netlify.com)

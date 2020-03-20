@@ -470,6 +470,12 @@ function mergeExistingKeys() {
 var hasKey = function hasKey(obj, key) {
   return key in (obj || {});
 };
+function removeUndefined(obj) {
+  Object.keys(obj).forEach(function (key) {
+    if (obj[key] === undefined) delete obj[key];
+  });
+  return obj;
+}
 function getServerContext(contextString) {
   try {
     var context = window;
@@ -508,7 +514,6 @@ function createAxios(config) {
 
   return Axios;
 }
-
 var axiosAdapter = {
   request: function request(endpoint) {
     var axios = createAxios(endpoint.axios);
@@ -528,9 +533,7 @@ var axiosAdapter = {
       };
     }(endpoint);
 
-    Object.keys(request).forEach(function (key) {
-      if (request[key] === undefined) delete request[key];
-    });
+    removeUndefined(request);
     request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params;
     request.cancelToken = new CancelToken(function (c) {
       endpoint._canceler = c;
@@ -866,31 +869,32 @@ var VueChimera = /*#__PURE__*/function () {
     this._vm = vm;
     this._watchers = [];
 
-    if (options) {
-      var deep = options.deep,
-          ssrContext = options.ssrContext,
-          endpointOptions = _objectWithoutProperties(options, ["deep", "ssrContext"]);
+    var _ref2 = options || {},
+        deep = _ref2.deep,
+        ssrContext = _ref2.ssrContext,
+        axios = _ref2.axios,
+        endpointOptions = _objectWithoutProperties(_ref2, ["deep", "ssrContext", "axios"]);
 
-      var LocalEndpoint = this.LocalEndpoint = /*#__PURE__*/function (_BaseEndpoint) {
-        _inherits(Endpoint, _BaseEndpoint);
+    var LocalEndpoint = this.LocalEndpoint = /*#__PURE__*/function (_BaseEndpoint) {
+      _inherits(Endpoint, _BaseEndpoint);
 
-        function Endpoint() {
-          _classCallCheck(this, Endpoint);
+      function Endpoint() {
+        _classCallCheck(this, Endpoint);
 
-          return _possibleConstructorReturn(this, _getPrototypeOf(Endpoint).apply(this, arguments));
-        }
+        return _possibleConstructorReturn(this, _getPrototypeOf(Endpoint).apply(this, arguments));
+      }
 
-        return Endpoint;
-      }(Endpoint);
+      return Endpoint;
+    }(Endpoint);
 
-      bindVmToEvents(options, this._vm);
-      LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions);
-      Object.assign(this, JSON.parse(JSON.stringify({
-        deep: deep,
-        ssrContext: ssrContext
-      })));
-    }
-
+    bindVmToEvents(endpointOptions, this._vm);
+    LocalEndpoint.prototype.options = LocalEndpoint.applyDefaults(LocalEndpoint.prototype.options, endpointOptions);
+    Object.assign(this, removeUndefined({
+      deep: deep,
+      ssrContext: ssrContext,
+      axios: axios
+    }));
+    LocalEndpoint.prototype.axios = createAxios(typeof this.axios === 'function' && !this.axios.request ? this.axios.call(vm) : this.axios);
     this._ssrContext = getServerContext(this.ssrContext);
     this._server = vm.$isServer;
     var watchOption = {
@@ -909,7 +913,7 @@ var VueChimera = /*#__PURE__*/function () {
 
       if (typeof r === 'function') {
         _this._watchers.push([function () {
-          return r.call(_this._vm);
+          return r.call(vm);
         }, function (t, f) {
           return _this.updateEndpoint(key, t, f);
         }, watchOption]);
@@ -1047,10 +1051,10 @@ function bindVmToEvents(value, vm) {
       return handler;
     };
 
-    Object.entries(value.on).forEach(function (_ref2) {
-      var _ref3 = _slicedToArray(_ref2, 2),
-          event = _ref3[0],
-          handlers = _ref3[1];
+    Object.entries(value.on).forEach(function (_ref3) {
+      var _ref4 = _slicedToArray(_ref3, 2),
+          event = _ref4[0],
+          handlers = _ref4[1];
 
       value.on[event] = Array.isArray(handlers) ? handlers.map(bindVm) : bindVm(handlers);
     });
@@ -1241,12 +1245,14 @@ function install(Vue) {
   var _options = options,
       deep = _options.deep,
       ssrContext = _options.ssrContext,
-      endpointOptions = _objectWithoutProperties(_options, ["deep", "ssrContext"]);
+      axios = _options.axios,
+      endpointOptions = _objectWithoutProperties(_options, ["deep", "ssrContext", "axios"]);
 
   Endpoint.prototype.options = endpointOptions;
   Object.assign(VueChimera.prototype, {
     deep: deep,
-    ssrContext: ssrContext
+    ssrContext: ssrContext,
+    axios: axios
   }); // const merge = Vue.config.optionMergeStrategies.methods
 
   Vue.config.optionMergeStrategies.chimera = function (toVal, fromVal, vm) {
