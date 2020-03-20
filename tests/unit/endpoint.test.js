@@ -173,7 +173,7 @@ describe('test-transformers', function () {
     endpoint.fetch().then(() => {
       expect(endpoint.data).toEqual(tr(data))
       done()
-    }).catch(Promise.reject)
+    }).catch(err => done(err))
   })
 
   it('should transform error', function (done) {
@@ -202,19 +202,12 @@ describe('test-cancellation', function () {
       JSON.stringify({})
     ])
 
-    const cancelSpy = jest.fn()
-    endpoint.on(events.CANCEL, cancelSpy)
-    expect(endpoint.loading).toBeFalsy()
-    endpoint.fetch().then(() => {
-      done()
-      throw new Error('Not cancelled')
-    }).catch((err) => {
-      expect(err.__CANCEL__).toBeTruthy()
-      expect(endpoint.loading).toBeFalsy()
+    endpoint.on(events.CANCEL, function () {
       expect(endpoint.data).toBeNull()
-      expect(cancelSpy).toBeCalled()
       done()
     })
+    expect(endpoint.loading).toBeFalsy()
+    endpoint.fetch()
     expect(endpoint.loading).toBeTruthy()
     endpoint.cancel()
   })

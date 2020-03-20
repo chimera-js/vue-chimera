@@ -1,7 +1,7 @@
 import Axios, { CancelToken } from 'axios'
-import { isPlainObject } from '../utils'
+import { isPlainObject, removeUndefined } from '../utils'
 
-function createAxios (config) {
+export function createAxios (config) {
   if (typeof config === 'function') {
     if (typeof config.request === 'function') return config
     return config()
@@ -29,9 +29,7 @@ export default {
       timeout
     }))(endpoint)
 
-    Object.keys(request).forEach(key => {
-      if (request[key] === undefined) delete request[key]
-    })
+    removeUndefined(request)
 
     request[(endpoint.method || 'get') !== 'get' ? 'data' : 'params'] = endpoint.params
     request.cancelToken = new CancelToken(c => {

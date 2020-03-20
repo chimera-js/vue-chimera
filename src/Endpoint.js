@@ -131,7 +131,7 @@ export default class Endpoint {
     return this.fetchDebounced(force)
   }
 
-  send (params) {
+  send (params = {}) {
     return this.fetch(true, { params })
   }
 

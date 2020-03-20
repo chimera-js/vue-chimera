@@ -38,13 +38,13 @@ describe('test-events', function () {
     endpoint.fetch().then(() => {
       spies.forEach(spy => expect(spy).toBeCalledTimes(1))
       done()
-    })
+    }).catch(done)
 
     server.resolve({ status: 200, data: { test: 'test' } })
   })
 
   it('should broadcast error event', function (done) {
-    endpoint.fetch()
+    endpoint.fetch().catch(() => {})
 
     server.reject({ status: 500, data: { test: 'test' } })
 
@@ -136,7 +136,7 @@ describe('test-listener-inheritance', function () {
       expect(mixinSpy).toBeCalledTimes(1)
 
       done()
-    })
+    }).catch(done)
 
     server.resolve({ data: 's', status: 200 })
   })

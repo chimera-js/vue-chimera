@@ -13,7 +13,10 @@
     <span v-if="user.error">Error: {{ user.status }} {{ user.error }}</span>
 
     <div>
-      <input type="checkbox" v-model="keepData"> Keep data
+      <input
+        v-model="keepData"
+        type="checkbox"
+      > Keep data
     </div>
   </div>
 </template>

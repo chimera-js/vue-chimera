@@ -21,11 +21,12 @@ export function install (Vue, options = {}) {
   Vue.mixin(mixin)
   Vue.component('chimera-endpoint', ChimeraEndpoint)
 
-  const { deep, ssrContext, ...endpointOptions } = options
+  const { deep, ssrContext, axios, ...endpointOptions } = options
   Endpoint.prototype.options = endpointOptions
   Object.assign(VueChimera.prototype, {
     deep,
-    ssrContext
+    ssrContext,
+    axios
   })
 
   // const merge = Vue.config.optionMergeStrategies.methods

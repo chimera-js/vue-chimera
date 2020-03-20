@@ -6,9 +6,6 @@ describe('test-import', function () {
   it('should be a vue plugin', function () {
     expect(typeof VueChimera).toBe('function')
     expect(typeof install).toBe('function')
-
-    const plugin = require('../../dist/vue-chimera.umd')
-    expect(typeof plugin.install).toBe('function')
   })
 })
 
@@ -17,6 +14,7 @@ describe('test-mixin', function () {
   beforeEach(() => {
     LocalVue = Vue
     LocalVue.use(VueChimera, {
+      auto: false,
       headers: {
         'X-Test-1': '1'
       },

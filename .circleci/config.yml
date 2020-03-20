@@ -55,16 +55,9 @@ jobs:
           at: ~/repo
       - run: yarn test
 
-  deploy:
-    <<: *defaults
-    steps:
-      - attach_workspace:
-          at: ~/repo
-      - run: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/repo/.npmrc && yarn publish
-
 workflows:
   version: 2
-  setup-lint-build-test-deploy:
+  setup-lint-build-test:
     jobs:
       - setup
 
@@ -84,11 +77,3 @@ workflows:
           filters:
             tags:
               only: /^v.*/
-      - deploy:
-          requires:
-            - test
-          filters:
-            tags:
-              only: /^v.*/
-            branches:
-              ignore: /.*/
