@@ -178,7 +178,7 @@ export default class Endpoint {
 
     this._interval = ms
     this.stopInterval()
-    this._interval_id = setInterval(() => {
+    this._interval_id = typeof window !== 'undefined' && setInterval(() => {
       this.cancel()
       this.reload(true)
     }, this._interval)
