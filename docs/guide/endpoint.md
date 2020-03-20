@@ -103,6 +103,35 @@ Endpoints are automatically loaded on component create
 if method is GET, but can be overrided with 
 setting `auto` is set to `true` or `false`
 
+```javascript
+export default {
+    chimera: {
+        users: '/users', // By default GET requests has `auto`
+        usersNotAuto: {
+           url: '/users',
+           auto: false, // Disable auto on GET
+        },
+        newUser: { // POST/PUT/PATCH/DELETE requests are manual. `auto`: false
+           url: '/users/new', 
+           method: 'POST',
+           params: { name: 'John Doe' }
+        },
+        newUserAuto: { // But can explicitly set to auto
+           url: '/users/new', 
+           method: 'POST',
+           params: { name: 'John Doe' },
+           auto: true,
+        }
+    },
+    method: {
+       submit () {
+         this.newUser.fetch()  // calling POST request
+         this.usersNotAuto.fetch() // fetching
+       }
+    }
+}
+```
+
 Or they can be manually fetched via calling `.fetch()` or `.reload()`
 method on the endpoint instance
 
