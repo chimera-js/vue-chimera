@@ -53,27 +53,36 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/repo
-      - run: yarn test
+      - run: yarn test && yarn report-coverage
+
+  deploy:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/repo
+      - run: yarn release:trigger
 
 workflows:
   version: 2
   setup-lint-build-test:
     jobs:
       - setup
-
       - lint:
           requires:
             - setup
-
-      - build:
-          requires:
-            - setup
-
       - test:
           requires:
             - setup
-            - lint
+      - build:
+          requires:
+            - setup
+      - deploy:
+          requires:
+            - test
             - build
+            - lint
           filters:
             tags:
               only: /^v.*/
+            branches:
+              ignore: /.*/
